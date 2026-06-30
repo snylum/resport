@@ -1,16 +1,22 @@
 /* ============================================================
-   editor.js — Résumé block editor
-   - Drag-to-reorder (pointer-based lift + placeholder, same
-     mechanism as the home page demo)
+   editor.js — Résumé block editor (v2)
+   - Edit tab: fixed Personal Details form + draggable Sections list
+     (accordion edit-in-place) + canvas drag-to-reorder
+   - Customize tab: Template & Colors / Text / Layout, wired to
+     CSS custom properties on the live preview
    - Two-column layout support (Main / Side column per block)
-   - Editing happens in a right-hand panel via labeled text
-     inputs, not directly on the document
    + Portfolio website conversion
    ============================================================ */
 
 // ── State ─────────────────────────────────────────────────────
+let profile = {
+  jobTitle: '', firstName: 'Juan', lastName: 'Lala',
+  email: '', phone: '', address: '', photo: null
+};
+
+// NOTE: 'header' is no longer a draggable block — it's the fixed
+// Personal Details form above. Everything else is still a block.
 let blocks = [
-  { id: uid(), type: 'header', col: 'main', data: { name: 'Your Full Name', contact: 'email@example.com  ·  +63 912 345 6789  ·  linkedin.com/in/you  ·  City, PH' } },
   { id: uid(), type: 'section', col: 'main', data: { title: 'Education' } },
   { id: uid(), type: 'education', col: 'main', data: { school: 'University of the Philippines', degree: 'B.S. Computer Science', location: 'Diliman, Quezon City', year: 'June 2024', gpa: 'GPA: 1.50' } },
   { id: uid(), type: 'section', col: 'main', data: { title: 'Experience' } },
@@ -24,17 +30,106 @@ let dragSrcType  = null;   // 'palette' — block reorder uses pointer drag belo
 let columnLayout = '1';    // '1' | '2-30' | '2-35' | '2-40'
 let sidebarPos   = 'left'; // 'left' | 'right'
 let selectedBlockId = null;
+let currentMode = 'edit';      // 'edit' | 'customize'
+let currentCTab = 'template';  // 'template' | 'text' | 'layout'
 
 // ── Utilities ──────────────────────────────────────────────────
 function uid() { return Math.random().toString(36).slice(2, 9); }
 function blockById(id) { return blocks.find(b => b.id === id); }
-function save(id, key, val) { const b = blockById(id); if (b) { b.data[key] = val; renderBlockInPlace(id); } }
+function save(id, key, val) { const b = blockById(id); if (b) { b.data[key] = val; renderBlockInPlace(id); updateScore(); } }
 function saveBullet(id, idx, val) { const b = blockById(id); if (b) { b.data.bullets[idx] = val; renderBlockInPlace(id); } }
 function saveLink(id, idx, val) { const b = blockById(id); if (b) { b.data.links[idx] = val; renderBlockInPlace(id); } }
 
 function esc(str) {
   if (!str) return '';
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Personal details ─────────────────────────────────────────
+function updateProfile(key, val) {
+  profile[key] = val;
+  renderHeader();
+  updateScore();
+}
+
+function handlePhotoUpload(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    profile.photo = reader.result;
+    renderHeader();
+    syncPhotoBox();
+  };
+  reader.readAsDataURL(file);
+}
+
+function syncPhotoBox() {
+  const box = document.getElementById('pdPhotoBox');
+  if (!box) return;
+  box.innerHTML = profile.photo
+    ? `<img src="${profile.photo}" alt="Profile photo" />`
+    : `<span id="pdPhotoIcon">👤</span>`;
+}
+
+function contactLine() {
+  return [profile.email, profile.phone, profile.address].filter(Boolean).join('  ·  ');
+}
+
+function renderHeader() {
+  const host = document.getElementById('resumeHeader');
+  if (!host) return;
+  const fullName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
+  host.innerHTML = `
+    ${profile.photo ? `<img class="rb-photo" src="${esc(profile.photo)}" alt="" />` : ''}
+    <span class="rb-name">${esc(fullName) || '<span class="rb-placeholder">Your Full Name</span>'}</span>
+    ${profile.jobTitle ? `<span class="rb-job-title">${esc(profile.jobTitle)}</span>` : ''}
+    <span class="rb-contact">${esc(contactLine()) || '<span class="rb-placeholder">Contact info</span>'}</span>
+  `;
+}
+
+function syncPersonalDetailsForm() {
+  const map = {
+    pdJobTitle: 'jobTitle', pdFirst: 'firstName', pdLast: 'lastName',
+    pdEmail: 'email', pdPhone: 'phone', pdAddress: 'address'
+  };
+  Object.entries(map).forEach(([elId, key]) => {
+    const el = document.getElementById(elId);
+    if (el) el.value = profile[key] || '';
+  });
+  syncPhotoBox();
+}
+
+// ── Résumé score (simple heuristic, drives the top progress bar) ──
+function updateScore() {
+  const checks = [
+    !!profile.firstName, !!profile.lastName, !!profile.email, !!profile.phone,
+    !!profile.jobTitle, !!profile.address, blocks.some(b => b.type === 'experience'),
+    blocks.some(b => b.type === 'education'), blocks.some(b => b.type === 'skills'), blocks.length >= 4
+  ];
+  const pct = Math.round((checks.filter(Boolean).length / checks.length) * 100);
+  const badge = document.getElementById('scoreBadge');
+  const fill = document.getElementById('scoreFill');
+  const tip = document.getElementById('scoreTip');
+  if (badge) badge.textContent = pct + '%';
+  if (fill) fill.style.width = pct + '%';
+  if (tip) tip.textContent = pct < 100 ? '+10% Add more detail' : 'Looking great!';
+}
+
+// ── Mode switching: Edit / Customize ───────────────────────────
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('tabEditBtn').classList.toggle('active', mode === 'edit');
+  document.getElementById('tabCustomizeBtn').classList.toggle('active', mode === 'customize');
+  document.getElementById('editModePanel').style.display = mode === 'edit' ? 'flex' : 'none';
+  document.getElementById('customizeModePanel').style.display = mode === 'customize' ? 'flex' : 'none';
+}
+
+function setCustomizeTab(tab) {
+  currentCTab = tab;
+  document.querySelectorAll('.customize-tab').forEach(t => t.classList.toggle('active', t.dataset.ctab === tab));
+  document.querySelectorAll('.customize-pane').forEach(p => p.style.display = 'none');
+  document.getElementById('ctab-' + tab).style.display = 'flex';
 }
 
 // ── Render (document / preview side — read-only, no contenteditable) ──
@@ -44,8 +139,19 @@ function render() {
   paper.classList.toggle('is-two-col', columnLayout !== '1');
   paper.classList.toggle('sidebar-right', sidebarPos === 'right');
 
+  const header = document.createElement('div');
+  header.className = 'rb-header';
+  header.id = 'resumeHeader';
+  paper.appendChild(header);
+
   if (blocks.length === 0) {
-    paper.innerHTML = `<div class="canvas-hint"><p style="font-size:1.5rem;margin-bottom:0.5rem">📋</p><p>Drag a block from the left panel to get started.</p></div>`;
+    const hint = document.createElement('div');
+    hint.className = 'canvas-hint';
+    hint.innerHTML = `<p style="font-size:1.5rem;margin-bottom:0.5rem">📋</p><p>Drag a section from the left panel to get started.</p>`;
+    paper.appendChild(hint);
+    renderHeader();
+    renderSectionsList();
+    updateScore();
     return;
   }
 
@@ -79,7 +185,10 @@ function render() {
     paper.appendChild(cols);
   }
 
+  renderHeader();
   highlightSelectedBlock();
+  renderSectionsList();
+  updateScore();
 }
 
 function renderBlockEl(block, i) {
@@ -103,16 +212,12 @@ function renderBlockInPlace(id) {
   if (!el || !block) return;
   const i = blocks.indexOf(block);
   el.innerHTML = renderBlockContent(block) + renderControls(block, i);
+  refreshSectionRowTitle(id);
 }
 
 function renderBlockContent(b) {
   const d = b.data;
   switch (b.type) {
-    case 'header':
-      return `<div class="rb-header">
-        <span class="rb-name">${esc(d.name) || '<span class="rb-placeholder">Your Full Name</span>'}</span>
-        <span class="rb-contact">${esc(d.contact) || '<span class="rb-placeholder">Contact info</span>'}</span>
-      </div>`;
     case 'section':
       return `<div class="rb-section-title">${esc(d.title) || '<span class="rb-placeholder">Section Title</span>'}</div>`;
     case 'experience': {
@@ -141,8 +246,10 @@ function renderBlockContent(b) {
           <div>${esc(d.gpa)}</div>
         </div>
       </div>`;
-    case 'skills':
-      return `<div class="rb-skills"><span class="rb-skills-list">${esc(d.items)}</span></div>`;
+    case 'skills': {
+      const tags = (d.items || '').split(',').map(s => s.trim()).filter(Boolean);
+      return `<div class="rb-skills"><span class="rb-skills-list">${tags.map(t => `<span class="rb-skill-tag">${esc(t)}</span>`).join(', ')}</span></div>`;
+    }
     case 'text':
       return `<div class="rb-text">${esc(d.content || '') || '<span class="rb-placeholder">Type your text here.</span>'}</div>`;
     case 'links': {
@@ -176,10 +283,10 @@ function highlightSelectedBlock() {
 }
 
 // ── Block operations ───────────────────────────────────────────
-function addBullet(id) { const b = blockById(id); if (b) { b.data.bullets.push('Describe what you did.'); renderBlockInPlace(id); openPanelFor(id); } }
-function removeBullet(id, idx) { const b = blockById(id); if (b) { b.data.bullets.splice(idx, 1); renderBlockInPlace(id); openPanelFor(id); } }
-function addLink(id)   { const b = blockById(id); if (b) { b.data.links.push('yourlink.com'); renderBlockInPlace(id); openPanelFor(id); } }
-function removeLink(id, idx) { const b = blockById(id); if (b) { b.data.links.splice(idx, 1); renderBlockInPlace(id); openPanelFor(id); } }
+function addBullet(id) { const b = blockById(id); if (b) { b.data.bullets.push('Describe what you did.'); renderBlockInPlace(id); refreshExpandedRow(id); } }
+function removeBullet(id, idx) { const b = blockById(id); if (b) { b.data.bullets.splice(idx, 1); renderBlockInPlace(id); refreshExpandedRow(id); } }
+function addLink(id)   { const b = blockById(id); if (b) { b.data.links.push('yourlink.com'); renderBlockInPlace(id); refreshExpandedRow(id); } }
+function removeLink(id, idx) { const b = blockById(id); if (b) { b.data.links.splice(idx, 1); renderBlockInPlace(id); refreshExpandedRow(id); } }
 
 function moveBlock(i, dir) {
   const j = i + dir;
@@ -196,10 +303,10 @@ function duplicateBlock(i) {
 }
 
 function deleteBlock(i) {
-  if (!confirm('Delete this block?')) return;
+  if (!confirm('Delete this section?')) return;
   const id = blocks[i].id;
   blocks.splice(i, 1);
-  if (selectedBlockId === id) closePanel();
+  if (selectedBlockId === id) selectedBlockId = null;
   render();
 }
 
@@ -208,12 +315,11 @@ function toggleBlockColumn(id) {
   if (!b) return;
   b.col = b.col === 'side' ? 'main' : 'side';
   render();
-  if (selectedBlockId === id) openPanelFor(id);
+  if (selectedBlockId === id) selectBlock(id);
 }
 
 function defaultData(type) {
   const map = {
-    header:     { name: 'Your Name', contact: 'email@example.com · Phone · City' },
     section:    { title: 'Section Title' },
     experience: { company: 'Company Name', dates: '2024 – Present', role: 'Your Role', location: 'City, PH', bullets: ['Describe your impact here.'] },
     education:  { school: 'University Name', degree: 'Degree & Major', location: 'City', year: '2024', gpa: '' },
@@ -234,6 +340,10 @@ function insertBlock(type, atIndex, col) {
   return newBlock;
 }
 
+function addSection(type) {
+  insertBlock(type, undefined, 'main');
+}
+
 // ── Column layout controls ──────────────────────────────────────
 function setColumnLayout(value) {
   columnLayout = value;
@@ -242,6 +352,10 @@ function setColumnLayout(value) {
     blocks.forEach(b => b.col = 'main');
   }
   render();
+  // BUG FIX: previously the open field-editor kept showing a stale
+  // Main/Side toggle after switching back to single column. Re-open
+  // it so it reflects the current layout.
+  if (selectedBlockId) selectBlock(selectedBlockId);
 }
 
 function setSidebarPosition(value) {
@@ -249,7 +363,160 @@ function setSidebarPosition(value) {
   render();
 }
 
-// ── Drag-to-reorder: physical pointer-based drag ────────────────
+// ── Sections accordion (left sidebar, Edit tab) ─────────────────
+const typeLabels = {
+  section: '📌 Section Title', experience: '💼 Experience',
+  education: '🎓 Education', skills: '⚡ Skills', text: '📝 Text Block',
+  links: '🔗 Links', spacer: '↕️ Spacer',
+};
+const typeIcons = { section:'📌', experience:'💼', education:'🎓', skills:'⚡', text:'📝', links:'🔗', spacer:'↕️' };
+
+function sectionRowTitle(block) {
+  const d = block.data;
+  switch (block.type) {
+    case 'section': return d.title || 'Section Title';
+    case 'experience': return d.company || 'Experience';
+    case 'education': return d.school || 'Education';
+    case 'skills': return 'Skills';
+    case 'text': return 'Text Block';
+    case 'links': return 'Links';
+    case 'spacer': return 'Spacer';
+    default: return block.type;
+  }
+}
+
+function refreshSectionRowTitle(id) {
+  const row = document.querySelector(`.section-row[data-id="${id}"] .section-row-title`);
+  const block = blockById(id);
+  if (row && block) row.textContent = sectionRowTitle(block);
+}
+
+function refreshExpandedRow(id) {
+  if (selectedBlockId === id) renderSectionsList();
+}
+
+function renderSectionsList() {
+  const host = document.getElementById('sectionsList');
+  if (!host) return;
+  if (blocks.length === 0) {
+    host.innerHTML = `<p class="sidebar-hint">No sections yet — drag one in from below.</p>`;
+    return;
+  }
+  host.innerHTML = blocks.map((b, i) => `
+    <div class="section-row ${selectedBlockId === b.id ? 'expanded' : ''}" data-id="${b.id}">
+      <div class="section-row-head" onclick="toggleSectionRow('${b.id}')">
+        <span class="section-row-grip" title="Drag to reorder">⠿</span>
+        <span class="section-row-icon">${typeIcons[b.type] || ''}</span>
+        <span class="section-row-title">${esc(sectionRowTitle(b))}</span>
+        <span class="section-row-actions">
+          <button class="bc-btn" title="Duplicate" onclick="event.stopPropagation();duplicateBlock(${i})">⧉</button>
+          <button class="bc-btn del" title="Delete" onclick="event.stopPropagation();deleteBlock(${i})">✕</button>
+        </span>
+      </div>
+      ${selectedBlockId === b.id ? `<div class="section-row-body">${renderFieldsForBlock(b)}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function toggleSectionRow(id) {
+  selectedBlockId = (selectedBlockId === id) ? null : id;
+  highlightSelectedBlock();
+  renderSectionsList();
+}
+
+function selectBlock(id) {
+  selectedBlockId = id;
+  highlightSelectedBlock();
+  renderSectionsList();
+  const row = document.querySelector(`.section-row[data-id="${id}"]`);
+  if (row) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+function panelField(label, inputHtml) {
+  return `<div class="pf-field"><label class="pf-label">${esc(label)}</label>${inputHtml}</div>`;
+}
+function panelInput(value, onInput, placeholder) {
+  return `<input type="text" class="pf-input" value="${esc(value || '')}" placeholder="${esc(placeholder || '')}" oninput="${onInput}" />`;
+}
+function panelTextarea(value, onInput, placeholder, rows) {
+  return `<textarea class="pf-textarea" rows="${rows || 3}" placeholder="${esc(placeholder || '')}" oninput="${onInput}">${esc(value || '')}</textarea>`;
+}
+
+function renderFieldsForBlock(block) {
+  const id = block.id, d = block.data;
+  let fieldsHtml = '';
+  switch (block.type) {
+    case 'section':
+      fieldsHtml += panelField('Section title', panelInput(d.title, `save('${id}','title',this.value)`, 'Experience'));
+      break;
+    case 'experience':
+      fieldsHtml += panelField('Company', panelInput(d.company, `save('${id}','company',this.value)`, 'Company Name'));
+      fieldsHtml += panelField('Dates', panelInput(d.dates, `save('${id}','dates',this.value)`, '2024 – Present'));
+      fieldsHtml += panelField('Role / title', panelInput(d.role, `save('${id}','role',this.value)`, 'Your Role'));
+      fieldsHtml += panelField('Location', panelInput(d.location, `save('${id}','location',this.value)`, 'City, PH'));
+      fieldsHtml += `<div class="pf-field"><label class="pf-label">Bullet points</label>
+        <div class="pf-bullet-list">
+          ${(d.bullets || []).map((bl, bi) => `
+            <div class="pf-bullet-row">
+              <textarea class="pf-textarea pf-textarea-sm" rows="2" oninput="saveBullet('${id}',${bi},this.value)">${esc(bl)}</textarea>
+              <button class="pf-remove-btn" title="Remove bullet" onclick="removeBullet('${id}',${bi})">✕</button>
+            </div>`).join('')}
+        </div>
+        <button class="pf-add-btn" onclick="addBullet('${id}')">+ Add bullet</button>
+      </div>`;
+      break;
+    case 'education':
+      fieldsHtml += panelField('School', panelInput(d.school, `save('${id}','school',this.value)`, 'University Name'));
+      fieldsHtml += panelField('Degree', panelInput(d.degree, `save('${id}','degree',this.value)`, 'Degree & Major'));
+      fieldsHtml += panelField('Location', panelInput(d.location, `save('${id}','location',this.value)`, 'City'));
+      fieldsHtml += panelField('Year', panelInput(d.year, `save('${id}','year',this.value)`, '2024'));
+      fieldsHtml += panelField('GPA / honors', panelInput(d.gpa, `save('${id}','gpa',this.value)`, 'GPA: 1.50'));
+      break;
+    case 'skills':
+      fieldsHtml += panelField('Skills (comma-separated)', panelTextarea(d.items, `save('${id}','items',this.value)`, 'JavaScript, React, Node.js', 3));
+      break;
+    case 'text':
+      fieldsHtml += panelField('Content', panelTextarea(d.content, `save('${id}','content',this.value)`, 'Type your text here.', 5));
+      break;
+    case 'links':
+      fieldsHtml += `<div class="pf-field"><label class="pf-label">Links</label>
+        <div class="pf-bullet-list">
+          ${(d.links || []).map((lk, li) => `
+            <div class="pf-bullet-row">
+              <input type="text" class="pf-input" value="${esc(lk)}" oninput="saveLink('${id}',${li},this.value)" />
+              <button class="pf-remove-btn" title="Remove link" onclick="removeLink('${id}',${li})">✕</button>
+            </div>`).join('')}
+        </div>
+        <button class="pf-add-btn" onclick="addLink('${id}')">+ Add link</button>
+      </div>`;
+      break;
+    case 'spacer':
+      fieldsHtml += `<p class="pf-hint">A spacer just adds vertical space — nothing to edit here.</p>`;
+      break;
+  }
+
+  let colControl = '';
+  if (columnLayout !== '1') {
+    colControl = `<div class="pf-field">
+      <label class="pf-label">Column</label>
+      <div class="pf-col-toggle">
+        <button class="pf-col-btn ${block.col !== 'side' ? 'active' : ''}" onclick="setBlockColumn('${id}','main')">Main</button>
+        <button class="pf-col-btn ${block.col === 'side' ? 'active' : ''}" onclick="setBlockColumn('${id}','side')">Side</button>
+      </div>
+    </div>`;
+  }
+  return colControl + fieldsHtml;
+}
+
+function setBlockColumn(id, col) {
+  const b = blockById(id);
+  if (!b) return;
+  b.col = col;
+  render();
+  selectBlock(id);
+}
+
+// ── Drag-to-reorder: physical pointer-based drag (on canvas) ────
 // Mirrors the homepage demo: the card lifts, follows the cursor,
 // a dashed placeholder marks the drop slot, siblings reflow live,
 // and the canvas auto-scrolls when dragging near its top/bottom edge.
@@ -417,11 +684,14 @@ function onPaperPointerUp(e) {
       Array.from(paper.querySelectorAll('.resume-block')).forEach(el => orderedIds.push(el.dataset.id));
     }
 
+    // BUG FIX: orderedIds can momentarily include an id no longer
+    // present in `blocks` (e.g. block deleted mid-drag) — guard
+    // against pushing `undefined` into the array.
     blocks = orderedIds.map(id => {
       const b = blockById(id);
       if (landedCol && b) b.col = colOf[id] || b.col;
       return b;
-    });
+    }).filter(Boolean);
 
     const draggedId = pdDragEl.dataset.id;
     pdDragEl = null;
@@ -476,146 +746,90 @@ function initCanvasDrop() {
   });
 }
 
-// ── Right-hand edit panel ────────────────────────────────────────
-// Selecting a block opens a panel of labeled text inputs / textareas
-// on the right. Typing into them updates the block's data and the
-// preview re-renders immediately — there's no contenteditable on
-// the document itself.
-
-function selectBlock(id) {
-  selectedBlockId = id;
-  highlightSelectedBlock();
-  openPanelFor(id);
-}
-
-function closePanel() {
-  selectedBlockId = null;
-  highlightSelectedBlock();
-  document.getElementById('panelEmpty').style.display = 'flex';
-  document.getElementById('panelContent').style.display = 'none';
-  document.getElementById('panelContent').innerHTML = '';
-}
-
-function panelField(label, inputHtml, extraClass) {
-  return `<div class="pf-field ${extraClass || ''}">
-    <label class="pf-label">${esc(label)}</label>
-    ${inputHtml}
-  </div>`;
-}
-
-function panelInput(value, onInput, placeholder) {
-  return `<input type="text" class="pf-input" value="${esc(value || '')}" placeholder="${esc(placeholder || '')}" oninput="${onInput}" />`;
-}
-
-function panelTextarea(value, onInput, placeholder, rows) {
-  return `<textarea class="pf-textarea" rows="${rows || 3}" placeholder="${esc(placeholder || '')}" oninput="${onInput}">${esc(value || '')}</textarea>`;
-}
-
-function openPanelFor(id) {
-  const block = blockById(id);
-  if (!block) { closePanel(); return; }
-
-  document.getElementById('panelEmpty').style.display = 'none';
-  const panel = document.getElementById('panelContent');
-  panel.style.display = 'flex';
-
-  const typeLabels = {
-    header: '👤 Name / Header', section: '📌 Section Title', experience: '💼 Experience',
-    education: '🎓 Education', skills: '⚡ Skills', text: '📝 Text Block',
-    links: '🔗 Links', spacer: '↕️ Spacer',
-  };
-
-  let fieldsHtml = '';
-  const d = block.data;
-
-  switch (block.type) {
-    case 'header':
-      fieldsHtml += panelField('Full name', panelInput(d.name, `save('${id}','name',this.value)`, 'Your Full Name'));
-      fieldsHtml += panelField('Contact line', panelInput(d.contact, `save('${id}','contact',this.value)`, 'email · phone · city'));
-      break;
-    case 'section':
-      fieldsHtml += panelField('Section title', panelInput(d.title, `save('${id}','title',this.value)`, 'Experience'));
-      break;
-    case 'experience':
-      fieldsHtml += panelField('Company', panelInput(d.company, `save('${id}','company',this.value)`, 'Company Name'));
-      fieldsHtml += panelField('Dates', panelInput(d.dates, `save('${id}','dates',this.value)`, '2024 – Present'));
-      fieldsHtml += panelField('Role / title', panelInput(d.role, `save('${id}','role',this.value)`, 'Your Role'));
-      fieldsHtml += panelField('Location', panelInput(d.location, `save('${id}','location',this.value)`, 'City, PH'));
-      fieldsHtml += `<div class="pf-field"><label class="pf-label">Bullet points</label>
-        <div class="pf-bullet-list">
-          ${(d.bullets || []).map((bl, bi) => `
-            <div class="pf-bullet-row">
-              <textarea class="pf-textarea pf-textarea-sm" rows="2" oninput="saveBullet('${id}',${bi},this.value)">${esc(bl)}</textarea>
-              <button class="pf-remove-btn" title="Remove bullet" onclick="removeBullet('${id}',${bi})">✕</button>
-            </div>`).join('')}
-        </div>
-        <button class="pf-add-btn" onclick="addBullet('${id}')">+ Add bullet</button>
-      </div>`;
-      break;
-    case 'education':
-      fieldsHtml += panelField('School', panelInput(d.school, `save('${id}','school',this.value)`, 'University Name'));
-      fieldsHtml += panelField('Degree', panelInput(d.degree, `save('${id}','degree',this.value)`, 'Degree & Major'));
-      fieldsHtml += panelField('Location', panelInput(d.location, `save('${id}','location',this.value)`, 'City'));
-      fieldsHtml += panelField('Year', panelInput(d.year, `save('${id}','year',this.value)`, '2024'));
-      fieldsHtml += panelField('GPA / honors', panelInput(d.gpa, `save('${id}','gpa',this.value)`, 'GPA: 1.50'));
-      break;
-    case 'skills':
-      fieldsHtml += panelField('Skills (comma-separated)', panelTextarea(d.items, `save('${id}','items',this.value)`, 'JavaScript, React, Node.js', 3));
-      break;
-    case 'text':
-      fieldsHtml += panelField('Content', panelTextarea(d.content, `save('${id}','content',this.value)`, 'Type your text here.', 5));
-      break;
-    case 'links':
-      fieldsHtml += `<div class="pf-field"><label class="pf-label">Links</label>
-        <div class="pf-bullet-list">
-          ${(d.links || []).map((lk, li) => `
-            <div class="pf-bullet-row">
-              <input type="text" class="pf-input" value="${esc(lk)}" oninput="saveLink('${id}',${li},this.value)" />
-              <button class="pf-remove-btn" title="Remove link" onclick="removeLink('${id}',${li})">✕</button>
-            </div>`).join('')}
-        </div>
-        <button class="pf-add-btn" onclick="addLink('${id}')">+ Add link</button>
-      </div>`;
-      break;
-    case 'spacer':
-      fieldsHtml += `<p class="pf-hint">A spacer just adds vertical space — nothing to edit here.</p>`;
-      break;
-  }
-
-  let colControl = '';
-  if (columnLayout !== '1') {
-    colControl = `<div class="pf-field">
-      <label class="pf-label">Column</label>
-      <div class="pf-col-toggle">
-        <button class="pf-col-btn ${block.col !== 'side' ? 'active' : ''}" onclick="setBlockColumn('${id}','main')">Main</button>
-        <button class="pf-col-btn ${block.col === 'side' ? 'active' : ''}" onclick="setBlockColumn('${id}','side')">Side</button>
-      </div>
-    </div>`;
-  }
-
-  panel.innerHTML = `
-    <div class="pf-header">
-      <span class="pf-type-label">${typeLabels[block.type] || block.type}</span>
-      <button class="bc-btn del" title="Close" onclick="closePanel()">✕</button>
-    </div>
-    ${colControl}
-    ${fieldsHtml}
-  `;
-}
-
-function setBlockColumn(id, col) {
-  const b = blockById(id);
-  if (!b) return;
-  b.col = col;
-  render();
-  openPanelFor(id);
-}
-
 // ── Toolbar ────────────────────────────────────────────────────
 function toggleGuides(on) { document.getElementById('resumePaper').classList.toggle('show-guides', on); }
 function toggleDarkPaper(on) { document.getElementById('canvasWrap').classList.toggle('dark-canvas', on); }
 function downloadPDF() { window.print(); }
-function downloadDOCX() { alert('Word export coming soon.'); }
+
+// ── Pagination (preview footer) ─────────────────────────────────
+// Single continuous canvas today; the nav UI is wired and ready for
+// real multi-page support, but with one page we keep Prev/Next disabled
+// instead of leaving them clickable-but-broken (that was the bug).
+let currentPage = 1, totalPages = 1;
+function pageNav(dir) {
+  const next = currentPage + dir;
+  if (next < 1 || next > totalPages) return;
+  currentPage = next;
+  updatePageIndicator();
+}
+function updatePageIndicator() {
+  document.getElementById('pageIndicator').textContent = `${currentPage} / ${totalPages}`;
+}
+
+// ── Customize: Template & Colors ─────────────────────────────────
+function setMainColor(hex) {
+  document.getElementById('resumePaper').style.setProperty('--resume-accent', hex);
+  document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s.dataset.color.toLowerCase() === hex.toLowerCase()));
+}
+
+function setTemplate(name) {
+  const paper = document.getElementById('resumePaper');
+  paper.dataset.template = name;
+  document.querySelectorAll('.template-card').forEach(c => c.classList.toggle('active', c.dataset.template === name));
+}
+
+// ── Customize: Text ───────────────────────────────────────────
+function setPrimaryFont(value) {
+  document.getElementById('resumePaper').style.setProperty('--resume-font', value);
+}
+function setLineHeight(pct) {
+  document.getElementById('resumePaper').style.setProperty('--resume-line-height', (pct / 100));
+  document.getElementById('lineHeightVal').textContent = pct + '%';
+}
+function setFontSize(step) {
+  const sizes = ['11px', '12.5px', '14px'];
+  const labels = ['S', 'M', 'L'];
+  document.getElementById('resumePaper').style.setProperty('--resume-font-size', sizes[step]);
+  document.getElementById('fontSizeVal').textContent = labels[step];
+}
+
+// ── Customize: Layout ─────────────────────────────────────────
+function setPageFormat(fmt) {
+  const paper = document.getElementById('resumePaper');
+  paper.style.maxWidth = fmt === 'letter' ? '660px' : '680px';
+}
+function setMargin(which, px) {
+  const paper = document.getElementById('resumePaper');
+  if (which === 'tb') {
+    paper.style.setProperty('--resume-pad-tb', px + 'px');
+    document.getElementById('marginTBVal').textContent = px + 'px';
+  } else {
+    paper.style.setProperty('--resume-pad-lr', px + 'px');
+    document.getElementById('marginLRVal').textContent = px + 'px';
+  }
+}
+function setSpacing(which, px) {
+  const paper = document.getElementById('resumePaper');
+  if (which === 'section') {
+    paper.style.setProperty('--resume-gap-section', px + 'px');
+    document.getElementById('gapSectionVal').textContent = px + 'px';
+  } else {
+    paper.style.setProperty('--resume-gap-block', px + 'px');
+    document.getElementById('gapBlockVal').textContent = px + 'px';
+  }
+}
+function setHeaderAlign(val) {
+  document.getElementById('resumePaper').dataset.headerAlign = val;
+  document.querySelectorAll('#ctab-layout .align-toggle')[0].querySelectorAll('.align-btn').forEach(b => b.classList.toggle('active', b.dataset.val === val));
+}
+function setDateAlign(val) {
+  document.getElementById('resumePaper').dataset.dateAlign = val;
+  document.querySelectorAll('#ctab-layout .align-toggle')[1].querySelectorAll('.align-btn').forEach(b => b.classList.toggle('active', b.dataset.val === val));
+}
+function setSkillsLayout(val) {
+  document.getElementById('resumePaper').dataset.skillsLayout = val;
+  document.querySelectorAll('#ctab-layout .align-toggle')[2].querySelectorAll('.align-btn').forEach(b => b.classList.toggle('active', b.dataset.val === val));
+}
 
 // ── Portfolio builder ──────────────────────────────────────────
 const PORTFOLIO_THEMES = {
@@ -734,17 +948,14 @@ let selectedTheme = 'minimal';
 
 function buildPortfolioHTML(theme) {
   const t = PORTFOLIO_THEMES[theme];
-  let heroName = 'Your Name', heroContact = '';
+  const heroName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'Your Name';
+  const heroContact = [contactLine(), profile.jobTitle].filter(Boolean).join('  ·  ');
   const sections = [];
   let currentSection = null;
 
   blocks.forEach(block => {
     const d = block.data;
     switch (block.type) {
-      case 'header':
-        heroName = d.name || heroName;
-        heroContact = d.contact || '';
-        break;
       case 'section':
         if (currentSection) sections.push(currentSection);
         currentSection = { title: d.title, items: [] };
@@ -857,7 +1068,7 @@ function downloadPortfolio() {
   const blob = new Blob([html], { type: 'text/html' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  const name = (blocks.find(b => b.type === 'header')?.data?.name || 'portfolio').replace(/\s+/g,'-').toLowerCase();
+  const name = (`${profile.firstName} ${profile.lastName}`.trim() || 'portfolio').replace(/\s+/g,'-').toLowerCase();
   a.download = `${name}-portfolio.html`;
   a.click();
 }
@@ -884,11 +1095,20 @@ function publishToShowcase() {
 
 // ── Init ───────────────────────────────────────────────────────
 render();
+syncPersonalDetailsForm();
 initBlockDrag();
 initPaletteDrag();
 initCanvasDrop();
+updatePageIndicator();
 
 // Click outside any block (but inside the canvas) deselects.
+// BUG FIX: this used to only fire when the click landed exactly on
+// the canvas wrapper, so clicking the empty-state hint or paper
+// background never closed the open field editor.
 document.getElementById('canvasWrap').addEventListener('click', (e) => {
-  if (e.target.id === 'canvasWrap') closePanel();
+  if (!e.target.closest('.resume-block')) {
+    selectedBlockId = null;
+    highlightSelectedBlock();
+    renderSectionsList();
+  }
 });

@@ -697,3 +697,176 @@ body {
   .resume-paper { box-shadow: none; width: 100%; max-width: 100%; }
   .resume-block.block-selected { outline: none; }
 }
+
+/* ============================================================
+   REDESIGN ADD-ONS — Edit / Customize tabs, Personal Details,
+   Sections accordion, Customize panes, paginated preview.
+   ============================================================ */
+
+/* Mode tabs (Edit / Customize) in toolbar */
+.mode-tabs {
+  display: flex;
+  background: var(--color-surface-alt);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 3px;
+  gap: 2px;
+}
+.mode-tab {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.35rem 1.1rem;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  border-radius: calc(var(--radius-lg) - 2px);
+  cursor: pointer;
+}
+.mode-tab.active { background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow); }
+
+.editor-sidebar { width: 380px; }
+
+.mode-panel { display: flex; flex-direction: column; gap: 1.25rem; }
+
+/* Score bar */
+.score-bar { display: flex; flex-direction: column; gap: 0.5rem; }
+.score-bar-top { display: flex; align-items: center; gap: 0.5rem; }
+.score-badge {
+  background: var(--color-primary); color: var(--color-primary-contrast);
+  font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 100px;
+}
+.score-label { font-size: 0.78rem; color: var(--color-text-muted); flex: 1; }
+.score-tip { font-size: 0.7rem; color: var(--color-accent); font-weight: 600; }
+.score-track { height: 6px; background: var(--color-surface-alt); border-radius: 100px; overflow: hidden; }
+.score-fill { height: 100%; background: var(--color-primary); border-radius: 100px; transition: width 0.2s; }
+
+/* Personal details */
+.pd-photo-row { display: flex; align-items: center; gap: 0.75rem; margin: 0.25rem 0; }
+.pd-photo-box {
+  width: 56px; height: 56px; border-radius: var(--radius-lg);
+  background: var(--color-surface-alt); border: 1.5px solid var(--color-border);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  overflow: hidden; flex-shrink: 0; font-size: 1.4rem;
+}
+.pd-photo-box img { width: 100%; height: 100%; object-fit: cover; }
+.link-btn { background: none; border: 0; color: var(--color-secondary); font-size: 0.8rem; font-weight: 600; cursor: pointer; padding: 0; }
+.link-btn:hover { text-decoration: underline; }
+.pd-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+
+/* Sections accordion list */
+.sections-list { display: flex; flex-direction: column; gap: 0.4rem; }
+.section-row {
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+.section-row-head {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.5rem 0.6rem; cursor: pointer; user-select: none;
+}
+.section-row-head:hover { background: var(--color-surface-alt); }
+.section-row.expanded .section-row-head { background: var(--color-surface-alt); border-bottom: 1.5px solid var(--color-border); }
+.section-row-grip { cursor: grab; color: var(--color-text-muted); font-size: 0.95rem; }
+.section-row-grip:active { cursor: grabbing; }
+.section-row-title { flex: 1; font-size: 0.82rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.section-row-icon { font-size: 0.85rem; }
+.section-row-actions { display: flex; gap: 0.2rem; }
+.section-row-body { padding: 0.75rem 0.6rem; display: flex; flex-direction: column; gap: 0.75rem; }
+.section-row.dragging { opacity: 0.35; }
+.section-row-placeholder { height: 38px; border: 1.5px dashed var(--color-primary); border-radius: var(--radius-lg); background: rgba(255,51,102,0.06); }
+
+/* Customize tabs */
+.customize-tabs { display: flex; border-bottom: 1.5px solid var(--color-border); margin-bottom: 1rem; }
+.customize-tab {
+  flex: 1; background: none; border: 0; padding: 0.6rem 0.3rem; font-size: 0.8rem; font-weight: 600;
+  color: var(--color-text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1.5px;
+}
+.customize-tab.active { color: var(--color-text); border-bottom-color: var(--color-primary); }
+.customize-pane { display: flex; flex-direction: column; gap: 0.4rem; }
+
+/* Color swatches */
+.color-swatches { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.5rem 0; }
+.swatch {
+  width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent;
+  cursor: pointer; position: relative;
+}
+.swatch.active { border-color: var(--color-text); box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 3px var(--color-text); }
+.swatch.active::after { content: '✓'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.8rem; }
+
+/* Template grid */
+.template-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-top: 0.5rem; }
+.template-card { cursor: pointer; text-align: center; font-size: 0.72rem; color: var(--color-text-muted); }
+.template-card span { display: block; margin-top: 0.3rem; }
+.template-card.active span { color: var(--color-text); font-weight: 700; }
+.template-thumb {
+  height: 80px; border-radius: var(--radius-lg); border: 1.5px solid var(--color-border);
+  background: #fff; position: relative; overflow: hidden;
+}
+.template-card.active .template-thumb { box-shadow: 0 0 0 2px var(--color-primary); }
+.tpl-classic::before { content:''; position:absolute; top:8px; left:10px; right:10px; height:6px; background:#222; }
+.tpl-professional { background: #0f2f28; }
+.tpl-professional::before { content:''; position:absolute; top:10px; left:8px; width:30px; height:30px; border-radius:50%; background:#fff3; }
+.tpl-prime::before { content:''; position:absolute; top:8px; left:10px; right:40px; height:6px; background:#2F6FED; }
+.tpl-prime::after { content:''; position:absolute; top:8px; right:10px; width:22px; height:22px; border-radius:50%; background:#ddd; }
+.tpl-clean::before { content:''; position:absolute; top:10px; left:10px; right:10px; height:4px; background:#2F6FED; }
+
+/* Sliders */
+.slider-row { display: flex; align-items: center; gap: 0.6rem; margin: 0.4rem 0; }
+.slider-row input[type="range"] { flex: 1; accent-color: var(--color-primary); }
+.slider-val {
+  font-size: 0.75rem; font-weight: 700; background: var(--color-surface-alt);
+  padding: 0.2rem 0.5rem; border-radius: var(--radius-lg); min-width: 2.4rem; text-align: center;
+}
+.layout-slider { display: flex; flex-direction: column; gap: 0.3rem; margin: 0.5rem 0; }
+.layout-slider label { font-size: 0.75rem; color: var(--color-text-muted); display: flex; justify-content: space-between; }
+.layout-slider input[type="range"] { accent-color: var(--color-primary); width: 100%; }
+
+/* Alignment toggle buttons */
+.align-toggle { display: flex; gap: 0.4rem; margin-top: 0.4rem; }
+.align-btn {
+  flex: 1; font-size: 0.75rem; font-weight: 600; padding: 0.4rem 0.4rem;
+  border: 1.5px solid var(--color-border); background: var(--color-surface);
+  border-radius: var(--radius-lg); cursor: pointer; color: var(--color-text-muted);
+}
+.align-btn.active { background: var(--color-primary); color: var(--color-primary-contrast); border-color: var(--color-primary); }
+
+/* Canvas / page nav */
+.editor-canvas { position: relative; }
+.page-nav {
+  position: sticky; bottom: 1rem; margin-top: 1rem;
+  align-self: center; display: flex; align-items: center; gap: 0.75rem;
+  background: #1A1A1A; color: #fff; padding: 0.4rem 0.6rem; border-radius: 100px;
+  font-size: 0.8rem; font-weight: 600;
+}
+.page-nav-btn { background: none; border: 0; color: #fff; cursor: pointer; font-size: 1rem; width: 22px; }
+.page-nav-btn:disabled { opacity: 0.35; cursor: default; }
+
+/* Resume paper now driven by CSS custom properties set from Customize tab */
+.resume-paper {
+  font-family: var(--resume-font, var(--font-sans));
+  font-size: var(--resume-font-size, 12px);
+  line-height: var(--resume-line-height, 1.0);
+  padding: var(--resume-pad-tb, 48px) var(--resume-pad-lr, 48px) !important;
+}
+.resume-paper .rb-section-title,
+.resume-paper .rb-company,
+.resume-paper .rb-edu-school { color: var(--resume-accent, inherit); }
+.col-track { gap: var(--resume-gap-section, 18px) !important; }
+.resume-block { margin-bottom: var(--resume-gap-block, 10px); }
+.resume-paper[data-header-align="center"] .rb-header { text-align: center; }
+.resume-paper[data-header-align="right"] .rb-header { text-align: right; }
+.resume-paper[data-date-align="left"] .rb-dates,
+.resume-paper[data-date-align="left"] .rb-loc { text-align: left; }
+.resume-paper[data-skills-layout="columns"] .rb-skills-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.resume-paper[data-skills-layout="columns"] .rb-skills-list .rb-skill-tag {
+  border: 1px solid var(--resume-accent, #ccc); border-radius: 100px; padding: 2px 9px; font-size: 10.5px;
+}
+
+@media print { .page-nav { display: none !important; } }
+
+/* Header extras: photo + job title (added with the Personal Details rework) */
+.rb-photo { display: block; width: 64px; height: 64px; border-radius: 50%; object-fit: cover; margin: 0 auto 6px; }
+.rb-job-title { display: block; font-size: 12px; color: #555; margin-top: 2px; }
+.rb-skill-tag { }
