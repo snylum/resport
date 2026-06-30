@@ -493,10 +493,23 @@ function setBlockColumn(id, col) {
 }
 
 // ── Drag-to-reorder: Sections list (left sidebar) ───────────────
-let srDragEl = null, srPlaceholder = null, srOffsetY = 0;
+let srDragEl = null, srPlaceholder = null, srOffsetY = 0, srSuppressClick = false;
 
 function initSectionsDrag() {
-  document.getElementById('sectionsList').addEventListener('pointerdown', (e) => {
+  const host = document.getElementById('sectionsList');
+
+  // A click can fire right after a drag-release in some browsers;
+  // swallow exactly one of those so it doesn't toggle/collapse the
+  // row we just dropped (which used to make reordering look broken).
+  host.addEventListener('click', (e) => {
+    if (srSuppressClick) {
+      e.stopPropagation();
+      e.preventDefault();
+      srSuppressClick = false;
+    }
+  }, true);
+
+  host.addEventListener('pointerdown', (e) => {
     const grip = e.target.closest('.section-row-grip');
     const row = e.target.closest('.section-row');
     if (!grip || !row) return;
@@ -508,6 +521,7 @@ function initSectionsDrag() {
 
     srPlaceholder = document.createElement('div');
     srPlaceholder.className = 'section-row-placeholder';
+    srPlaceholder.style.height = rect.height + 'px';
     row.after(srPlaceholder);
 
     row.classList.add('dragging');
@@ -566,6 +580,7 @@ function onSectionsPointerUp() {
 
   srDragEl = null;
   srPlaceholder = null;
+  srSuppressClick = true;
   render();
 }
 
@@ -922,7 +937,7 @@ function initSidebarResizer() {
   const sidebar = document.getElementById('sidebar');
   if (!resizer || !sidebar) return;
 
-  const MIN = 260, MAX = 560;
+  const MIN = 280, MAX = 440;
   const saved = localStorage.getItem('editorSidebarWidth');
   if (saved) sidebar.style.width = Math.min(MAX, Math.max(MIN, parseInt(saved))) + 'px';
 
@@ -934,7 +949,8 @@ function initSidebarResizer() {
     const onMove = (ev) => {
       const layoutLeft = sidebar.getBoundingClientRect().left;
       let w = ev.clientX - layoutLeft;
-      w = Math.min(MAX, Math.max(MIN, w));
+      const viewportCap = window.innerWidth * 0.4;
+      w = Math.min(MAX, viewportCap, Math.max(MIN, w));
       sidebar.style.width = w + 'px';
     };
     const onUp = () => {
