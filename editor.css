@@ -386,3 +386,100 @@ body {
   .resume-paper { padding: 24px 18px; }
   .block-controls { display: none; }
 }
+
+/* ── Drag-to-reorder enhancements ────────────────────────────── */
+.resume-block.drag-over-top    { box-shadow: 0 -3px 0 0 #FF3366; }
+.resume-block.drag-over-bottom { box-shadow: 0 3px 0 0 #FF3366; }
+.resume-block.is-dragging { opacity: 0.25; background: rgba(255,51,102,0.03); }
+
+.bc-drag-handle {
+  width: 30px; height: 30px;
+  border: 1.5px solid var(--color-border);
+  background: white;
+  border-radius: 4px;
+  cursor: grab;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  margin-bottom: 2px;
+  user-select: none;
+}
+.bc-drag-handle:hover { background: #f0f0ff; color: var(--color-secondary); border-color: var(--color-secondary); cursor: grab; }
+.bc-drag-handle:active { cursor: grabbing; }
+.bc-btn.del:hover { background: #fff0f0; color: #e00; border-color: #e00; }
+
+/* ── Portfolio modal ─────────────────────────────────────────── */
+.modal-box-wide {
+  width: 880px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.25rem;
+}
+
+.theme-picker {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.theme-card {
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.1s;
+}
+
+.theme-card:hover { box-shadow: var(--shadow); transform: translateY(-2px); }
+.theme-card.theme-selected { border-color: var(--color-primary); box-shadow: 0 0 0 2px rgba(255,51,102,0.2); }
+
+.theme-swatch {
+  height: 72px;
+}
+.theme-swatch-minimal { background: #fff; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: center; }
+.theme-swatch-minimal::after { content: 'Aa'; font-family: Georgia, serif; font-size: 1.8rem; color: #111; }
+.theme-swatch-bold { background: #0a0a0a; display: flex; align-items: center; justify-content: center; }
+.theme-swatch-bold::after { content: 'Aa'; font-family: sans-serif; font-size: 1.8rem; font-weight: 900; background: linear-gradient(135deg,#FF3366,#7C4DFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.theme-swatch-warm { background: #FDF6EE; display: flex; align-items: center; justify-content: center; }
+.theme-swatch-warm::after { content: 'Aa'; font-family: Georgia, serif; font-size: 1.8rem; color: #8B4513; }
+.theme-swatch-neon { background: #050510; display: flex; align-items: center; justify-content: center; }
+.theme-swatch-neon::after { content: 'Aa'; font-family: monospace; font-size: 1.8rem; color: #00E5B0; }
+
+.theme-info {
+  padding: 0.6rem 0.75rem;
+  background: var(--color-surface);
+}
+.theme-info strong { font-size: 0.8rem; font-weight: 700; display: block; }
+.theme-info span { font-size: 0.7rem; color: var(--color-text-muted); }
+
+.portfolio-preview-wrap {
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: #fff;
+}
+
+.portfolio-preview-frame {
+  width: 100%;
+  height: 420px;
+  border: none;
+  display: block;
+  transform-origin: top left;
+}
+
+@media print {
+  .editor-toolbar, .editor-sidebar, .block-controls { display: none !important; }
+  .editor-layout { display: block; overflow: visible; }
+  .editor-canvas { padding: 0; background: none; overflow: visible; }
+  .resume-paper { box-shadow: none; width: 100%; max-width: 100%; }
+}

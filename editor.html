@@ -15,131 +15,113 @@
     <a href="index.html" class="nav-logo">
       <span class="logo-dot"></span>résumé
     </a>
-
     <div class="toolbar-center">
       <span class="toolbar-filename" id="resumeTitle" contenteditable="true" spellcheck="false">Untitled résumé</span>
     </div>
-
     <div class="toolbar-actions">
       <button class="btn btn-ghost btn-sm" onclick="downloadPDF()">⬇ PDF</button>
-      <button class="btn btn-ghost btn-sm" onclick="downloadDOCX()">⬇ Word</button>
-      <button class="btn btn-primary btn-sm" onclick="openShowcaseModal()">🌐 Publish</button>
+      <button class="btn btn-ghost btn-sm" onclick="openPortfolioModal()">🌐 Portfolio</button>
+      <button class="btn btn-primary btn-sm" onclick="openShowcaseModal()">✦ Publish</button>
     </div>
   </header>
 
   <!-- MAIN LAYOUT -->
   <div class="editor-layout">
 
-    <!-- LEFT SIDEBAR: block palette -->
+    <!-- LEFT SIDEBAR -->
     <aside class="editor-sidebar" id="sidebar">
       <div class="sidebar-section">
         <p class="sidebar-label">Drag to add</p>
         <div class="block-palette">
-          <div class="palette-chip" draggable="true" data-block-type="header">
-            <span class="chip-grip">⠿</span>
-            <span class="chip-icon">👤</span>
-            <span>Name / Header</span>
-          </div>
-          <div class="palette-chip" draggable="true" data-block-type="section">
-            <span class="chip-grip">⠿</span>
-            <span class="chip-icon">📌</span>
-            <span>Section Title</span>
-          </div>
-          <div class="palette-chip" draggable="true" data-block-type="experience">
-            <span class="chip-grip">⠿</span>
-            <span class="chip-icon">💼</span>
-            <span>Experience</span>
-          </div>
-          <div class="palette-chip" draggable="true" data-block-type="education">
-            <span class="chip-grip">⠿</span>
-            <span class="chip-icon">🎓</span>
-            <span>Education</span>
-          </div>
-          <div class="palette-chip" draggable="true" data-block-type="skills">
-            <span class="chip-grip">⠿</span>
-            <span class="chip-icon">⚡</span>
-            <span>Skills</span>
-          </div>
-          <div class="palette-chip" draggable="true" data-block-type="text">
-            <span class="chip-grip">⠿</span>
-            <span class="chip-icon">📝</span>
-            <span>Text Block</span>
-          </div>
-          <div class="palette-chip" draggable="true" data-block-type="links">
-            <span class="chip-grip">⠿</span>
-            <span class="chip-icon">🔗</span>
-            <span>Links</span>
-          </div>
-          <div class="palette-chip" draggable="true" data-block-type="spacer">
-            <span class="chip-grip">⠿</span>
-            <span class="chip-icon">↕️</span>
-            <span>Spacer</span>
-          </div>
+          <div class="palette-chip" draggable="true" data-block-type="header"><span class="chip-grip">⠿</span><span class="chip-icon">👤</span><span>Name / Header</span></div>
+          <div class="palette-chip" draggable="true" data-block-type="section"><span class="chip-grip">⠿</span><span class="chip-icon">📌</span><span>Section Title</span></div>
+          <div class="palette-chip" draggable="true" data-block-type="experience"><span class="chip-grip">⠿</span><span class="chip-icon">💼</span><span>Experience</span></div>
+          <div class="palette-chip" draggable="true" data-block-type="education"><span class="chip-grip">⠿</span><span class="chip-icon">🎓</span><span>Education</span></div>
+          <div class="palette-chip" draggable="true" data-block-type="skills"><span class="chip-grip">⠿</span><span class="chip-icon">⚡</span><span>Skills</span></div>
+          <div class="palette-chip" draggable="true" data-block-type="text"><span class="chip-grip">⠿</span><span class="chip-icon">📝</span><span>Text Block</span></div>
+          <div class="palette-chip" draggable="true" data-block-type="links"><span class="chip-grip">⠿</span><span class="chip-icon">🔗</span><span>Links</span></div>
+          <div class="palette-chip" draggable="true" data-block-type="spacer"><span class="chip-grip">⠿</span><span class="chip-icon">↕️</span><span>Spacer</span></div>
         </div>
       </div>
 
       <div class="sidebar-section">
         <p class="sidebar-label">Settings</p>
-        <label class="sidebar-toggle">
-          <input type="checkbox" id="showGuides" onchange="toggleGuides(this.checked)" />
-          <span>Block guides</span>
-        </label>
-        <label class="sidebar-toggle">
-          <input type="checkbox" id="darkPaper" onchange="toggleDarkPaper(this.checked)" />
-          <span>Dark canvas</span>
-        </label>
+        <label class="sidebar-toggle"><input type="checkbox" id="showGuides" onchange="toggleGuides(this.checked)" /><span>Block guides</span></label>
+        <label class="sidebar-toggle"><input type="checkbox" id="darkPaper" onchange="toggleDarkPaper(this.checked)" /><span>Dark canvas</span></label>
       </div>
 
       <div class="sidebar-section sidebar-tip">
-        <p>💡 <strong>Tip:</strong> Drag blocks from here onto the résumé, or use the ↑↓ handles to reorder.</p>
+        <p>💡 <strong>Tip:</strong> Drag blocks on the canvas to reorder them. Use ↑↓ buttons too.</p>
       </div>
     </aside>
 
     <!-- CANVAS -->
     <main class="editor-canvas" id="canvasWrap">
-      <div class="resume-paper" id="resumePaper">
-        <!-- blocks rendered by JS -->
-      </div>
+      <div class="resume-paper" id="resumePaper" style="position:relative"></div>
     </main>
 
   </div>
 
-  <!-- SHOWCASE PUBLISH MODAL -->
+  <!-- PORTFOLIO MODAL -->
+  <div class="modal-overlay" id="portfolioModal" style="display:none" onclick="closePortfolioModal(event)">
+    <div class="modal-box modal-box-wide">
+      <div class="modal-header">
+        <div>
+          <h2>Portfolio Website</h2>
+          <p class="modal-sub">Your résumé, auto-converted into a personal website. Pick a theme and download.</p>
+        </div>
+        <button class="bc-btn del" onclick="closePortfolioModal()" style="width:32px;height:32px;font-size:16px">✕</button>
+      </div>
+
+      <div class="theme-picker">
+        <div class="theme-card theme-selected" data-theme="minimal" onclick="selectTheme('minimal')">
+          <div class="theme-swatch theme-swatch-minimal"></div>
+          <div class="theme-info"><strong>Minimal</strong><span>Clean, typographic</span></div>
+        </div>
+        <div class="theme-card" data-theme="bold" onclick="selectTheme('bold')">
+          <div class="theme-swatch theme-swatch-bold"></div>
+          <div class="theme-info"><strong>Bold</strong><span>Editorial, dark</span></div>
+        </div>
+        <div class="theme-card" data-theme="warm" onclick="selectTheme('warm')">
+          <div class="theme-swatch theme-swatch-warm"></div>
+          <div class="theme-info"><strong>Warm</strong><span>Earthy, approachable</span></div>
+        </div>
+        <div class="theme-card" data-theme="neon" onclick="selectTheme('neon')">
+          <div class="theme-swatch theme-swatch-neon"></div>
+          <div class="theme-info"><strong>Neon</strong><span>Tech-forward</span></div>
+        </div>
+      </div>
+
+      <div class="portfolio-preview-wrap">
+        <iframe id="portfolioPreviewFrame" class="portfolio-preview-frame"></iframe>
+      </div>
+
+      <div class="modal-actions" style="margin-top:1rem">
+        <button class="btn btn-ghost btn-sm" onclick="closePortfolioModal()">Cancel</button>
+        <button class="btn btn-gradient btn-sm" onclick="downloadPortfolio()">⬇ Download HTML →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHOWCASE MODAL -->
   <div class="modal-overlay" id="showcaseModal" style="display:none" onclick="closeShowcaseModal(event)">
     <div class="modal-box">
       <h2>Publish to Showcase</h2>
       <p class="modal-sub">Your résumé will appear in the public gallery. Choose what to show.</p>
-
       <div class="modal-fields">
-        <label class="modal-field">
-          <input type="checkbox" id="showPhoto" checked /> Show profile photo
-        </label>
-        <label class="modal-field">
-          <input type="checkbox" id="showFullName" checked /> Show full name
-          <span class="modal-hint">(uncheck to show initials only)</span>
-        </label>
-        <label class="modal-field">
-          <input type="checkbox" id="showLocation" checked /> Show location
-        </label>
-        <label class="modal-field">
-          <input type="checkbox" id="showContact" /> Show contact info
-        </label>
-
+        <label class="modal-field"><input type="checkbox" id="showPhoto" checked /> Show profile photo</label>
+        <label class="modal-field"><input type="checkbox" id="showFullName" checked /> Show full name <span class="modal-hint">(uncheck for initials only)</span></label>
+        <label class="modal-field"><input type="checkbox" id="showLocation" checked /> Show location</label>
+        <label class="modal-field"><input type="checkbox" id="showContact" /> Show contact info</label>
         <div class="modal-category">
           <label for="categorySelect" style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.3rem">Category</label>
           <select id="categorySelect" class="modal-select">
-            <option>Technology</option>
-            <option>Design</option>
-            <option>Marketing</option>
-            <option>Finance</option>
-            <option>Healthcare</option>
-            <option>Education</option>
-            <option>Engineering</option>
-            <option>Other</option>
+            <option>Technology</option><option>Design</option><option>Marketing</option>
+            <option>Finance</option><option>Healthcare</option><option>Education</option>
+            <option>Engineering</option><option>Other</option>
           </select>
         </div>
       </div>
-
       <div class="modal-actions">
         <button class="btn btn-ghost btn-sm" onclick="closeShowcaseModal()">Cancel</button>
         <button class="btn btn-gradient btn-sm" onclick="publishToShowcase()">Publish →</button>
