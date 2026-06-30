@@ -185,30 +185,30 @@
         <button class="btn btn-gradient" onclick="scrollToSlide(4)">See pricing →</button>
       </div>
       <div class="split-right">
-        <!-- Animated block stack -->
-        <div class="block-demo">
-          <div class="demo-block demo-block-1">
+        <!-- Live draggable block demo -->
+        <div class="block-demo" id="liveBlockDemo">
+          <div class="demo-block" draggable="true" data-label="Experience" data-icon="📌">
             <span class="demo-grip">⠿</span>
             <span class="demo-icon">📌</span>
             <span>Experience</span>
           </div>
-          <div class="demo-block demo-block-2">
+          <div class="demo-block" draggable="true" data-label="Education" data-icon="🎓">
             <span class="demo-grip">⠿</span>
             <span class="demo-icon">🎓</span>
             <span>Education</span>
           </div>
-          <div class="demo-block demo-block-3 demo-block-active">
+          <div class="demo-block demo-block-active" draggable="true" data-label="Skills" data-icon="⚡">
             <span class="demo-grip">⠿</span>
             <span class="demo-icon">⚡</span>
             <span>Skills</span>
           </div>
-          <div class="demo-block demo-block-4">
+          <div class="demo-block" draggable="true" data-label="Links" data-icon="🔗">
             <span class="demo-grip">⠿</span>
             <span class="demo-icon">🔗</span>
             <span>Links</span>
           </div>
-          <p class="demo-label">Drag to reorder — your résumé, your rules</p>
         </div>
+        <p class="demo-label" style="text-align:center;margin-top:0.75rem">↕ Try dragging these blocks</p>
       </div>
     </section>
 
@@ -268,5 +268,59 @@
   </div><!-- /#wrapper -->
 
   <script src="home.js"></script>
+  <script>
+  (function() {
+    let dragSrc = null;
+
+    function initDemo() {
+      const demo = document.getElementById('liveBlockDemo');
+      if (!demo) return;
+
+      function getBlocks() { return Array.from(demo.querySelectorAll('.demo-block')); }
+
+      demo.addEventListener('dragstart', function(e) {
+        dragSrc = e.target.closest('.demo-block');
+        if (!dragSrc) return;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', '');
+        setTimeout(() => dragSrc.classList.add('demo-dragging'), 0);
+      });
+
+      demo.addEventListener('dragend', function(e) {
+        getBlocks().forEach(b => b.classList.remove('demo-dragging', 'demo-over-top', 'demo-over-bottom'));
+        dragSrc = null;
+      });
+
+      demo.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        const target = e.target.closest('.demo-block');
+        if (!target || target === dragSrc) return;
+        const rect = target.getBoundingClientRect();
+        const isBefore = e.clientY < rect.top + rect.height / 2;
+        getBlocks().forEach(b => b.classList.remove('demo-over-top', 'demo-over-bottom'));
+        target.classList.add(isBefore ? 'demo-over-top' : 'demo-over-bottom');
+      });
+
+      demo.addEventListener('dragleave', function(e) {
+        const target = e.target.closest('.demo-block');
+        if (target) target.classList.remove('demo-over-top', 'demo-over-bottom');
+      });
+
+      demo.addEventListener('drop', function(e) {
+        e.preventDefault();
+        const target = e.target.closest('.demo-block');
+        if (!target || !dragSrc || target === dragSrc) return;
+        const rect = target.getBoundingClientRect();
+        const isBefore = e.clientY < rect.top + rect.height / 2;
+        getBlocks().forEach(b => b.classList.remove('demo-over-top', 'demo-over-bottom'));
+        if (isBefore) demo.insertBefore(dragSrc, target);
+        else target.after(dragSrc);
+      });
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initDemo);
+    else initDemo();
+  })();
+  </script>
 </body>
 </html>

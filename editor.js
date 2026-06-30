@@ -41,7 +41,7 @@ function render() {
     wrap.className = 'resume-block';
     wrap.dataset.id = block.id;
     wrap.dataset.index = i;
-    wrap.draggable = true;
+    wrap.draggable = false; // enabled dynamically on grip mousedown
 
     wrap.innerHTML = renderBlock(block, i) + renderControls(i);
 
@@ -220,9 +220,18 @@ function initPaletteDrag() {
   });
 }
 
-// Block drag (reorder)
+// Block drag (reorder) — only fires when drag originates from the grip handle
+let gripMousedown = false;
+
+document.addEventListener('mousedown', e => {
+  gripMousedown = !!(e.target.closest('.bc-drag-handle'));
+});
+
 function onBlockDragStart(e) {
-  if (e.target.isContentEditable || e.target.contentEditable === 'true') { e.preventDefault(); return; }
+  if (!gripMousedown || e.target.closest('[contenteditable="true"]')) {
+    e.preventDefault();
+    return;
+  }
   dragSrcType  = 'block';
   dragSrcIndex = parseInt(this.dataset.index);
   e.dataTransfer.effectAllowed = 'move';
@@ -577,3 +586,11 @@ render();
 createDragIndicator();
 initPaletteDrag();
 initCanvasDrop();
+
+// Dynamically toggle draggable so contenteditable children work normally
+document.addEventListener('mousedown', e => {
+  const grip = e.target.closest('.bc-drag-handle');
+  document.querySelectorAll('.resume-block').forEach(b => {
+    b.draggable = !!grip;
+  });
+});

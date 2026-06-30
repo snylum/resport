@@ -432,7 +432,16 @@ body {
   60% { transform: translateY(-8px); }
 }
 
-.demo-grip { color: var(--color-text-muted); }
+/* Live demo drag states */
+.demo-block.demo-dragging { opacity: 0.3; cursor: grabbing; }
+.demo-block.demo-over-top    { box-shadow: 0 -3px 0 0 var(--color-primary), var(--shadow); transform: none; }
+.demo-block.demo-over-bottom { box-shadow: 0 3px 0 0 var(--color-primary), var(--shadow); transform: none; }
+.demo-block { cursor: grab; user-select: none; }
+.demo-block:active { cursor: grabbing; }
+
+/* Kill the float animation now that blocks are interactive */
+.demo-block-active { animation: none !important; }
+
 .demo-icon { font-size: 1rem; }
 
 .demo-label {
