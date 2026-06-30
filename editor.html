@@ -45,13 +45,30 @@
       </div>
 
       <div class="sidebar-section">
+        <p class="sidebar-label">Layout</p>
+        <label class="sidebar-field-label" for="columnLayout">Columns</label>
+        <select id="columnLayout" class="modal-select sidebar-select" onchange="setColumnLayout(this.value)">
+          <option value="1">Single column</option>
+          <option value="2-30">Two columns — narrow sidebar (30%)</option>
+          <option value="2-35">Two columns — sidebar (35%)</option>
+          <option value="2-40">Two columns — wide sidebar (40%)</option>
+        </select>
+        <label class="sidebar-field-label" for="sidebarPosition">Sidebar position</label>
+        <select id="sidebarPosition" class="modal-select sidebar-select" onchange="setSidebarPosition(this.value)">
+          <option value="left">Left</option>
+          <option value="right">Right</option>
+        </select>
+        <p class="sidebar-hint">In two-column mode, assign each block to Main or Side from the edit panel on the right.</p>
+      </div>
+
+      <div class="sidebar-section">
         <p class="sidebar-label">Settings</p>
         <label class="sidebar-toggle"><input type="checkbox" id="showGuides" onchange="toggleGuides(this.checked)" /><span>Block guides</span></label>
         <label class="sidebar-toggle"><input type="checkbox" id="darkPaper" onchange="toggleDarkPaper(this.checked)" /><span>Dark canvas</span></label>
       </div>
 
       <div class="sidebar-section sidebar-tip">
-        <p>💡 <strong>Tip:</strong> Drag blocks on the canvas to reorder them. Use ↑↓ buttons too.</p>
+        <p>💡 <strong>Tip:</strong> Drag blocks on the canvas to reorder. Click a block to edit its text in the panel on the right.</p>
       </div>
     </aside>
 
@@ -59,6 +76,15 @@
     <main class="editor-canvas" id="canvasWrap">
       <div class="resume-paper" id="resumePaper" style="position:relative"></div>
     </main>
+
+    <!-- RIGHT EDIT PANEL -->
+    <aside class="editor-panel" id="editPanel">
+      <div class="panel-empty" id="panelEmpty">
+        <p class="panel-empty-icon">✎</p>
+        <p>Select a block on the résumé to edit its content here.</p>
+      </div>
+      <div class="panel-content" id="panelContent" style="display:none"></div>
+    </aside>
 
   </div>
 

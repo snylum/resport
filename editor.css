@@ -52,6 +52,27 @@ body {
   overflow: hidden;
 }
 
+/* ── Sidebar layout controls (select, hints) ────────────────── */
+.sidebar-field-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-top: 0.25rem;
+}
+
+.sidebar-select {
+  width: 100%;
+  font-size: 0.78rem;
+  padding: 0.4rem 0.6rem;
+}
+
+.sidebar-hint {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin-top: 0.25rem;
+}
+
 /* ── Sidebar ─────────────────────────────────────────────── */
 .editor-sidebar {
   width: 220px;
@@ -145,6 +166,154 @@ body {
 
 .editor-canvas.dark-canvas { background: #2a2a2a; }
 
+/* ── Right edit panel ────────────────────────────────────── */
+.editor-panel {
+  width: 300px;
+  flex-shrink: 0;
+  background: var(--color-surface);
+  border-left: 2px solid var(--color-border);
+  overflow-y: auto;
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  gap: 0.5rem;
+  padding: 2rem 1rem;
+  line-height: 1.5;
+}
+
+.panel-empty-icon {
+  font-size: 1.5rem;
+  opacity: 0.4;
+}
+
+.panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pf-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.pf-type-label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.pf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.pf-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.pf-input, .pf-textarea {
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  padding: 0.5rem 0.6rem;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+  outline: none;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.pf-input:focus, .pf-textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(255,51,102,0.15);
+}
+
+.pf-textarea-sm { font-size: 0.8rem; }
+
+.pf-bullet-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.pf-bullet-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: flex-start;
+}
+
+.pf-bullet-row .pf-input,
+.pf-bullet-row .pf-textarea { flex: 1; }
+
+.pf-remove-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: 4px;
+  cursor: pointer;
+  color: #999;
+  font-size: 11px;
+}
+
+.pf-remove-btn:hover { background: #fff0f0; color: #e00; border-color: #e00; }
+
+.pf-add-btn {
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  background: none;
+  border: 1px dashed var(--color-border);
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+  border-radius: var(--radius-lg);
+  color: var(--color-text-muted);
+  font-family: inherit;
+  width: 100%;
+}
+
+.pf-add-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+.pf-hint { font-size: 0.8rem; color: var(--color-text-muted); line-height: 1.5; }
+
+.pf-col-toggle { display: flex; gap: 0.4rem; }
+
+.pf-col-btn {
+  flex: 1;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.45rem 0.5rem;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  color: var(--color-text-muted);
+}
+
+.pf-col-btn.active {
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  border-color: var(--color-primary);
+}
+
 /* Drop zone hint when canvas is empty */
 .canvas-hint {
   width: 680px;
@@ -188,13 +357,46 @@ body {
 
 .resume-paper.show-guides .resume-block { outline: 1px dashed rgba(255,51,102,0.3); }
 
+/* Two-column layout: a flex row of two .col-track containers,
+   each holding its own ordered list of .resume-block elements. */
+.col-wrap {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+}
+
+.col-track {
+  display: flex;
+  flex-direction: column;
+  min-height: 60px;
+}
+
+.col-track.col-main { flex: 1; min-width: 0; }
+.col-track.col-side { flex: 0 0 var(--side-width, 32%); min-width: 0; }
+
+.resume-paper.is-two-col .col-track {
+  min-height: 120px;
+}
+
+.resume-paper.show-guides .col-track {
+  outline: 1px dotted rgba(124,77,255,0.35);
+  outline-offset: 4px;
+}
+
 /* ── Resume block wrapper ────────────────────────────────── */
 .resume-block {
   position: relative;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s, transform 0.12s ease;
+  cursor: pointer;
+  border-radius: 4px;
 }
 
 .resume-block.is-dragging { opacity: 0.3; }
+
+.resume-block.block-selected {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
 
 /* Block controls (appear on hover) */
 .block-controls {
@@ -208,7 +410,8 @@ body {
   transition: opacity 0.15s;
 }
 
-.resume-block:hover > .block-controls { opacity: 1; }
+.resume-block:hover > .block-controls,
+.resume-block.block-selected > .block-controls { opacity: 1; }
 
 .bc-btn {
   width: 30px; height: 30px;
@@ -226,8 +429,12 @@ body {
 
 .bc-btn:hover { background: #fff0f3; color: var(--color-primary); border-color: var(--color-primary); }
 .bc-btn.move:hover { background: #f0f0ff; color: var(--color-secondary); border-color: var(--color-secondary); }
+.bc-btn.col { color: var(--color-secondary); }
+.bc-btn.col:hover { background: #f0f0ff; border-color: var(--color-secondary); }
+.bc-btn.col.active { background: var(--color-secondary); color: #fff; }
 
 /* ── Block styles (résumé typography) ───────────────────── */
+
 
 /* Header */
 .rb-header { text-align: center; margin-bottom: 4px; }
@@ -266,43 +473,29 @@ body {
 /* Experience */
 .rb-experience { margin-bottom: 8px; }
 .rb-exp-row { display: flex; justify-content: space-between; align-items: baseline; }
-.rb-company { font-weight: 700; font-size: 12px; outline: none; min-width: 40px; }
-.rb-dates   { font-size: 11px; color: #444; outline: none; min-width: 40px; text-align: right; }
-.rb-role    { font-size: 12px; font-style: italic; outline: none; min-width: 40px; }
-.rb-loc     { font-size: 11px; color: #444; outline: none; min-width: 40px; text-align: right; }
+.rb-company { font-weight: 700; font-size: 12px; min-width: 40px; }
+.rb-dates   { font-size: 11px; color: #444; min-width: 40px; text-align: right; }
+.rb-role    { font-size: 12px; font-style: italic; min-width: 40px; }
+.rb-loc     { font-size: 11px; color: #444; min-width: 40px; text-align: right; }
 .rb-bullets { margin-top: 3px; padding-left: 16px; font-size: 11.5px; line-height: 1.55; }
-.rb-bullet  { outline: none; margin-bottom: 1px; }
-.rb-add-bullet {
-  font-size: 11px;
-  margin-top: 4px;
-  background: none;
-  border: 1px dashed #bbb;
-  padding: 2px 8px;
-  cursor: pointer;
-  border-radius: 3px;
-  color: #999;
-  font-family: inherit;
-}
-.rb-add-bullet:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.rb-bullet  { margin-bottom: 1px; }
 
 /* Education */
-.rb-education { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px; }
+.rb-education { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px; gap: 0.75rem; }
 .rb-edu-left  {}
-.rb-edu-school { font-weight: 700; outline: none; display: block; }
-.rb-edu-degree { font-style: italic; outline: none; display: block; }
-.rb-edu-right  { text-align: right; font-size: 11px; color: #444; }
-.rb-edu-right div { outline: none; }
+.rb-edu-school { font-weight: 700; display: block; }
+.rb-edu-degree { font-style: italic; display: block; }
+.rb-edu-right  { text-align: right; font-size: 11px; color: #444; flex-shrink: 0; }
 
 /* Skills */
 .rb-skills { font-size: 11.5px; line-height: 1.6; }
 .rb-skills-label { font-weight: 700; }
-.rb-skills-list { outline: none; min-height: 16px; display: inline; }
+.rb-skills-list { min-height: 16px; display: inline; }
 
 /* Text */
 .rb-text {
   font-size: 11.5px;
   line-height: 1.65;
-  outline: none;
   min-height: 16px;
   display: block;
 }
@@ -310,10 +503,13 @@ body {
 /* Links */
 .rb-links { font-size: 11.5px; }
 .rb-links-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 2px; }
-.rb-link-item { outline: none; color: #1a0dab; text-decoration: underline; }
+.rb-link-item { color: #1a0dab; text-decoration: underline; }
 
 /* Spacer */
 .rb-spacer { height: 14px; }
+
+/* Empty-field placeholder text shown on the document preview */
+.rb-placeholder { color: #bbb; font-style: italic; }
 
 /* ── Publish modal ───────────────────────────────────────── */
 .modal-overlay {
@@ -373,8 +569,13 @@ body {
 .modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
 
 /* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .editor-panel { width: 260px; }
+}
+
 @media (max-width: 900px) {
   .editor-sidebar { width: 180px; }
+  .editor-panel { width: 230px; }
   .resume-paper { padding: 32px 28px; }
   .block-controls { right: -36px; }
   .bc-btn { width: 26px; height: 26px; }
@@ -382,16 +583,13 @@ body {
 
 @media (max-width: 640px) {
   .editor-sidebar { display: none; }
+  .editor-panel { display: none; }
   .editor-canvas { padding: 1rem 0.5rem; }
   .resume-paper { padding: 24px 18px; }
   .block-controls { display: none; }
 }
 
 /* ── Drag-to-reorder: physical lifted card ───────────────────── */
-.resume-block {
-  transition: transform 0.12s ease;
-}
-
 .resume-block.block-lifted {
   box-shadow: 6px 8px 0 0 rgba(0,0,0,0.15), 0 16px 28px rgba(0,0,0,0.22);
   transform: rotate(-1.5deg) scale(1.015);
@@ -493,8 +691,9 @@ body {
 }
 
 @media print {
-  .editor-toolbar, .editor-sidebar, .block-controls { display: none !important; }
+  .editor-toolbar, .editor-sidebar, .editor-panel, .block-controls { display: none !important; }
   .editor-layout { display: block; overflow: visible; }
   .editor-canvas { padding: 0; background: none; overflow: visible; }
   .resume-paper { box-shadow: none; width: 100%; max-width: 100%; }
+  .resume-block.block-selected { outline: none; }
 }

@@ -1,104 +1,153 @@
 /* ============================================================
-   editor.js — Résumé block editor with working drag-to-reorder
+   editor.js — Résumé block editor
+   - Drag-to-reorder (pointer-based lift + placeholder, same
+     mechanism as the home page demo)
+   - Two-column layout support (Main / Side column per block)
+   - Editing happens in a right-hand panel via labeled text
+     inputs, not directly on the document
    + Portfolio website conversion
    ============================================================ */
 
 // ── State ─────────────────────────────────────────────────────
 let blocks = [
-  { id: uid(), type: 'header', data: { name: 'Your Full Name', contact: 'email@example.com  ·  +63 912 345 6789  ·  linkedin.com/in/you  ·  City, PH' } },
-  { id: uid(), type: 'section', data: { title: 'Education' } },
-  { id: uid(), type: 'education', data: { school: 'University of the Philippines', degree: 'B.S. Computer Science', location: 'Diliman, Quezon City', year: 'June 2024', gpa: 'GPA: 1.50' } },
-  { id: uid(), type: 'section', data: { title: 'Experience' } },
-  { id: uid(), type: 'experience', data: { company: 'Tech Company Inc.', dates: 'Jan 2024 – Present', role: 'Software Engineer', location: 'Makati, PH', bullets: ['Built and shipped a feature used by 10,000+ users.', 'Led a team of 3 engineers to deliver on schedule.'] } },
-  { id: uid(), type: 'section', data: { title: 'Skills' } },
-  { id: uid(), type: 'skills', data: { items: 'JavaScript, React, Node.js, Python, SQL, Git' } },
-  { id: uid(), type: 'links', data: { links: ['github.com/you', 'linkedin.com/in/you', 'yourportfolio.com'] } }
+  { id: uid(), type: 'header', col: 'main', data: { name: 'Your Full Name', contact: 'email@example.com  ·  +63 912 345 6789  ·  linkedin.com/in/you  ·  City, PH' } },
+  { id: uid(), type: 'section', col: 'main', data: { title: 'Education' } },
+  { id: uid(), type: 'education', col: 'main', data: { school: 'University of the Philippines', degree: 'B.S. Computer Science', location: 'Diliman, Quezon City', year: 'June 2024', gpa: 'GPA: 1.50' } },
+  { id: uid(), type: 'section', col: 'main', data: { title: 'Experience' } },
+  { id: uid(), type: 'experience', col: 'main', data: { company: 'Tech Company Inc.', dates: 'Jan 2024 – Present', role: 'Software Engineer', location: 'Makati, PH', bullets: ['Built and shipped a feature used by 10,000+ users.', 'Led a team of 3 engineers to deliver on schedule.'] } },
+  { id: uid(), type: 'section', col: 'main', data: { title: 'Skills' } },
+  { id: uid(), type: 'skills', col: 'main', data: { items: 'JavaScript, React, Node.js, Python, SQL, Git' } },
+  { id: uid(), type: 'links', col: 'main', data: { links: ['github.com/you', 'linkedin.com/in/you', 'yourportfolio.com'] } }
 ];
 
-let dragSrcType  = null; // 'palette' only now — block reorder uses pointer drag below
+let dragSrcType  = null;   // 'palette' — block reorder uses pointer drag below
+let columnLayout = '1';    // '1' | '2-30' | '2-35' | '2-40'
+let sidebarPos   = 'left'; // 'left' | 'right'
+let selectedBlockId = null;
 
 // ── Utilities ──────────────────────────────────────────────────
 function uid() { return Math.random().toString(36).slice(2, 9); }
 function blockById(id) { return blocks.find(b => b.id === id); }
-function save(id, key, val) { const b = blockById(id); if (b) b.data[key] = val; }
-function saveBullet(id, idx, val) { const b = blockById(id); if (b) b.data.bullets[idx] = val; }
-function saveLink(id, idx, val) { const b = blockById(id); if (b) b.data.links[idx] = val; }
+function save(id, key, val) { const b = blockById(id); if (b) { b.data[key] = val; renderBlockInPlace(id); } }
+function saveBullet(id, idx, val) { const b = blockById(id); if (b) { b.data.bullets[idx] = val; renderBlockInPlace(id); } }
+function saveLink(id, idx, val) { const b = blockById(id); if (b) { b.data.links[idx] = val; renderBlockInPlace(id); } }
 
-// ── Render ─────────────────────────────────────────────────────
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Render (document / preview side — read-only, no contenteditable) ──
 function render() {
   const paper = document.getElementById('resumePaper');
   paper.innerHTML = '';
+  paper.classList.toggle('is-two-col', columnLayout !== '1');
+  paper.classList.toggle('sidebar-right', sidebarPos === 'right');
 
   if (blocks.length === 0) {
     paper.innerHTML = `<div class="canvas-hint"><p style="font-size:1.5rem;margin-bottom:0.5rem">📋</p><p>Drag a block from the left panel to get started.</p></div>`;
     return;
   }
 
-  blocks.forEach((block, i) => {
-    const wrap = document.createElement('div');
-    wrap.className = 'resume-block';
-    wrap.dataset.id = block.id;
-    wrap.dataset.index = i;
+  if (columnLayout === '1') {
+    const track = document.createElement('div');
+    track.className = 'col-track col-main';
+    track.dataset.col = 'main';
+    blocks.forEach((block, i) => track.appendChild(renderBlockEl(block, i)));
+    paper.appendChild(track);
+  } else {
+    const sideWidth = columnLayout.split('-')[1];
+    paper.style.setProperty('--side-width', sideWidth + '%');
 
-    wrap.innerHTML = renderBlock(block, i) + renderControls(i);
+    const mainTrack = document.createElement('div');
+    mainTrack.className = 'col-track col-main';
+    mainTrack.dataset.col = 'main';
 
-    paper.appendChild(wrap);
-  });
+    const sideTrack = document.createElement('div');
+    sideTrack.className = 'col-track col-side';
+    sideTrack.dataset.col = 'side';
+
+    blocks.forEach((block, i) => {
+      const el = renderBlockEl(block, i);
+      (block.col === 'side' ? sideTrack : mainTrack).appendChild(el);
+    });
+
+    const cols = document.createElement('div');
+    cols.className = 'col-wrap';
+    if (sidebarPos === 'left') { cols.appendChild(sideTrack); cols.appendChild(mainTrack); }
+    else { cols.appendChild(mainTrack); cols.appendChild(sideTrack); }
+    paper.appendChild(cols);
+  }
+
+  highlightSelectedBlock();
 }
 
-function renderBlock(b, i) {
+function renderBlockEl(block, i) {
+  const wrap = document.createElement('div');
+  wrap.className = 'resume-block';
+  wrap.dataset.id = block.id;
+  wrap.dataset.index = i;
+  wrap.innerHTML = renderBlockContent(block) + renderControls(block, i);
+  wrap.addEventListener('click', (e) => {
+    if (e.target.closest('.block-controls')) return;
+    selectBlock(block.id);
+  });
+  return wrap;
+}
+
+// Re-render just one block's content (after a panel edit) without
+// rebuilding the whole canvas / losing drag listeners elsewhere.
+function renderBlockInPlace(id) {
+  const el = document.querySelector(`.resume-block[data-id="${id}"]`);
+  const block = blockById(id);
+  if (!el || !block) return;
+  const i = blocks.indexOf(block);
+  el.innerHTML = renderBlockContent(block) + renderControls(block, i);
+}
+
+function renderBlockContent(b) {
   const d = b.data;
   switch (b.type) {
     case 'header':
       return `<div class="rb-header">
-        <span class="rb-name" contenteditable="true" onblur="save('${b.id}','name',this.innerText)">${esc(d.name)}</span>
-        <span class="rb-contact" contenteditable="true" onblur="save('${b.id}','contact',this.innerText)">${esc(d.contact)}</span>
+        <span class="rb-name">${esc(d.name) || '<span class="rb-placeholder">Your Full Name</span>'}</span>
+        <span class="rb-contact">${esc(d.contact) || '<span class="rb-placeholder">Contact info</span>'}</span>
       </div>`;
     case 'section':
-      return `<div class="rb-section-title" contenteditable="true" onblur="save('${b.id}','title',this.innerText)">${esc(d.title)}</div>`;
+      return `<div class="rb-section-title">${esc(d.title) || '<span class="rb-placeholder">Section Title</span>'}</div>`;
     case 'experience': {
-      const bullets = d.bullets.map((bl, bi) =>
-        `<li class="rb-bullet" contenteditable="true" onblur="saveBullet('${b.id}',${bi},this.innerText)">${esc(bl)}</li>`
-      ).join('');
+      const bullets = (d.bullets || []).map(bl => `<li class="rb-bullet">${esc(bl)}</li>`).join('');
       return `<div class="rb-experience">
         <div class="rb-exp-row">
-          <span class="rb-company" contenteditable="true" onblur="save('${b.id}','company',this.innerText)">${esc(d.company)}</span>
-          <span class="rb-dates" contenteditable="true" onblur="save('${b.id}','dates',this.innerText)">${esc(d.dates)}</span>
+          <span class="rb-company">${esc(d.company)}</span>
+          <span class="rb-dates">${esc(d.dates)}</span>
         </div>
         <div class="rb-exp-row">
-          <span class="rb-role" contenteditable="true" onblur="save('${b.id}','role',this.innerText)">${esc(d.role)}</span>
-          <span class="rb-loc" contenteditable="true" onblur="save('${b.id}','location',this.innerText)">${esc(d.location)}</span>
+          <span class="rb-role">${esc(d.role)}</span>
+          <span class="rb-loc">${esc(d.location)}</span>
         </div>
         <ul class="rb-bullets">${bullets}</ul>
-        <button class="rb-add-bullet" onclick="addBullet('${b.id}')">+ bullet</button>
       </div>`;
     }
     case 'education':
       return `<div class="rb-education">
         <div class="rb-edu-left">
-          <span class="rb-edu-school" contenteditable="true" onblur="save('${b.id}','school',this.innerText)">${esc(d.school)}</span>
-          <span class="rb-edu-degree" contenteditable="true" onblur="save('${b.id}','degree',this.innerText)">${esc(d.degree)}</span>
+          <span class="rb-edu-school">${esc(d.school)}</span>
+          <span class="rb-edu-degree">${esc(d.degree)}</span>
         </div>
         <div class="rb-edu-right">
-          <div contenteditable="true" onblur="save('${b.id}','location',this.innerText)">${esc(d.location)}</div>
-          <div contenteditable="true" onblur="save('${b.id}','year',this.innerText)">${esc(d.year)}</div>
-          <div contenteditable="true" onblur="save('${b.id}','gpa',this.innerText)">${esc(d.gpa)}</div>
+          <div>${esc(d.location)}</div>
+          <div>${esc(d.year)}</div>
+          <div>${esc(d.gpa)}</div>
         </div>
       </div>`;
     case 'skills':
-      return `<div class="rb-skills">
-        <span class="rb-skills-list" contenteditable="true" onblur="save('${b.id}','items',this.innerText)">${esc(d.items)}</span>
-      </div>`;
+      return `<div class="rb-skills"><span class="rb-skills-list">${esc(d.items)}</span></div>`;
     case 'text':
-      return `<div class="rb-text" contenteditable="true" onblur="save('${b.id}','content',this.innerText)">${esc(d.content || '')}</div>`;
+      return `<div class="rb-text">${esc(d.content || '') || '<span class="rb-placeholder">Type your text here.</span>'}</div>`;
     case 'links': {
-      const rows = d.links.map((lk, li) =>
-        `<span class="rb-link-item" contenteditable="true" onblur="saveLink('${b.id}',${li},this.innerText)">${esc(lk)}</span>`
-      ).join('');
-      return `<div class="rb-links">
-        <div class="rb-links-row">${rows}</div>
-        <button class="rb-add-bullet" onclick="addLink('${b.id}')">+ link</button>
-      </div>`;
+      const rows = (d.links || []).map(lk => `<span class="rb-link-item">${esc(lk)}</span>`).join('');
+      return `<div class="rb-links"><div class="rb-links-row">${rows}</div></div>`;
     }
     case 'spacer':
       return `<div class="rb-spacer"></div>`;
@@ -106,24 +155,31 @@ function renderBlock(b, i) {
   }
 }
 
-function renderControls(i) {
+function renderControls(block, i) {
+  const colToggle = columnLayout !== '1'
+    ? `<button class="bc-btn col ${block.col === 'side' ? 'active' : ''}" title="Toggle Main / Side column" onclick="event.stopPropagation();toggleBlockColumn('${block.id}')">${block.col === 'side' ? '◧' : '◨'}</button>`
+    : '';
   return `<div class="block-controls">
     <div class="bc-drag-handle" title="Drag to reorder">⠿</div>
-    ${i > 0 ? `<button class="bc-btn move" title="Move up" onclick="moveBlock(${i},-1)">↑</button>` : ''}
-    ${i < blocks.length - 1 ? `<button class="bc-btn move" title="Move down" onclick="moveBlock(${i},1)">↓</button>` : ''}
-    <button class="bc-btn" title="Duplicate" onclick="duplicateBlock(${i})">⧉</button>
-    <button class="bc-btn del" title="Delete" onclick="deleteBlock(${i})">✕</button>
+    ${i > 0 ? `<button class="bc-btn move" title="Move up" onclick="event.stopPropagation();moveBlock(${i},-1)">↑</button>` : ''}
+    ${i < blocks.length - 1 ? `<button class="bc-btn move" title="Move down" onclick="event.stopPropagation();moveBlock(${i},1)">↓</button>` : ''}
+    ${colToggle}
+    <button class="bc-btn" title="Duplicate" onclick="event.stopPropagation();duplicateBlock(${i})">⧉</button>
+    <button class="bc-btn del" title="Delete" onclick="event.stopPropagation();deleteBlock(${i})">✕</button>
   </div>`;
 }
 
-function esc(str) {
-  if (!str) return '';
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function highlightSelectedBlock() {
+  document.querySelectorAll('.resume-block').forEach(el => {
+    el.classList.toggle('block-selected', el.dataset.id === selectedBlockId);
+  });
 }
 
 // ── Block operations ───────────────────────────────────────────
-function addBullet(id) { const b = blockById(id); if (b) { b.data.bullets.push('Describe what you did.'); render(); } }
-function addLink(id)   { const b = blockById(id); if (b) { b.data.links.push('yourlink.com'); render(); } }
+function addBullet(id) { const b = blockById(id); if (b) { b.data.bullets.push('Describe what you did.'); renderBlockInPlace(id); openPanelFor(id); } }
+function removeBullet(id, idx) { const b = blockById(id); if (b) { b.data.bullets.splice(idx, 1); renderBlockInPlace(id); openPanelFor(id); } }
+function addLink(id)   { const b = blockById(id); if (b) { b.data.links.push('yourlink.com'); renderBlockInPlace(id); openPanelFor(id); } }
+function removeLink(id, idx) { const b = blockById(id); if (b) { b.data.links.splice(idx, 1); renderBlockInPlace(id); openPanelFor(id); } }
 
 function moveBlock(i, dir) {
   const j = i + dir;
@@ -141,8 +197,18 @@ function duplicateBlock(i) {
 
 function deleteBlock(i) {
   if (!confirm('Delete this block?')) return;
+  const id = blocks[i].id;
   blocks.splice(i, 1);
+  if (selectedBlockId === id) closePanel();
   render();
+}
+
+function toggleBlockColumn(id) {
+  const b = blockById(id);
+  if (!b) return;
+  b.col = b.col === 'side' ? 'main' : 'side';
+  render();
+  if (selectedBlockId === id) openPanelFor(id);
 }
 
 function defaultData(type) {
@@ -159,20 +225,42 @@ function defaultData(type) {
   return map[type] || {};
 }
 
-function insertBlock(type, atIndex) {
-  const newBlock = { id: uid(), type, data: { ...defaultData(type) } };
+function insertBlock(type, atIndex, col) {
+  const newBlock = { id: uid(), type, col: col || 'main', data: { ...defaultData(type) } };
   if (atIndex === undefined || atIndex >= blocks.length) blocks.push(newBlock);
   else blocks.splice(atIndex, 0, newBlock);
+  render();
+  selectBlock(newBlock.id);
+  return newBlock;
+}
+
+// ── Column layout controls ──────────────────────────────────────
+function setColumnLayout(value) {
+  columnLayout = value;
+  if (value === '1') {
+    // collapse everything back into main, preserving order
+    blocks.forEach(b => b.col = 'main');
+  }
+  render();
+}
+
+function setSidebarPosition(value) {
+  sidebarPos = value;
   render();
 }
 
 // ── Drag-to-reorder: physical pointer-based drag ────────────────
-// The card itself lifts and follows the cursor; a placeholder shows
-// where it will land; other blocks reflow live.
+// Mirrors the homepage demo: the card lifts, follows the cursor,
+// a dashed placeholder marks the drop slot, siblings reflow live,
+// and the canvas auto-scrolls when dragging near its top/bottom edge.
 
 let pdDragEl = null;
 let pdPlaceholder = null;
 let pdOffsetX = 0, pdOffsetY = 0, pdOriginRect = null;
+let pdScrollEl = null;
+let pdAutoScrollRAF = null;
+let pdLastClientX = 0, pdLastClientY = 0;
+let pdMoved = false;
 
 function initBlockDrag() {
   const paper = document.getElementById('resumePaper');
@@ -186,10 +274,14 @@ function onPaperPointerDown(e) {
   e.preventDefault();
 
   pdDragEl = card;
+  pdMoved = false;
   pdOriginRect = card.getBoundingClientRect();
+  pdScrollEl = document.getElementById('canvasWrap');
 
   pdOffsetX = e.clientX - pdOriginRect.left;
   pdOffsetY = e.clientY - pdOriginRect.top;
+  pdLastClientX = e.clientX;
+  pdLastClientY = e.clientY;
 
   pdPlaceholder = document.createElement('div');
   pdPlaceholder.className = 'resume-block-placeholder';
@@ -206,47 +298,97 @@ function onPaperPointerDown(e) {
 
   document.addEventListener('pointermove', onPaperPointerMove);
   document.addEventListener('pointerup', onPaperPointerUp);
+  pdAutoScrollRAF = requestAnimationFrame(autoScrollTick);
 }
 
 function onPaperPointerMove(e) {
   if (!pdDragEl) return;
+  pdMoved = true;
+  pdLastClientX = e.clientX;
+  pdLastClientY = e.clientY;
   const newLeft = e.clientX - pdOffsetX;
   const newTop = e.clientY - pdOffsetY;
   pdDragEl.style.left = newLeft + 'px';
   pdDragEl.style.top = newTop + 'px';
 
+  placeFromDragPosition(newTop);
+}
+
+function placeFromDragPosition(newTop) {
   const dragCenterY = newTop + pdOriginRect.height / 2;
-  const paper = document.getElementById('resumePaper');
-  const siblings = Array.from(paper.querySelectorAll('.resume-block')).filter(b => b !== pdDragEl);
+
+  // The placeholder + drag element can only land within the column
+  // track that's currently under the cursor (when in two-column mode),
+  // so blocks stay confined to Main or Side as the user drags.
+  const trackEl = document.elementFromPoint(pdLastClientX, dragCenterY)?.closest('.col-track');
+
+  const fallbackTrack = pdPlaceholder.closest('.col-track') || document.querySelector('.col-track');
+  const targetTrack = trackEl || fallbackTrack;
+  if (!targetTrack) return;
+
+  const siblings = Array.from(targetTrack.querySelectorAll('.resume-block')).filter(b => b !== pdDragEl);
 
   let inserted = false;
   for (const sib of siblings) {
     const rect = sib.getBoundingClientRect();
     const center = rect.top + rect.height / 2;
     if (dragCenterY < center) {
-      if (pdPlaceholder.nextSibling !== sib) sib.before(pdPlaceholder);
+      if (pdPlaceholder.nextSibling !== sib || pdPlaceholder.parentElement !== targetTrack) sib.before(pdPlaceholder);
       inserted = true;
       break;
     }
   }
   if (!inserted) {
     const last = siblings[siblings.length - 1];
-    if (last && pdPlaceholder !== last.nextSibling) last.after(pdPlaceholder);
+    if (last) {
+      if (pdPlaceholder !== last.nextSibling || pdPlaceholder.parentElement !== targetTrack) last.after(pdPlaceholder);
+    } else if (pdPlaceholder.parentElement !== targetTrack) {
+      targetTrack.appendChild(pdPlaceholder);
+    }
   }
+}
+
+function autoScrollTick() {
+  if (!pdDragEl || !pdScrollEl) return;
+  const rect = pdScrollEl.getBoundingClientRect();
+  const margin = 70;
+  const maxSpeed = 16;
+  let dy = 0;
+
+  if (pdLastClientY < rect.top + margin) {
+    dy = -maxSpeed * (1 - Math.max(0, pdLastClientY - rect.top) / margin);
+  } else if (pdLastClientY > rect.bottom - margin) {
+    dy = maxSpeed * (1 - Math.max(0, rect.bottom - pdLastClientY) / margin);
+  }
+
+  if (dy !== 0) {
+    pdScrollEl.scrollTop += dy;
+    // Keep the dragged card's on-screen position synced with the
+    // cursor even while the canvas scrolls underneath it.
+    const newTop = pdLastClientY - pdOffsetY;
+    pdDragEl.style.top = newTop + 'px';
+    placeFromDragPosition(newTop);
+  }
+
+  pdAutoScrollRAF = requestAnimationFrame(autoScrollTick);
 }
 
 function onPaperPointerUp(e) {
   if (!pdDragEl) return;
   document.removeEventListener('pointermove', onPaperPointerMove);
   document.removeEventListener('pointerup', onPaperPointerUp);
+  if (pdAutoScrollRAF) cancelAnimationFrame(pdAutoScrollRAF);
+  pdAutoScrollRAF = null;
 
   const finalRect = pdPlaceholder.getBoundingClientRect();
+  const landedTrack = pdPlaceholder.closest('.col-track');
+  const landedCol = landedTrack ? landedTrack.dataset.col : null;
+
   pdDragEl.style.transition = 'left 0.16s ease, top 0.16s ease';
   pdDragEl.style.left = finalRect.left + 'px';
   pdDragEl.style.top = finalRect.top + 'px';
 
   setTimeout(() => {
-    const paper = document.getElementById('resumePaper');
     pdPlaceholder.replaceWith(pdDragEl);
     pdDragEl.classList.remove('block-lifted');
     pdDragEl.style.position = '';
@@ -257,13 +399,38 @@ function onPaperPointerUp(e) {
     pdDragEl.style.pointerEvents = '';
     pdDragEl.style.transition = '';
 
-    // Commit new order from DOM back into the blocks array
-    const newOrder = Array.from(paper.querySelectorAll('.resume-block')).map(el => el.dataset.id);
-    blocks = newOrder.map(id => blockById(id));
-    render();
+    // Commit new order + column assignment from the DOM back into
+    // the blocks array — read both column tracks (if present) in
+    // their visual order so multi-column reordering sticks too.
+    const paper = document.getElementById('resumePaper');
+    const tracks = Array.from(paper.querySelectorAll('.col-track'));
+    const orderedIds = [];
+    const colOf = {};
+    if (tracks.length) {
+      tracks.forEach(track => {
+        Array.from(track.querySelectorAll('.resume-block')).forEach(el => {
+          orderedIds.push(el.dataset.id);
+          colOf[el.dataset.id] = track.dataset.col;
+        });
+      });
+    } else {
+      Array.from(paper.querySelectorAll('.resume-block')).forEach(el => orderedIds.push(el.dataset.id));
+    }
 
+    blocks = orderedIds.map(id => {
+      const b = blockById(id);
+      if (landedCol && b) b.col = colOf[id] || b.col;
+      return b;
+    });
+
+    const draggedId = pdDragEl.dataset.id;
     pdDragEl = null;
     pdPlaceholder = null;
+    pdScrollEl = null;
+
+    render();
+
+    if (!pdMoved) selectBlock(draggedId);
   }, 160);
 }
 
@@ -296,15 +463,152 @@ function initCanvasDrop() {
     if (dragSrcType !== 'palette') return;
     const type = e.dataTransfer.getData('block-type');
     const target = e.target.closest('.resume-block');
+    const track = e.target.closest('.col-track');
+    const col = track ? track.dataset.col : 'main';
     if (target) {
       const rect = target.getBoundingClientRect();
       const before = e.clientY < rect.top + rect.height / 2;
       const idx = parseInt(target.dataset.index);
-      insertBlock(type, before ? idx : idx + 1);
+      insertBlock(type, before ? idx : idx + 1, col);
     } else {
-      insertBlock(type);
+      insertBlock(type, undefined, col);
     }
   });
+}
+
+// ── Right-hand edit panel ────────────────────────────────────────
+// Selecting a block opens a panel of labeled text inputs / textareas
+// on the right. Typing into them updates the block's data and the
+// preview re-renders immediately — there's no contenteditable on
+// the document itself.
+
+function selectBlock(id) {
+  selectedBlockId = id;
+  highlightSelectedBlock();
+  openPanelFor(id);
+}
+
+function closePanel() {
+  selectedBlockId = null;
+  highlightSelectedBlock();
+  document.getElementById('panelEmpty').style.display = 'flex';
+  document.getElementById('panelContent').style.display = 'none';
+  document.getElementById('panelContent').innerHTML = '';
+}
+
+function panelField(label, inputHtml, extraClass) {
+  return `<div class="pf-field ${extraClass || ''}">
+    <label class="pf-label">${esc(label)}</label>
+    ${inputHtml}
+  </div>`;
+}
+
+function panelInput(value, onInput, placeholder) {
+  return `<input type="text" class="pf-input" value="${esc(value || '')}" placeholder="${esc(placeholder || '')}" oninput="${onInput}" />`;
+}
+
+function panelTextarea(value, onInput, placeholder, rows) {
+  return `<textarea class="pf-textarea" rows="${rows || 3}" placeholder="${esc(placeholder || '')}" oninput="${onInput}">${esc(value || '')}</textarea>`;
+}
+
+function openPanelFor(id) {
+  const block = blockById(id);
+  if (!block) { closePanel(); return; }
+
+  document.getElementById('panelEmpty').style.display = 'none';
+  const panel = document.getElementById('panelContent');
+  panel.style.display = 'flex';
+
+  const typeLabels = {
+    header: '👤 Name / Header', section: '📌 Section Title', experience: '💼 Experience',
+    education: '🎓 Education', skills: '⚡ Skills', text: '📝 Text Block',
+    links: '🔗 Links', spacer: '↕️ Spacer',
+  };
+
+  let fieldsHtml = '';
+  const d = block.data;
+
+  switch (block.type) {
+    case 'header':
+      fieldsHtml += panelField('Full name', panelInput(d.name, `save('${id}','name',this.value)`, 'Your Full Name'));
+      fieldsHtml += panelField('Contact line', panelInput(d.contact, `save('${id}','contact',this.value)`, 'email · phone · city'));
+      break;
+    case 'section':
+      fieldsHtml += panelField('Section title', panelInput(d.title, `save('${id}','title',this.value)`, 'Experience'));
+      break;
+    case 'experience':
+      fieldsHtml += panelField('Company', panelInput(d.company, `save('${id}','company',this.value)`, 'Company Name'));
+      fieldsHtml += panelField('Dates', panelInput(d.dates, `save('${id}','dates',this.value)`, '2024 – Present'));
+      fieldsHtml += panelField('Role / title', panelInput(d.role, `save('${id}','role',this.value)`, 'Your Role'));
+      fieldsHtml += panelField('Location', panelInput(d.location, `save('${id}','location',this.value)`, 'City, PH'));
+      fieldsHtml += `<div class="pf-field"><label class="pf-label">Bullet points</label>
+        <div class="pf-bullet-list">
+          ${(d.bullets || []).map((bl, bi) => `
+            <div class="pf-bullet-row">
+              <textarea class="pf-textarea pf-textarea-sm" rows="2" oninput="saveBullet('${id}',${bi},this.value)">${esc(bl)}</textarea>
+              <button class="pf-remove-btn" title="Remove bullet" onclick="removeBullet('${id}',${bi})">✕</button>
+            </div>`).join('')}
+        </div>
+        <button class="pf-add-btn" onclick="addBullet('${id}')">+ Add bullet</button>
+      </div>`;
+      break;
+    case 'education':
+      fieldsHtml += panelField('School', panelInput(d.school, `save('${id}','school',this.value)`, 'University Name'));
+      fieldsHtml += panelField('Degree', panelInput(d.degree, `save('${id}','degree',this.value)`, 'Degree & Major'));
+      fieldsHtml += panelField('Location', panelInput(d.location, `save('${id}','location',this.value)`, 'City'));
+      fieldsHtml += panelField('Year', panelInput(d.year, `save('${id}','year',this.value)`, '2024'));
+      fieldsHtml += panelField('GPA / honors', panelInput(d.gpa, `save('${id}','gpa',this.value)`, 'GPA: 1.50'));
+      break;
+    case 'skills':
+      fieldsHtml += panelField('Skills (comma-separated)', panelTextarea(d.items, `save('${id}','items',this.value)`, 'JavaScript, React, Node.js', 3));
+      break;
+    case 'text':
+      fieldsHtml += panelField('Content', panelTextarea(d.content, `save('${id}','content',this.value)`, 'Type your text here.', 5));
+      break;
+    case 'links':
+      fieldsHtml += `<div class="pf-field"><label class="pf-label">Links</label>
+        <div class="pf-bullet-list">
+          ${(d.links || []).map((lk, li) => `
+            <div class="pf-bullet-row">
+              <input type="text" class="pf-input" value="${esc(lk)}" oninput="saveLink('${id}',${li},this.value)" />
+              <button class="pf-remove-btn" title="Remove link" onclick="removeLink('${id}',${li})">✕</button>
+            </div>`).join('')}
+        </div>
+        <button class="pf-add-btn" onclick="addLink('${id}')">+ Add link</button>
+      </div>`;
+      break;
+    case 'spacer':
+      fieldsHtml += `<p class="pf-hint">A spacer just adds vertical space — nothing to edit here.</p>`;
+      break;
+  }
+
+  let colControl = '';
+  if (columnLayout !== '1') {
+    colControl = `<div class="pf-field">
+      <label class="pf-label">Column</label>
+      <div class="pf-col-toggle">
+        <button class="pf-col-btn ${block.col !== 'side' ? 'active' : ''}" onclick="setBlockColumn('${id}','main')">Main</button>
+        <button class="pf-col-btn ${block.col === 'side' ? 'active' : ''}" onclick="setBlockColumn('${id}','side')">Side</button>
+      </div>
+    </div>`;
+  }
+
+  panel.innerHTML = `
+    <div class="pf-header">
+      <span class="pf-type-label">${typeLabels[block.type] || block.type}</span>
+      <button class="bc-btn del" title="Close" onclick="closePanel()">✕</button>
+    </div>
+    ${colControl}
+    ${fieldsHtml}
+  `;
+}
+
+function setBlockColumn(id, col) {
+  const b = blockById(id);
+  if (!b) return;
+  b.col = col;
+  render();
+  openPanelFor(id);
 }
 
 // ── Toolbar ────────────────────────────────────────────────────
@@ -583,3 +887,8 @@ render();
 initBlockDrag();
 initPaletteDrag();
 initCanvasDrop();
+
+// Click outside any block (but inside the canvas) deselects.
+document.getElementById('canvasWrap').addEventListener('click', (e) => {
+  if (e.target.id === 'canvasWrap') closePanel();
+});
