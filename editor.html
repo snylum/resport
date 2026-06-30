@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dazed">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Résumé Editor</title>
+  <link rel="stylesheet" href="dazed.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="editor.css" />
+</head>
+<body>
+
+  <!-- TOP TOOLBAR -->
+  <header class="editor-toolbar">
+    <a href="index.html" class="nav-logo">
+      <span class="logo-dot"></span>résumé
+    </a>
+
+    <div class="toolbar-center">
+      <span class="toolbar-filename" id="resumeTitle" contenteditable="true" spellcheck="false">Untitled résumé</span>
+    </div>
+
+    <div class="toolbar-actions">
+      <button class="btn btn-ghost btn-sm" onclick="downloadPDF()">⬇ PDF</button>
+      <button class="btn btn-ghost btn-sm" onclick="downloadDOCX()">⬇ Word</button>
+      <button class="btn btn-primary btn-sm" onclick="openShowcaseModal()">🌐 Publish</button>
+    </div>
+  </header>
+
+  <!-- MAIN LAYOUT -->
+  <div class="editor-layout">
+
+    <!-- LEFT SIDEBAR: block palette -->
+    <aside class="editor-sidebar" id="sidebar">
+      <div class="sidebar-section">
+        <p class="sidebar-label">Drag to add</p>
+        <div class="block-palette">
+          <div class="palette-chip" draggable="true" data-block-type="header">
+            <span class="chip-grip">⠿</span>
+            <span class="chip-icon">👤</span>
+            <span>Name / Header</span>
+          </div>
+          <div class="palette-chip" draggable="true" data-block-type="section">
+            <span class="chip-grip">⠿</span>
+            <span class="chip-icon">📌</span>
+            <span>Section Title</span>
+          </div>
+          <div class="palette-chip" draggable="true" data-block-type="experience">
+            <span class="chip-grip">⠿</span>
+            <span class="chip-icon">💼</span>
+            <span>Experience</span>
+          </div>
+          <div class="palette-chip" draggable="true" data-block-type="education">
+            <span class="chip-grip">⠿</span>
+            <span class="chip-icon">🎓</span>
+            <span>Education</span>
+          </div>
+          <div class="palette-chip" draggable="true" data-block-type="skills">
+            <span class="chip-grip">⠿</span>
+            <span class="chip-icon">⚡</span>
+            <span>Skills</span>
+          </div>
+          <div class="palette-chip" draggable="true" data-block-type="text">
+            <span class="chip-grip">⠿</span>
+            <span class="chip-icon">📝</span>
+            <span>Text Block</span>
+          </div>
+          <div class="palette-chip" draggable="true" data-block-type="links">
+            <span class="chip-grip">⠿</span>
+            <span class="chip-icon">🔗</span>
+            <span>Links</span>
+          </div>
+          <div class="palette-chip" draggable="true" data-block-type="spacer">
+            <span class="chip-grip">⠿</span>
+            <span class="chip-icon">↕️</span>
+            <span>Spacer</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <p class="sidebar-label">Settings</p>
+        <label class="sidebar-toggle">
+          <input type="checkbox" id="showGuides" onchange="toggleGuides(this.checked)" />
+          <span>Block guides</span>
+        </label>
+        <label class="sidebar-toggle">
+          <input type="checkbox" id="darkPaper" onchange="toggleDarkPaper(this.checked)" />
+          <span>Dark canvas</span>
+        </label>
+      </div>
+
+      <div class="sidebar-section sidebar-tip">
+        <p>💡 <strong>Tip:</strong> Drag blocks from here onto the résumé, or use the ↑↓ handles to reorder.</p>
+      </div>
+    </aside>
+
+    <!-- CANVAS -->
+    <main class="editor-canvas" id="canvasWrap">
+      <div class="resume-paper" id="resumePaper">
+        <!-- blocks rendered by JS -->
+      </div>
+    </main>
+
+  </div>
+
+  <!-- SHOWCASE PUBLISH MODAL -->
+  <div class="modal-overlay" id="showcaseModal" style="display:none" onclick="closeShowcaseModal(event)">
+    <div class="modal-box">
+      <h2>Publish to Showcase</h2>
+      <p class="modal-sub">Your résumé will appear in the public gallery. Choose what to show.</p>
+
+      <div class="modal-fields">
+        <label class="modal-field">
+          <input type="checkbox" id="showPhoto" checked /> Show profile photo
+        </label>
+        <label class="modal-field">
+          <input type="checkbox" id="showFullName" checked /> Show full name
+          <span class="modal-hint">(uncheck to show initials only)</span>
+        </label>
+        <label class="modal-field">
+          <input type="checkbox" id="showLocation" checked /> Show location
+        </label>
+        <label class="modal-field">
+          <input type="checkbox" id="showContact" /> Show contact info
+        </label>
+
+        <div class="modal-category">
+          <label for="categorySelect" style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.3rem">Category</label>
+          <select id="categorySelect" class="modal-select">
+            <option>Technology</option>
+            <option>Design</option>
+            <option>Marketing</option>
+            <option>Finance</option>
+            <option>Healthcare</option>
+            <option>Education</option>
+            <option>Engineering</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-ghost btn-sm" onclick="closeShowcaseModal()">Cancel</button>
+        <button class="btn btn-gradient btn-sm" onclick="publishToShowcase()">Publish →</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="editor.js"></script>
+</body>
+</html>

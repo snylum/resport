@@ -1,0 +1,170 @@
+/* ============================================================
+   Resumé — shared styles
+   Imports dazed.css variables; apply data-theme="dazed" on <html>
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Roboto+Mono:wght@400;500&display=swap');
+
+/* ── Reset ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-background);
+  color: var(--color-text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── Typography ──────────────────────────────────────────── */
+.display { font-family: var(--font-display); }
+
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height: 1.15; }
+
+/* ── Nav ─────────────────────────────────────────────────── */
+.site-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--color-surface);
+  border-bottom: 2px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2rem;
+  height: 56px;
+}
+
+.nav-logo {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.2rem;
+  text-decoration: none;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.nav-logo .logo-dot {
+  display: inline-block;
+  width: 10px; height: 10px;
+  background: var(--color-primary);
+  border-radius: 50%;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  list-style: none;
+}
+
+.nav-links a {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.nav-links a:hover { color: var(--color-text); }
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.6rem 1.25rem;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.1s, box-shadow 0.1s;
+  white-space: nowrap;
+}
+
+.btn:active { transform: translate(3px,3px); box-shadow: none !important; }
+
+.btn-primary {
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  box-shadow: var(--shadow);
+}
+.btn-primary:hover { box-shadow: var(--shadow-lg); transform: translate(-2px,-2px); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text);
+  box-shadow: var(--shadow);
+}
+.btn-ghost:hover { background: var(--color-surface-alt); box-shadow: var(--shadow-lg); transform: translate(-2px,-2px); }
+
+.btn-sm { font-size: 0.75rem; padding: 0.4rem 0.875rem; }
+
+.btn-gradient {
+  background: var(--gradient);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: var(--shadow);
+}
+.btn-gradient:hover { box-shadow: var(--shadow-lg); transform: translate(-2px,-2px); }
+
+/* ── Pill / badge ────────────────────────────────────────── */
+.pill {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.6rem;
+  border: 1.5px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+}
+
+.pill-primary { background: var(--color-primary); color: #fff; border-color: transparent; }
+.pill-accent  { background: var(--color-accent);  color: var(--color-text); border-color: transparent; }
+
+/* ── Section wrapper ─────────────────────────────────────── */
+.section { padding: 5rem 2rem; }
+.container { max-width: 1160px; margin: 0 auto; }
+
+/* ── Footer ──────────────────────────────────────────────── */
+.site-footer {
+  border-top: 2px solid var(--color-border);
+  padding: 2rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+}
+
+.site-footer a { color: var(--color-primary); text-decoration: none; }
+
+/* ── Gradient tape accent (signature element) ────────────── */
+.tape {
+  display: inline-block;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--gradient);
+  flex-shrink: 0;
+}
+
+/* ── Utility ─────────────────────────────────────────────── */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+@media (max-width: 640px) {
+  .section { padding: 3rem 1rem; }
+  .site-nav { padding: 0 1rem; }
+  .nav-links { gap: 1rem; }
+}
