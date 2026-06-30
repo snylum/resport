@@ -36,7 +36,7 @@ let currentCTab = 'template';  // 'template' | 'text' | 'layout'
 // ── Utilities ──────────────────────────────────────────────────
 function uid() { return Math.random().toString(36).slice(2, 9); }
 function blockById(id) { return blocks.find(b => b.id === id); }
-function save(id, key, val) { const b = blockById(id); if (b) { b.data[key] = val; renderBlockInPlace(id); updateScore(); } }
+function save(id, key, val) { const b = blockById(id); if (b) { b.data[key] = val; renderBlockInPlace(id); } }
 function saveBullet(id, idx, val) { const b = blockById(id); if (b) { b.data.bullets[idx] = val; renderBlockInPlace(id); } }
 function saveLink(id, idx, val) { const b = blockById(id); if (b) { b.data.links[idx] = val; renderBlockInPlace(id); } }
 
@@ -49,7 +49,6 @@ function esc(str) {
 function updateProfile(key, val) {
   profile[key] = val;
   renderHeader();
-  updateScore();
 }
 
 function handlePhotoUpload(e) {
@@ -100,22 +99,6 @@ function syncPersonalDetailsForm() {
   syncPhotoBox();
 }
 
-// ── Résumé score (simple heuristic, drives the top progress bar) ──
-function updateScore() {
-  const checks = [
-    !!profile.firstName, !!profile.lastName, !!profile.email, !!profile.phone,
-    !!profile.jobTitle, !!profile.address, blocks.some(b => b.type === 'experience'),
-    blocks.some(b => b.type === 'education'), blocks.some(b => b.type === 'skills'), blocks.length >= 4
-  ];
-  const pct = Math.round((checks.filter(Boolean).length / checks.length) * 100);
-  const badge = document.getElementById('scoreBadge');
-  const fill = document.getElementById('scoreFill');
-  const tip = document.getElementById('scoreTip');
-  if (badge) badge.textContent = pct + '%';
-  if (fill) fill.style.width = pct + '%';
-  if (tip) tip.textContent = pct < 100 ? '+10% Add more detail' : 'Looking great!';
-}
-
 // ── Mode switching: Edit / Customize ───────────────────────────
 function setMode(mode) {
   currentMode = mode;
@@ -151,7 +134,6 @@ function render() {
     paper.appendChild(hint);
     renderHeader();
     renderSectionsList();
-    updateScore();
     return;
   }
 
@@ -188,7 +170,6 @@ function render() {
   renderHeader();
   highlightSelectedBlock();
   renderSectionsList();
-  updateScore();
 }
 
 function renderBlockEl(block, i) {
@@ -196,11 +177,8 @@ function renderBlockEl(block, i) {
   wrap.className = 'resume-block';
   wrap.dataset.id = block.id;
   wrap.dataset.index = i;
-  wrap.innerHTML = renderBlockContent(block) + renderControls(block, i);
-  wrap.addEventListener('click', (e) => {
-    if (e.target.closest('.block-controls')) return;
-    selectBlock(block.id);
-  });
+  wrap.innerHTML = renderBlockContent(block);
+  wrap.addEventListener('click', () => selectBlock(block.id));
   return wrap;
 }
 
@@ -211,7 +189,7 @@ function renderBlockInPlace(id) {
   const block = blockById(id);
   if (!el || !block) return;
   const i = blocks.indexOf(block);
-  el.innerHTML = renderBlockContent(block) + renderControls(block, i);
+  el.innerHTML = renderBlockContent(block);
   refreshSectionRowTitle(id);
 }
 
@@ -260,20 +238,6 @@ function renderBlockContent(b) {
       return `<div class="rb-spacer"></div>`;
     default: return '';
   }
-}
-
-function renderControls(block, i) {
-  const colToggle = columnLayout !== '1'
-    ? `<button class="bc-btn col ${block.col === 'side' ? 'active' : ''}" title="Toggle Main / Side column" onclick="event.stopPropagation();toggleBlockColumn('${block.id}')">${block.col === 'side' ? '◧' : '◨'}</button>`
-    : '';
-  return `<div class="block-controls">
-    <div class="bc-drag-handle" title="Drag to reorder">⠿</div>
-    ${i > 0 ? `<button class="bc-btn move" title="Move up" onclick="event.stopPropagation();moveBlock(${i},-1)">↑</button>` : ''}
-    ${i < blocks.length - 1 ? `<button class="bc-btn move" title="Move down" onclick="event.stopPropagation();moveBlock(${i},1)">↓</button>` : ''}
-    ${colToggle}
-    <button class="bc-btn" title="Duplicate" onclick="event.stopPropagation();duplicateBlock(${i})">⧉</button>
-    <button class="bc-btn del" title="Delete" onclick="event.stopPropagation();deleteBlock(${i})">✕</button>
-  </div>`;
 }
 
 function highlightSelectedBlock() {
@@ -342,7 +306,19 @@ function insertBlock(type, atIndex, col) {
 
 function addSection(type) {
   insertBlock(type, undefined, 'main');
+  closeAddSectionMenu();
 }
+
+function toggleAddSectionMenu(e) {
+  e.stopPropagation();
+  document.getElementById('addSectionDropdown').classList.toggle('open');
+}
+function closeAddSectionMenu() {
+  document.getElementById('addSectionDropdown')?.classList.remove('open');
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#addSectionDropdown')) closeAddSectionMenu();
+});
 
 // ── Column layout controls ──────────────────────────────────────
 function setColumnLayout(value) {
@@ -399,11 +375,11 @@ function renderSectionsList() {
   const host = document.getElementById('sectionsList');
   if (!host) return;
   if (blocks.length === 0) {
-    host.innerHTML = `<p class="sidebar-hint">No sections yet — drag one in from below.</p>`;
+    host.innerHTML = `<p class="sidebar-hint">No sections yet — use "+ Add" above to get started.</p>`;
     return;
   }
   host.innerHTML = blocks.map((b, i) => `
-    <div class="section-row ${selectedBlockId === b.id ? 'expanded' : ''}" data-id="${b.id}">
+    <div class="section-row ${selectedBlockId === b.id ? 'expanded' : ''}" data-id="${b.id}" data-index="${i}">
       <div class="section-row-head" onclick="toggleSectionRow('${b.id}')">
         <span class="section-row-grip" title="Drag to reorder">⠿</span>
         <span class="section-row-icon">${typeIcons[b.type] || ''}</span>
@@ -516,234 +492,81 @@ function setBlockColumn(id, col) {
   selectBlock(id);
 }
 
-// ── Drag-to-reorder: physical pointer-based drag (on canvas) ────
-// Mirrors the homepage demo: the card lifts, follows the cursor,
-// a dashed placeholder marks the drop slot, siblings reflow live,
-// and the canvas auto-scrolls when dragging near its top/bottom edge.
+// ── Drag-to-reorder: Sections list (left sidebar) ───────────────
+let srDragEl = null, srPlaceholder = null, srOffsetY = 0;
 
-let pdDragEl = null;
-let pdPlaceholder = null;
-let pdOffsetX = 0, pdOffsetY = 0, pdOriginRect = null;
-let pdScrollEl = null;
-let pdAutoScrollRAF = null;
-let pdLastClientX = 0, pdLastClientY = 0;
-let pdMoved = false;
+function initSectionsDrag() {
+  document.getElementById('sectionsList').addEventListener('pointerdown', (e) => {
+    const grip = e.target.closest('.section-row-grip');
+    const row = e.target.closest('.section-row');
+    if (!grip || !row) return;
+    e.preventDefault();
 
-function initBlockDrag() {
-  const paper = document.getElementById('resumePaper');
-  paper.addEventListener('pointerdown', onPaperPointerDown);
+    srDragEl = row;
+    const rect = row.getBoundingClientRect();
+    srOffsetY = e.clientY - rect.top;
+
+    srPlaceholder = document.createElement('div');
+    srPlaceholder.className = 'section-row-placeholder';
+    row.after(srPlaceholder);
+
+    row.classList.add('dragging');
+    row.style.position = 'fixed';
+    row.style.left = rect.left + 'px';
+    row.style.top = rect.top + 'px';
+    row.style.width = rect.width + 'px';
+    row.style.zIndex = '999';
+    row.style.pointerEvents = 'none';
+
+    document.addEventListener('pointermove', onSectionsPointerMove);
+    document.addEventListener('pointerup', onSectionsPointerUp);
+  });
 }
 
-function onPaperPointerDown(e) {
-  const grip = e.target.closest('.bc-drag-handle');
-  const card = e.target.closest('.resume-block');
-  if (!grip || !card) return;
-  e.preventDefault();
+function onSectionsPointerMove(e) {
+  if (!srDragEl) return;
+  srDragEl.style.top = (e.clientY - srOffsetY) + 'px';
 
-  pdDragEl = card;
-  pdMoved = false;
-  pdOriginRect = card.getBoundingClientRect();
-  pdScrollEl = document.getElementById('canvasWrap');
-
-  pdOffsetX = e.clientX - pdOriginRect.left;
-  pdOffsetY = e.clientY - pdOriginRect.top;
-  pdLastClientX = e.clientX;
-  pdLastClientY = e.clientY;
-
-  pdPlaceholder = document.createElement('div');
-  pdPlaceholder.className = 'resume-block-placeholder';
-  pdPlaceholder.style.height = pdOriginRect.height + 'px';
-  card.after(pdPlaceholder);
-
-  card.classList.add('block-lifted');
-  card.style.width = pdOriginRect.width + 'px';
-  card.style.position = 'fixed';
-  card.style.left = pdOriginRect.left + 'px';
-  card.style.top = pdOriginRect.top + 'px';
-  card.style.zIndex = '999';
-  card.style.pointerEvents = 'none';
-
-  document.addEventListener('pointermove', onPaperPointerMove);
-  document.addEventListener('pointerup', onPaperPointerUp);
-  pdAutoScrollRAF = requestAnimationFrame(autoScrollTick);
-}
-
-function onPaperPointerMove(e) {
-  if (!pdDragEl) return;
-  pdMoved = true;
-  pdLastClientX = e.clientX;
-  pdLastClientY = e.clientY;
-  const newLeft = e.clientX - pdOffsetX;
-  const newTop = e.clientY - pdOffsetY;
-  pdDragEl.style.left = newLeft + 'px';
-  pdDragEl.style.top = newTop + 'px';
-
-  placeFromDragPosition(newTop);
-}
-
-function placeFromDragPosition(newTop) {
-  const dragCenterY = newTop + pdOriginRect.height / 2;
-
-  // The placeholder + drag element can only land within the column
-  // track that's currently under the cursor (when in two-column mode),
-  // so blocks stay confined to Main or Side as the user drags.
-  const trackEl = document.elementFromPoint(pdLastClientX, dragCenterY)?.closest('.col-track');
-
-  const fallbackTrack = pdPlaceholder.closest('.col-track') || document.querySelector('.col-track');
-  const targetTrack = trackEl || fallbackTrack;
-  if (!targetTrack) return;
-
-  const siblings = Array.from(targetTrack.querySelectorAll('.resume-block')).filter(b => b !== pdDragEl);
+  const host = document.getElementById('sectionsList');
+  const siblings = Array.from(host.querySelectorAll('.section-row')).filter(r => r !== srDragEl);
+  const dragCenterY = e.clientY;
 
   let inserted = false;
   for (const sib of siblings) {
     const rect = sib.getBoundingClientRect();
-    const center = rect.top + rect.height / 2;
-    if (dragCenterY < center) {
-      if (pdPlaceholder.nextSibling !== sib || pdPlaceholder.parentElement !== targetTrack) sib.before(pdPlaceholder);
+    if (dragCenterY < rect.top + rect.height / 2) {
+      if (srPlaceholder.nextSibling !== sib) sib.before(srPlaceholder);
       inserted = true;
       break;
     }
   }
   if (!inserted) {
     const last = siblings[siblings.length - 1];
-    if (last) {
-      if (pdPlaceholder !== last.nextSibling || pdPlaceholder.parentElement !== targetTrack) last.after(pdPlaceholder);
-    } else if (pdPlaceholder.parentElement !== targetTrack) {
-      targetTrack.appendChild(pdPlaceholder);
-    }
+    if (last && srPlaceholder !== last.nextSibling) last.after(srPlaceholder);
   }
 }
 
-function autoScrollTick() {
-  if (!pdDragEl || !pdScrollEl) return;
-  const rect = pdScrollEl.getBoundingClientRect();
-  const margin = 70;
-  const maxSpeed = 16;
-  let dy = 0;
+function onSectionsPointerUp() {
+  if (!srDragEl) return;
+  document.removeEventListener('pointermove', onSectionsPointerMove);
+  document.removeEventListener('pointerup', onSectionsPointerUp);
 
-  if (pdLastClientY < rect.top + margin) {
-    dy = -maxSpeed * (1 - Math.max(0, pdLastClientY - rect.top) / margin);
-  } else if (pdLastClientY > rect.bottom - margin) {
-    dy = maxSpeed * (1 - Math.max(0, rect.bottom - pdLastClientY) / margin);
-  }
+  srPlaceholder.replaceWith(srDragEl);
+  srDragEl.classList.remove('dragging');
+  srDragEl.style.position = '';
+  srDragEl.style.left = '';
+  srDragEl.style.top = '';
+  srDragEl.style.width = '';
+  srDragEl.style.zIndex = '';
+  srDragEl.style.pointerEvents = '';
 
-  if (dy !== 0) {
-    pdScrollEl.scrollTop += dy;
-    // Keep the dragged card's on-screen position synced with the
-    // cursor even while the canvas scrolls underneath it.
-    const newTop = pdLastClientY - pdOffsetY;
-    pdDragEl.style.top = newTop + 'px';
-    placeFromDragPosition(newTop);
-  }
+  const host = document.getElementById('sectionsList');
+  const orderedIds = Array.from(host.querySelectorAll('.section-row')).map(r => r.dataset.id);
+  blocks = orderedIds.map(id => blockById(id)).filter(Boolean);
 
-  pdAutoScrollRAF = requestAnimationFrame(autoScrollTick);
-}
-
-function onPaperPointerUp(e) {
-  if (!pdDragEl) return;
-  document.removeEventListener('pointermove', onPaperPointerMove);
-  document.removeEventListener('pointerup', onPaperPointerUp);
-  if (pdAutoScrollRAF) cancelAnimationFrame(pdAutoScrollRAF);
-  pdAutoScrollRAF = null;
-
-  const finalRect = pdPlaceholder.getBoundingClientRect();
-  const landedTrack = pdPlaceholder.closest('.col-track');
-  const landedCol = landedTrack ? landedTrack.dataset.col : null;
-
-  pdDragEl.style.transition = 'left 0.16s ease, top 0.16s ease';
-  pdDragEl.style.left = finalRect.left + 'px';
-  pdDragEl.style.top = finalRect.top + 'px';
-
-  setTimeout(() => {
-    pdPlaceholder.replaceWith(pdDragEl);
-    pdDragEl.classList.remove('block-lifted');
-    pdDragEl.style.position = '';
-    pdDragEl.style.left = '';
-    pdDragEl.style.top = '';
-    pdDragEl.style.width = '';
-    pdDragEl.style.zIndex = '';
-    pdDragEl.style.pointerEvents = '';
-    pdDragEl.style.transition = '';
-
-    // Commit new order + column assignment from the DOM back into
-    // the blocks array — read both column tracks (if present) in
-    // their visual order so multi-column reordering sticks too.
-    const paper = document.getElementById('resumePaper');
-    const tracks = Array.from(paper.querySelectorAll('.col-track'));
-    const orderedIds = [];
-    const colOf = {};
-    if (tracks.length) {
-      tracks.forEach(track => {
-        Array.from(track.querySelectorAll('.resume-block')).forEach(el => {
-          orderedIds.push(el.dataset.id);
-          colOf[el.dataset.id] = track.dataset.col;
-        });
-      });
-    } else {
-      Array.from(paper.querySelectorAll('.resume-block')).forEach(el => orderedIds.push(el.dataset.id));
-    }
-
-    // BUG FIX: orderedIds can momentarily include an id no longer
-    // present in `blocks` (e.g. block deleted mid-drag) — guard
-    // against pushing `undefined` into the array.
-    blocks = orderedIds.map(id => {
-      const b = blockById(id);
-      if (landedCol && b) b.col = colOf[id] || b.col;
-      return b;
-    }).filter(Boolean);
-
-    const draggedId = pdDragEl.dataset.id;
-    pdDragEl = null;
-    pdPlaceholder = null;
-    pdScrollEl = null;
-
-    render();
-
-    if (!pdMoved) selectBlock(draggedId);
-  }, 160);
-}
-
-// Palette drag (sidebar chip → canvas) — still native HTML5 drag,
-// since it crosses from outside the paper and needs OS-level drag affordance.
-function initPaletteDrag() {
-  document.querySelectorAll('.palette-chip').forEach(chip => {
-    chip.addEventListener('dragstart', e => {
-      dragSrcType  = 'palette';
-      e.dataTransfer.effectAllowed = 'copy';
-      e.dataTransfer.setData('block-type', chip.dataset.blockType);
-      chip.classList.add('dragging');
-    });
-    chip.addEventListener('dragend', () => {
-      chip.classList.remove('dragging');
-      dragSrcType = null;
-    });
-  });
-}
-
-// Canvas drop (palette chip dropped onto paper)
-function initCanvasDrop() {
-  const paper = document.getElementById('resumePaper');
-  paper.addEventListener('dragover', e => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
-  });
-  paper.addEventListener('drop', e => {
-    e.preventDefault();
-    if (dragSrcType !== 'palette') return;
-    const type = e.dataTransfer.getData('block-type');
-    const target = e.target.closest('.resume-block');
-    const track = e.target.closest('.col-track');
-    const col = track ? track.dataset.col : 'main';
-    if (target) {
-      const rect = target.getBoundingClientRect();
-      const before = e.clientY < rect.top + rect.height / 2;
-      const idx = parseInt(target.dataset.index);
-      insertBlock(type, before ? idx : idx + 1, col);
-    } else {
-      insertBlock(type, undefined, col);
-    }
-  });
+  srDragEl = null;
+  srPlaceholder = null;
+  render();
 }
 
 // ── Toolbar ────────────────────────────────────────────────────
@@ -1093,12 +916,43 @@ function publishToShowcase() {
   closeShowcaseModal();
 }
 
+// ── Sidebar resizer (drag to adjust edit panel vs preview width) ──
+function initSidebarResizer() {
+  const resizer = document.getElementById('sidebarResizer');
+  const sidebar = document.getElementById('sidebar');
+  if (!resizer || !sidebar) return;
+
+  const MIN = 260, MAX = 560;
+  const saved = localStorage.getItem('editorSidebarWidth');
+  if (saved) sidebar.style.width = Math.min(MAX, Math.max(MIN, parseInt(saved))) + 'px';
+
+  resizer.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    resizer.setPointerCapture(e.pointerId);
+    document.body.classList.add('resizing-sidebar');
+
+    const onMove = (ev) => {
+      const layoutLeft = sidebar.getBoundingClientRect().left;
+      let w = ev.clientX - layoutLeft;
+      w = Math.min(MAX, Math.max(MIN, w));
+      sidebar.style.width = w + 'px';
+    };
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.body.classList.remove('resizing-sidebar');
+      localStorage.setItem('editorSidebarWidth', parseInt(sidebar.style.width));
+    };
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  });
+}
+
 // ── Init ───────────────────────────────────────────────────────
 render();
 syncPersonalDetailsForm();
-initBlockDrag();
-initPaletteDrag();
-initCanvasDrop();
+initSectionsDrag();
+initSidebarResizer();
 updatePageIndicator();
 
 // Click outside any block (but inside the canvas) deselects.

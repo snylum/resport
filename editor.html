@@ -38,15 +38,6 @@
       <!-- EDIT MODE -->
       <div id="editModePanel" class="mode-panel">
 
-        <div class="score-bar">
-          <div class="score-bar-top">
-            <span class="score-badge" id="scoreBadge">10%</span>
-            <span class="score-label">Your resume score</span>
-            <span class="score-tip" id="scoreTip"></span>
-          </div>
-          <div class="score-track"><div class="score-fill" id="scoreFill"></div></div>
-        </div>
-
         <div class="sidebar-section">
           <p class="sidebar-label">Personal Details</p>
           <p class="sidebar-hint">Users who added phone number and email received 64% more positive feedback from recruiters.</p>
@@ -105,21 +96,22 @@
         </div>
 
         <div class="sidebar-section">
-          <p class="sidebar-label">Sections</p>
-          <div class="sections-list" id="sectionsList"></div>
-        </div>
-
-        <div class="sidebar-section">
-          <p class="sidebar-label">Drag to add a section</p>
-          <div class="block-palette">
-            <div class="palette-chip" draggable="true" data-block-type="section"><span class="chip-grip">⠿</span><span class="chip-icon">📌</span><span>Section Title</span></div>
-            <div class="palette-chip" draggable="true" data-block-type="experience"><span class="chip-grip">⠿</span><span class="chip-icon">💼</span><span>Experience</span></div>
-            <div class="palette-chip" draggable="true" data-block-type="education"><span class="chip-grip">⠿</span><span class="chip-icon">🎓</span><span>Education</span></div>
-            <div class="palette-chip" draggable="true" data-block-type="skills"><span class="chip-grip">⠿</span><span class="chip-icon">⚡</span><span>Skills</span></div>
-            <div class="palette-chip" draggable="true" data-block-type="text"><span class="chip-grip">⠿</span><span class="chip-icon">📝</span><span>Text Block</span></div>
-            <div class="palette-chip" draggable="true" data-block-type="links"><span class="chip-grip">⠿</span><span class="chip-icon">🔗</span><span>Links</span></div>
-            <div class="palette-chip" draggable="true" data-block-type="spacer"><span class="chip-grip">⠿</span><span class="chip-icon">↕️</span><span>Spacer</span></div>
+          <div class="sidebar-label-row">
+            <p class="sidebar-label" style="border:0;padding:0;margin:0">Sections</p>
+            <div class="add-section-dropdown" id="addSectionDropdown">
+              <button class="add-section-btn" id="addSectionBtn" onclick="toggleAddSectionMenu(event)">+ Add</button>
+              <div class="add-section-menu" id="addSectionMenu">
+                <button onclick="addSection('section')">📌 Section Title</button>
+                <button onclick="addSection('experience')">💼 Experience</button>
+                <button onclick="addSection('education')">🎓 Education</button>
+                <button onclick="addSection('skills')">⚡ Skills</button>
+                <button onclick="addSection('text')">📝 Text Block</button>
+                <button onclick="addSection('links')">🔗 Links</button>
+                <button onclick="addSection('spacer')">↕️ Spacer</button>
+              </div>
+            </div>
           </div>
+          <div class="sections-list" id="sectionsList"></div>
         </div>
 
         <div class="sidebar-section">
@@ -229,6 +221,9 @@
       </div>
 
     </aside>
+
+    <!-- RESIZER -->
+    <div class="sidebar-resizer" id="sidebarResizer"></div>
 
     <!-- CANVAS -->
     <main class="editor-canvas" id="canvasWrap">

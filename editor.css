@@ -98,38 +98,49 @@ body {
   border-bottom: 1px solid var(--color-border);
 }
 
-.block-palette { display: flex; flex-direction: column; gap: 0.375rem; }
-
-.palette-chip {
+.add-section-dropdown { position: relative; }
+.add-section-btn {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.3rem 0.65rem;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  cursor: pointer;
+  color: var(--color-text);
+  transition: background 0.1s, border-color 0.1s;
+}
+.add-section-btn:hover { background: var(--color-surface-alt); border-color: var(--color-primary); }
+.add-section-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 0.3rem;
+  min-width: 170px;
+  flex-direction: column;
+}
+.add-section-dropdown.open .add-section-menu { display: flex; }
+.add-section-menu button {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  font-size: 0.8rem;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-size: 0.78rem;
   font-weight: 500;
-  cursor: grab;
-  user-select: none;
-  background: var(--color-surface);
-  transition: background 0.1s, box-shadow 0.1s, transform 0.1s;
-  /* gradient tape left border */
-  border-left: 4px solid transparent;
-  border-image: var(--gradient) 1;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--color-text);
 }
-
-.palette-chip:hover {
-  background: var(--color-surface-alt);
-  box-shadow: var(--shadow);
-  transform: translateX(2px);
-}
-
-.palette-chip:active { cursor: grabbing; opacity: 0.6; }
-
-.palette-chip.dragging { opacity: 0.4; }
-
-.chip-grip { color: var(--color-text-muted); font-size: 1rem; line-height: 1; }
-.chip-icon { font-size: 0.9rem; }
+.add-section-menu button:hover { background: var(--color-surface-alt); }
 
 .sidebar-toggle {
   display: flex;
@@ -391,35 +402,13 @@ body {
   border-radius: 4px;
 }
 
-.resume-block.is-dragging { opacity: 0.3; }
-
-.resume-block.block-selected {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 3px;
-}
-
-/* Block controls (appear on hover) */
-.block-controls {
-  position: absolute;
-  right: -48px;
-  top: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.resume-block:hover > .block-controls,
-.resume-block.block-selected > .block-controls { opacity: 1; }
-
 .bc-btn {
-  width: 30px; height: 30px;
+  width: 26px; height: 26px;
   border: 1.5px solid var(--color-border);
   background: white;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -428,10 +417,7 @@ body {
 }
 
 .bc-btn:hover { background: #fff0f3; color: var(--color-primary); border-color: var(--color-primary); }
-.bc-btn.move:hover { background: #f0f0ff; color: var(--color-secondary); border-color: var(--color-secondary); }
-.bc-btn.col { color: var(--color-secondary); }
-.bc-btn.col:hover { background: #f0f0ff; border-color: var(--color-secondary); }
-.bc-btn.col.active { background: var(--color-secondary); color: #fff; }
+.bc-btn.del:hover { background: #fff0f0; color: #e00; border-color: #e00; }
 
 /* ── Block styles (résumé typography) ───────────────────── */
 
@@ -574,54 +560,18 @@ body {
 }
 
 @media (max-width: 900px) {
-  .editor-sidebar { width: 180px; }
+  .editor-sidebar { width: 180px !important; }
   .editor-panel { width: 230px; }
   .resume-paper { padding: 32px 28px; }
-  .block-controls { right: -36px; }
-  .bc-btn { width: 26px; height: 26px; }
 }
 
 @media (max-width: 640px) {
   .editor-sidebar { display: none; }
   .editor-panel { display: none; }
+  .sidebar-resizer { display: none; }
   .editor-canvas { padding: 1rem 0.5rem; }
   .resume-paper { padding: 24px 18px; }
-  .block-controls { display: none; }
 }
-
-/* ── Drag-to-reorder: physical lifted card ───────────────────── */
-.resume-block.block-lifted {
-  box-shadow: 6px 8px 0 0 rgba(0,0,0,0.15), 0 16px 28px rgba(0,0,0,0.22);
-  transform: rotate(-1.5deg) scale(1.015);
-  background: white;
-  border-radius: 4px;
-}
-
-.resume-block-placeholder {
-  border: 2px dashed var(--color-primary);
-  border-radius: 4px;
-  background: rgba(255,51,102,0.05);
-  margin: 4px 0;
-}
-
-.bc-drag-handle {
-  width: 30px; height: 30px;
-  border: 1.5px solid var(--color-border);
-  background: white;
-  border-radius: 4px;
-  cursor: grab;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #999;
-  margin-bottom: 2px;
-  user-select: none;
-  touch-action: none;
-}
-.bc-drag-handle:hover { background: #f0f0ff; color: var(--color-secondary); border-color: var(--color-secondary); }
-.bc-drag-handle:active { cursor: grabbing; }
-.bc-btn.del:hover { background: #fff0f0; color: #e00; border-color: #e00; }
 
 /* ── Portfolio modal ─────────────────────────────────────────── */
 .modal-box-wide {
@@ -691,7 +641,7 @@ body {
 }
 
 @media print {
-  .editor-toolbar, .editor-sidebar, .editor-panel, .block-controls { display: none !important; }
+  .editor-toolbar, .editor-sidebar, .editor-panel, .sidebar-resizer { display: none !important; }
   .editor-layout { display: block; overflow: visible; }
   .editor-canvas { padding: 0; background: none; overflow: visible; }
   .resume-paper { box-shadow: none; width: 100%; max-width: 100%; }
@@ -729,17 +679,34 @@ body {
 
 .mode-panel { display: flex; flex-direction: column; gap: 1.25rem; }
 
-/* Score bar */
-.score-bar { display: flex; flex-direction: column; gap: 0.5rem; }
-.score-bar-top { display: flex; align-items: center; gap: 0.5rem; }
-.score-badge {
-  background: var(--color-primary); color: var(--color-primary-contrast);
-  font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 100px;
+/* Resizer handle between sidebar and canvas */
+.sidebar-resizer {
+  width: 6px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+  z-index: 10;
 }
-.score-label { font-size: 0.78rem; color: var(--color-text-muted); flex: 1; }
-.score-tip { font-size: 0.7rem; color: var(--color-accent); font-weight: 600; }
-.score-track { height: 6px; background: var(--color-surface-alt); border-radius: 100px; overflow: hidden; }
-.score-fill { height: 100%; background: var(--color-primary); border-radius: 100px; transition: width 0.2s; }
+.sidebar-resizer::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0; left: 2px;
+  width: 2px;
+  background: var(--color-border);
+  transition: background 0.15s;
+}
+.sidebar-resizer:hover::after { background: var(--color-primary); }
+body.resizing-sidebar { cursor: col-resize; user-select: none; }
+body.resizing-sidebar .editor-canvas { pointer-events: none; }
+
+.sidebar-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--color-border);
+}
 
 /* Personal details */
 .pd-photo-row { display: flex; align-items: center; gap: 0.75rem; margin: 0.25rem 0; }
