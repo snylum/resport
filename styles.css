@@ -61,7 +61,7 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
   list-style: none;
 }
 
-.nav-links a {
+.nav-links a:not(.btn) {
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--color-text-muted);
@@ -69,7 +69,7 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
   transition: color 0.15s;
 }
 
-.nav-links a:hover { color: var(--color-text); }
+.nav-links a:not(.btn):hover { color: var(--color-text); }
 
 /* ── Buttons ─────────────────────────────────────────────── */
 .btn {
