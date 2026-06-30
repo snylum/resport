@@ -565,6 +565,12 @@ body.is-loading #wrapper {
 }
 
 /* ── Responsive: stack vertically on mobile ──────────────── */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .split-left { padding: 2.5rem 2rem; }
+  .split-right { padding: 1.5rem; }
+  .block-demo { width: 220px; }
+}
+
 @media (max-width: 768px) {
   html, body { overflow: hidden; }
 
