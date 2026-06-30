@@ -433,12 +433,26 @@ body {
   60% { transform: translateY(-8px); }
 }
 
-/* Live demo drag states */
-.demo-block.demo-dragging { opacity: 0.3; cursor: grabbing; }
-.demo-block.demo-over-top    { box-shadow: 0 -3px 0 0 var(--color-primary), var(--shadow); transform: none; }
-.demo-block.demo-over-bottom { box-shadow: 0 3px 0 0 var(--color-primary), var(--shadow); transform: none; }
-.demo-block { cursor: grab; user-select: none; }
-.demo-block:active { cursor: grabbing; }
+/* Pointer-based drag: lifted card + placeholder */
+.demo-grip { cursor: grab; touch-action: none; }
+.demo-grip:active { cursor: grabbing; }
+
+.demo-block {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.demo-block.demo-lifted {
+  box-shadow: 8px 10px 0 0 var(--color-border), 0 18px 30px rgba(0,0,0,0.18);
+  transform: rotate(-2deg) scale(1.02);
+  cursor: grabbing;
+}
+
+.demo-placeholder {
+  border: 2px dashed var(--color-primary);
+  border-radius: var(--radius-lg);
+  background: rgba(255,51,102,0.06);
+  margin-bottom: 0.5rem;
+}
 
 /* Kill the float animation now that blocks are interactive */
 .demo-block-active { animation: none !important; }
@@ -566,12 +580,6 @@ body.is-loading #wrapper {
 }
 
 /* ── Responsive: stack vertically on mobile ──────────────── */
-@media (max-width: 1024px) and (min-width: 769px) {
-  .split-left { padding: 2.5rem 2rem; }
-  .split-right { padding: 1.5rem; }
-  .block-demo { width: 220px; }
-}
-
 @media (max-width: 768px) {
   html, body { overflow: hidden; }
 

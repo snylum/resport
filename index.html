@@ -187,27 +187,28 @@
       <div class="split-right">
         <!-- Live draggable block demo -->
         <div class="block-demo" id="liveBlockDemo">
-          <div class="demo-block" draggable="true" data-label="Experience" data-icon="📌">
+          <div class="demo-block" data-label="Experience" data-icon="📌">
             <span class="demo-grip">⠿</span>
             <span class="demo-icon">📌</span>
             <span>Experience</span>
           </div>
-          <div class="demo-block" draggable="true" data-label="Education" data-icon="🎓">
+          <div class="demo-block" data-label="Education" data-icon="🎓">
             <span class="demo-grip">⠿</span>
             <span class="demo-icon">🎓</span>
             <span>Education</span>
           </div>
-          <div class="demo-block demo-block-active" draggable="true" data-label="Skills" data-icon="⚡">
+          <div class="demo-block demo-block-active" data-label="Skills" data-icon="⚡">
             <span class="demo-grip">⠿</span>
             <span class="demo-icon">⚡</span>
             <span>Skills</span>
           </div>
-          <div class="demo-block" draggable="true" data-label="Links" data-icon="🔗">
+          <div class="demo-block" data-label="Links" data-icon="🔗">
             <span class="demo-grip">⠿</span>
             <span class="demo-icon">🔗</span>
             <span>Links</span>
           </div>
         </div>
+        <p class="demo-label" style="text-align:center;margin-top:0.75rem">↕ Try dragging these blocks</p>
       </div>
     </section>
 
@@ -269,52 +270,109 @@
   <script src="home.js"></script>
   <script>
   (function() {
-    let dragSrc = null;
-
     function initDemo() {
       const demo = document.getElementById('liveBlockDemo');
       if (!demo) return;
 
-      function getBlocks() { return Array.from(demo.querySelectorAll('.demo-block')); }
+      let dragEl = null;
+      let placeholder = null;
+      let startY = 0, startX = 0, offsetY = 0, offsetX = 0;
+      let originRect = null;
 
-      demo.addEventListener('dragstart', function(e) {
-        dragSrc = e.target.closest('.demo-block');
-        if (!dragSrc) return;
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', '');
-        setTimeout(() => dragSrc.classList.add('demo-dragging'), 0);
-      });
+      function getBlocks() {
+        return Array.from(demo.querySelectorAll('.demo-block')).filter(b => b !== dragEl);
+      }
 
-      demo.addEventListener('dragend', function(e) {
-        getBlocks().forEach(b => b.classList.remove('demo-dragging', 'demo-over-top', 'demo-over-bottom'));
-        dragSrc = null;
-      });
-
-      demo.addEventListener('dragover', function(e) {
+      function onPointerDown(e) {
+        const grip = e.target.closest('.demo-grip');
+        const card = e.target.closest('.demo-block');
+        if (!grip || !card) return;
         e.preventDefault();
-        const target = e.target.closest('.demo-block');
-        if (!target || target === dragSrc) return;
-        const rect = target.getBoundingClientRect();
-        const isBefore = e.clientY < rect.top + rect.height / 2;
-        getBlocks().forEach(b => b.classList.remove('demo-over-top', 'demo-over-bottom'));
-        target.classList.add(isBefore ? 'demo-over-top' : 'demo-over-bottom');
-      });
 
-      demo.addEventListener('dragleave', function(e) {
-        const target = e.target.closest('.demo-block');
-        if (target) target.classList.remove('demo-over-top', 'demo-over-bottom');
-      });
+        dragEl = card;
+        originRect = card.getBoundingClientRect();
+        const demoRect = demo.getBoundingClientRect();
 
-      demo.addEventListener('drop', function(e) {
-        e.preventDefault();
-        const target = e.target.closest('.demo-block');
-        if (!target || !dragSrc || target === dragSrc) return;
-        const rect = target.getBoundingClientRect();
-        const isBefore = e.clientY < rect.top + rect.height / 2;
-        getBlocks().forEach(b => b.classList.remove('demo-over-top', 'demo-over-bottom'));
-        if (isBefore) demo.insertBefore(dragSrc, target);
-        else target.after(dragSrc);
-      });
+        startY = e.clientY;
+        startX = e.clientX;
+        offsetY = e.clientY - originRect.top;
+        offsetX = e.clientX - originRect.left;
+
+        placeholder = document.createElement('div');
+        placeholder.className = 'demo-placeholder';
+        placeholder.style.height = originRect.height + 'px';
+        card.after(placeholder);
+
+        card.classList.add('demo-lifted');
+        card.style.width = originRect.width + 'px';
+        card.style.position = 'fixed';
+        card.style.left = originRect.left + 'px';
+        card.style.top = originRect.top + 'px';
+        card.style.zIndex = '999';
+        card.style.pointerEvents = 'none';
+
+        document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('pointerup', onPointerUp);
+      }
+
+      function onPointerMove(e) {
+        if (!dragEl) return;
+        const newLeft = e.clientX - offsetX;
+        const newTop = e.clientY - offsetY;
+        dragEl.style.left = newLeft + 'px';
+        dragEl.style.top = newTop + 'px';
+
+        const dragCenterY = newTop + originRect.height / 2;
+
+        const blocks = getBlocks();
+        let inserted = false;
+        for (const block of blocks) {
+          if (block === placeholder) continue;
+          const rect = block.getBoundingClientRect();
+          const blockCenterY = rect.top + rect.height / 2;
+          if (dragCenterY < blockCenterY) {
+            if (placeholder.nextSibling !== block) {
+              block.before(placeholder);
+            }
+            inserted = true;
+            break;
+          }
+        }
+        if (!inserted) {
+          const last = blocks[blocks.length - 1];
+          if (last && placeholder !== last.nextSibling) {
+            last.after(placeholder);
+          }
+        }
+      }
+
+      function onPointerUp(e) {
+        if (!dragEl) return;
+        document.removeEventListener('pointermove', onPointerMove);
+        document.removeEventListener('pointerup', onPointerUp);
+
+        const finalRect = placeholder.getBoundingClientRect();
+
+        dragEl.style.transition = 'left 0.18s ease, top 0.18s ease';
+        dragEl.style.left = finalRect.left + 'px';
+        dragEl.style.top = finalRect.top + 'px';
+
+        setTimeout(() => {
+          placeholder.replaceWith(dragEl);
+          dragEl.classList.remove('demo-lifted');
+          dragEl.style.position = '';
+          dragEl.style.left = '';
+          dragEl.style.top = '';
+          dragEl.style.width = '';
+          dragEl.style.zIndex = '';
+          dragEl.style.pointerEvents = '';
+          dragEl.style.transition = '';
+          dragEl = null;
+          placeholder = null;
+        }, 180);
+      }
+
+      demo.addEventListener('pointerdown', onPointerDown);
     }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initDemo);

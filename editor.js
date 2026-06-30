@@ -15,9 +15,7 @@ let blocks = [
   { id: uid(), type: 'links', data: { links: ['github.com/you', 'linkedin.com/in/you', 'yourportfolio.com'] } }
 ];
 
-let dragSrcType  = null;
-let dragSrcIndex = null;
-let dragIndicator = null;
+let dragSrcType  = null; // 'palette' only now — block reorder uses pointer drag below
 
 // ── Utilities ──────────────────────────────────────────────────
 function uid() { return Math.random().toString(36).slice(2, 9); }
@@ -41,15 +39,8 @@ function render() {
     wrap.className = 'resume-block';
     wrap.dataset.id = block.id;
     wrap.dataset.index = i;
-    wrap.draggable = false; // enabled dynamically on grip mousedown
 
     wrap.innerHTML = renderBlock(block, i) + renderControls(i);
-
-    wrap.addEventListener('dragstart', onBlockDragStart);
-    wrap.addEventListener('dragend',   onBlockDragEnd);
-    wrap.addEventListener('dragover',  onBlockDragOver);
-    wrap.addEventListener('dragleave', onBlockDragLeave);
-    wrap.addEventListener('drop',      onBlockDrop);
 
     paper.appendChild(wrap);
   });
@@ -175,39 +166,113 @@ function insertBlock(type, atIndex) {
   render();
 }
 
-// ── Drag-to-reorder (fixed implementation) ─────────────────────
-function createDragIndicator() {
-  dragIndicator = document.createElement('div');
-  dragIndicator.id = 'dragIndicator';
-  dragIndicator.style.cssText = 'height:3px;background:linear-gradient(135deg,#FF3366,#7C4DFF,#00E5B0);border-radius:2px;pointer-events:none;display:none;margin:0;transition:none;';
-  document.getElementById('resumePaper').parentNode.insertBefore(dragIndicator, document.getElementById('resumePaper'));
-}
+// ── Drag-to-reorder: physical pointer-based drag ────────────────
+// The card itself lifts and follows the cursor; a placeholder shows
+// where it will land; other blocks reflow live.
 
-function showIndicatorAt(blockEl, position) {
-  if (!dragIndicator) return;
+let pdDragEl = null;
+let pdPlaceholder = null;
+let pdOffsetX = 0, pdOffsetY = 0, pdOriginRect = null;
+
+function initBlockDrag() {
   const paper = document.getElementById('resumePaper');
-  const paperRect = paper.getBoundingClientRect();
-  const rect = blockEl.getBoundingClientRect();
-  const y = (position === 'before' ? rect.top : rect.bottom) - paperRect.top + paper.scrollTop;
-  dragIndicator.style.display = 'block';
-  dragIndicator.style.position = 'absolute';
-  dragIndicator.style.left = '0';
-  dragIndicator.style.right = '0';
-  dragIndicator.style.top = (y - 1) + 'px';
-  dragIndicator.style.width = '100%';
-  dragIndicator.style.zIndex = '100';
+  paper.addEventListener('pointerdown', onPaperPointerDown);
 }
 
-function hideIndicator() {
-  if (dragIndicator) dragIndicator.style.display = 'none';
+function onPaperPointerDown(e) {
+  const grip = e.target.closest('.bc-drag-handle');
+  const card = e.target.closest('.resume-block');
+  if (!grip || !card) return;
+  e.preventDefault();
+
+  pdDragEl = card;
+  pdOriginRect = card.getBoundingClientRect();
+
+  pdOffsetX = e.clientX - pdOriginRect.left;
+  pdOffsetY = e.clientY - pdOriginRect.top;
+
+  pdPlaceholder = document.createElement('div');
+  pdPlaceholder.className = 'resume-block-placeholder';
+  pdPlaceholder.style.height = pdOriginRect.height + 'px';
+  card.after(pdPlaceholder);
+
+  card.classList.add('block-lifted');
+  card.style.width = pdOriginRect.width + 'px';
+  card.style.position = 'fixed';
+  card.style.left = pdOriginRect.left + 'px';
+  card.style.top = pdOriginRect.top + 'px';
+  card.style.zIndex = '999';
+  card.style.pointerEvents = 'none';
+
+  document.addEventListener('pointermove', onPaperPointerMove);
+  document.addEventListener('pointerup', onPaperPointerUp);
 }
 
-// Palette drag
+function onPaperPointerMove(e) {
+  if (!pdDragEl) return;
+  const newLeft = e.clientX - pdOffsetX;
+  const newTop = e.clientY - pdOffsetY;
+  pdDragEl.style.left = newLeft + 'px';
+  pdDragEl.style.top = newTop + 'px';
+
+  const dragCenterY = newTop + pdOriginRect.height / 2;
+  const paper = document.getElementById('resumePaper');
+  const siblings = Array.from(paper.querySelectorAll('.resume-block')).filter(b => b !== pdDragEl);
+
+  let inserted = false;
+  for (const sib of siblings) {
+    const rect = sib.getBoundingClientRect();
+    const center = rect.top + rect.height / 2;
+    if (dragCenterY < center) {
+      if (pdPlaceholder.nextSibling !== sib) sib.before(pdPlaceholder);
+      inserted = true;
+      break;
+    }
+  }
+  if (!inserted) {
+    const last = siblings[siblings.length - 1];
+    if (last && pdPlaceholder !== last.nextSibling) last.after(pdPlaceholder);
+  }
+}
+
+function onPaperPointerUp(e) {
+  if (!pdDragEl) return;
+  document.removeEventListener('pointermove', onPaperPointerMove);
+  document.removeEventListener('pointerup', onPaperPointerUp);
+
+  const finalRect = pdPlaceholder.getBoundingClientRect();
+  pdDragEl.style.transition = 'left 0.16s ease, top 0.16s ease';
+  pdDragEl.style.left = finalRect.left + 'px';
+  pdDragEl.style.top = finalRect.top + 'px';
+
+  setTimeout(() => {
+    const paper = document.getElementById('resumePaper');
+    pdPlaceholder.replaceWith(pdDragEl);
+    pdDragEl.classList.remove('block-lifted');
+    pdDragEl.style.position = '';
+    pdDragEl.style.left = '';
+    pdDragEl.style.top = '';
+    pdDragEl.style.width = '';
+    pdDragEl.style.zIndex = '';
+    pdDragEl.style.pointerEvents = '';
+    pdDragEl.style.transition = '';
+
+    // Commit new order from DOM back into the blocks array
+    const newOrder = Array.from(paper.querySelectorAll('.resume-block')).map(el => el.dataset.id);
+    blocks = newOrder.map(id => blockById(id));
+    render();
+
+    pdDragEl = null;
+    pdPlaceholder = null;
+  }, 160);
+}
+
+// Palette drag (sidebar chip → canvas) — still native HTML5 drag,
+// since it crosses from outside the paper and needs OS-level drag affordance.
 function initPaletteDrag() {
   document.querySelectorAll('.palette-chip').forEach(chip => {
     chip.addEventListener('dragstart', e => {
       dragSrcType  = 'palette';
-      dragSrcIndex = null;
       e.dataTransfer.effectAllowed = 'copy';
       e.dataTransfer.setData('block-type', chip.dataset.blockType);
       chip.classList.add('dragging');
@@ -215,96 +280,28 @@ function initPaletteDrag() {
     chip.addEventListener('dragend', () => {
       chip.classList.remove('dragging');
       dragSrcType = null;
-      hideIndicator();
     });
   });
 }
 
-// Block drag (reorder) — only fires when drag originates from the grip handle
-let gripMousedown = false;
-
-document.addEventListener('mousedown', e => {
-  gripMousedown = !!(e.target.closest('.bc-drag-handle'));
-});
-
-function onBlockDragStart(e) {
-  if (!gripMousedown || e.target.closest('[contenteditable="true"]')) {
-    e.preventDefault();
-    return;
-  }
-  dragSrcType  = 'block';
-  dragSrcIndex = parseInt(this.dataset.index);
-  e.dataTransfer.effectAllowed = 'move';
-  e.dataTransfer.setData('text/plain', this.dataset.index);
-  const el = this;
-  setTimeout(() => el.classList.add('is-dragging'), 0);
-}
-
-function onBlockDragEnd(e) {
-  this.classList.remove('is-dragging');
-  document.querySelectorAll('.resume-block').forEach(b => b.classList.remove('drag-over-top','drag-over-bottom'));
-  hideIndicator();
-  dragSrcType  = null;
-  dragSrcIndex = null;
-}
-
-function onBlockDragOver(e) {
-  e.preventDefault();
-  e.stopPropagation();
-  e.dataTransfer.dropEffect = dragSrcType === 'palette' ? 'copy' : 'move';
-
-  const rect = this.getBoundingClientRect();
-  const midY = rect.top + rect.height / 2;
-  const position = e.clientY < midY ? 'before' : 'after';
-
-  document.querySelectorAll('.resume-block').forEach(b => b.classList.remove('drag-over-top','drag-over-bottom'));
-  this.classList.add(position === 'before' ? 'drag-over-top' : 'drag-over-bottom');
-  showIndicatorAt(this, position);
-}
-
-function onBlockDragLeave(e) {
-  if (!this.contains(e.relatedTarget)) {
-    this.classList.remove('drag-over-top','drag-over-bottom');
-  }
-}
-
-function onBlockDrop(e) {
-  e.preventDefault();
-  e.stopPropagation();
-  document.querySelectorAll('.resume-block').forEach(b => b.classList.remove('drag-over-top','drag-over-bottom'));
-  hideIndicator();
-
-  const targetIndex = parseInt(this.dataset.index);
-  const rect = this.getBoundingClientRect();
-  const dropBefore = e.clientY < (rect.top + rect.height / 2);
-  const insertAt = dropBefore ? targetIndex : targetIndex + 1;
-
-  if (dragSrcType === 'palette') {
-    const type = e.dataTransfer.getData('block-type');
-    insertBlock(type, insertAt);
-  } else if (dragSrcType === 'block' && dragSrcIndex !== null) {
-    if (dragSrcIndex === targetIndex) return;
-    const moved = blocks.splice(dragSrcIndex, 1)[0];
-    const newAt = dragSrcIndex < insertAt ? insertAt - 1 : insertAt;
-    blocks.splice(newAt, 0, moved);
-    render();
-  }
-}
-
-// Canvas drop (onto empty paper area)
+// Canvas drop (palette chip dropped onto paper)
 function initCanvasDrop() {
   const paper = document.getElementById('resumePaper');
   paper.addEventListener('dragover', e => {
-    if (e.target.closest('.resume-block')) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
   });
   paper.addEventListener('drop', e => {
-    if (e.target.closest('.resume-block')) return;
     e.preventDefault();
-    hideIndicator();
-    if (dragSrcType === 'palette') {
-      const type = e.dataTransfer.getData('block-type');
+    if (dragSrcType !== 'palette') return;
+    const type = e.dataTransfer.getData('block-type');
+    const target = e.target.closest('.resume-block');
+    if (target) {
+      const rect = target.getBoundingClientRect();
+      const before = e.clientY < rect.top + rect.height / 2;
+      const idx = parseInt(target.dataset.index);
+      insertBlock(type, before ? idx : idx + 1);
+    } else {
       insertBlock(type);
     }
   });
@@ -583,14 +580,6 @@ function publishToShowcase() {
 
 // ── Init ───────────────────────────────────────────────────────
 render();
-createDragIndicator();
+initBlockDrag();
 initPaletteDrag();
 initCanvasDrop();
-
-// Dynamically toggle draggable so contenteditable children work normally
-document.addEventListener('mousedown', e => {
-  const grip = e.target.closest('.bc-drag-handle');
-  document.querySelectorAll('.resume-block').forEach(b => {
-    b.draggable = !!grip;
-  });
-});

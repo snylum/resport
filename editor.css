@@ -387,10 +387,24 @@ body {
   .block-controls { display: none; }
 }
 
-/* ── Drag-to-reorder enhancements ────────────────────────────── */
-.resume-block.drag-over-top    { box-shadow: 0 -3px 0 0 #FF3366; }
-.resume-block.drag-over-bottom { box-shadow: 0 3px 0 0 #FF3366; }
-.resume-block.is-dragging { opacity: 0.25; background: rgba(255,51,102,0.03); }
+/* ── Drag-to-reorder: physical lifted card ───────────────────── */
+.resume-block {
+  transition: transform 0.12s ease;
+}
+
+.resume-block.block-lifted {
+  box-shadow: 6px 8px 0 0 rgba(0,0,0,0.15), 0 16px 28px rgba(0,0,0,0.22);
+  transform: rotate(-1.5deg) scale(1.015);
+  background: white;
+  border-radius: 4px;
+}
+
+.resume-block-placeholder {
+  border: 2px dashed var(--color-primary);
+  border-radius: 4px;
+  background: rgba(255,51,102,0.05);
+  margin: 4px 0;
+}
 
 .bc-drag-handle {
   width: 30px; height: 30px;
@@ -405,8 +419,9 @@ body {
   color: #999;
   margin-bottom: 2px;
   user-select: none;
+  touch-action: none;
 }
-.bc-drag-handle:hover { background: #f0f0ff; color: var(--color-secondary); border-color: var(--color-secondary); cursor: grab; }
+.bc-drag-handle:hover { background: #f0f0ff; color: var(--color-secondary); border-color: var(--color-secondary); }
 .bc-drag-handle:active { cursor: grabbing; }
 .bc-btn.del:hover { background: #fff0f0; color: #e00; border-color: #e00; }
 
