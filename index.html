@@ -3,60 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>proves.work — Sell your work. Print your résumé.</title>
+  <title>proves.work — Stop claiming. Start proving.</title>
   <link rel="stylesheet" href="dazed.css" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="home.css" />
   <style>
-    /* ── RESET & LAYOUT ── */
+    /* ── RESET & LAYOUT FIXES FOR HORIZONTAL WRAPPER ── */
     body {
       margin: 0;
       padding: 0;
-      background: var(--color-surface, #ffffff);
-      overflow-x: hidden;
+      overflow: hidden; /* Necessary for the horizontal slider panels */
     }
 
-    .site-nav {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1.5rem 2rem;
-      box-sizing: border-box;
-      z-index: 100;
-      background: rgba(255, 255, 255, 0.8);
-      backdrop-filter: blur(8px);
-      border-bottom: 2px solid var(--color-border, #000000);
-    }
-
-    .nav-logo {
-      font-weight: 800;
-      font-size: 1.25rem;
-      text-decoration: none;
-      color: var(--color-text, #000000);
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .logo-dot {
-      width: 10px;
-      height: 10px;
-      background: var(--color-primary, #6366f1);
-      border-radius: 50%;
-    }
-
-    /* ── WIDENED GUMROAD-STYLE HERO ── */
+    /* ── WIDENED PREMIUM HERO HEADER ── */
     .hero-header {
       width: 100%;
-      min-height: 100vh;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      padding: 6rem 2rem 4rem 2rem;
       text-align: center;
       box-sizing: border-box;
     }
@@ -67,6 +32,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      position: relative;
     }
 
     .dynamic-subdomain {
@@ -76,6 +42,12 @@
       letter-spacing: -0.05em;
       color: var(--color-text, #000000);
       margin: 0;
+      opacity: 1;
+      transition: opacity 0.25s ease-in-out; /* Smooth transition instead of blinking */
+    }
+
+    .dynamic-subdomain.fade-out {
+      opacity: 0;
     }
 
     .dynamic-subdomain em {
@@ -105,6 +77,8 @@
     .hero-actions {
       margin-top: 3.5rem;
       display: flex;
+      flex-direction: column;
+      align-items: center;
       gap: 1rem;
       opacity: 0;
       transform: translateY(15px);
@@ -115,90 +89,313 @@
       opacity: 1;
       transform: translateY(0);
     }
+
+    .button-group {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .user-count-tag {
+      font-size: 0.9rem;
+      font-style: italic;
+      color: var(--color-text-muted, #6b7280);
+      margin-top: 0.5rem;
+    }
   </style>
 </head>
-<body>
+<body class="is-loading">
 
+  <!-- NAV (fixed, always visible) -->
   <nav class="site-nav">
     <a href="index.html" class="nav-logo">
       <span class="logo-dot"></span>proves.work
     </a>
-    <ul class="nav-links" style="list-style: none; display: flex; gap: 1.5rem; margin: 0; padding: 0; align-items: center;">
-      <li><a href="#" style="text-decoration: none; color: var(--color-text-muted); font-weight: 500;">Dashboard Preview</a></li>
-      <li><a href="#" class="btn btn-primary btn-sm">Start Publishing →</a></li>
+    <ul class="nav-links">
+      <li><a href="showcase.html">Showcase</a></li>
+      <li><a href="#" onclick="scrollToSlide(4);return false;">Pricing</a></li>
+      <li><a href="editor.html" class="btn btn-primary btn-sm">Open Dashboard →</a></li>
     </ul>
   </nav>
 
-  <header class="hero-header">
-    <div class="brand-container">
-      <h1 class="dynamic-subdomain" id="tickerTarget">
-        claims<span class="tld-accent">.work</span>
-      </h1>
-    </div>
+  <!-- SLIDE DOTS (right side) -->
+  <nav class="slide-dots" aria-label="Page sections">
+    <button class="dot active" onclick="scrollToSlide(0)" aria-label="Hero"></button>
+    <button class="dot" onclick="scrollToSlide(1)" aria-label="How it works"></button>
+    <button class="dot" onclick="scrollToSlide(2)" aria-label="Features"></button>
+    <button class="dot" onclick="scrollToSlide(3)" aria-label="Demo"></button>
+    <button class="dot" onclick="scrollToSlide(4)" aria-label="Pricing"></button>
+    <button class="dot" onclick="scrollToSlide(5)" aria-label="Get started"></button>
+  </nav>
 
-    <p class="hero-tagline" id="taglineTarget">Stop claiming. Start proving.</p>
+  <!-- HORIZONTAL SCROLL WRAPPER RETURNED -->
+  <div id="wrapper">
 
-    <div class="hero-actions" id="actionsTarget">
-      <a href="#" class="btn btn-primary btn-lg">Create Your Shop & Résumé</a>
-      <a href="#" class="btn btn-ghost btn-lg">View Templates</a>
-    </div>
-  </header>
+    <!-- SLIDE 1: HERO -->
+    <section class="panel panel-hero" id="slide-0">
+      <div class="panel-content" style="max-width: 100%; width: 100%;">
+        
+        <!-- WIDENED HERO AREA -->
+        <header class="hero-header">
+          <div class="brand-container">
+            <h1 class="dynamic-subdomain" id="tickerTarget">
+              claims<span class="tld-accent">.work</span>
+            </h1>
+          </div>
 
-  <!-- RE-ENGINEERED STEP TICKER CONSOLE -->
+          <p class="hero-tagline" id="taglineTarget">Stop claiming. Start proving.</p>
+
+          <div class="hero-actions" id="actionsTarget">
+            <div class="button-group">
+              <a href="#" class="btn btn-primary btn-lg">Show yours</a>
+              <button class="btn btn-ghost btn-lg" onclick="scrollToSlide(1)">See how →</button>
+            </div>
+            <!-- Dynamic User Proof Count Tag -->
+            <span class="user-count-tag">1,420 people have already proven theirs.</span>
+          </div>
+        </header>
+
+      </div>
+    </section>
+
+    <!-- SLIDE 2: HOW IT WORKS -->
+    <section class="panel panel-how" id="slide-1">
+      <div class="panel-intro">
+        <p class="eyebrow">How it works</p>
+        <h2>Three steps.<br>One live profile.</h2>
+        <p class="intro-sub">No filler content. No traditional padding. Just proof blocks you own.</p>
+        <button class="btn btn-ghost btn-sm" onclick="scrollToSlide(2)">See features →</button>
+      </div>
+      <div class="panel-steps">
+        <div class="step">
+          <div class="step-num">01</div>
+          <div class="step-tape"></div>
+          <h3>Connect Assets</h3>
+          <p>Link your live goods, GitHub milestones, or shipped builds straight to your storefront dashboard.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <div class="step-tape"></div>
+          <h3>Generate PDF</h3>
+          <p>Export a clean, vector-perfect, ATS-safe PDF résumé built automatically from your real dashboard records.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <div class="step-tape"></div>
+          <h3>Launch Subdomain</h3>
+          <p>Instantly deploy your standalone dashboard portfolio onto your personal verified link.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 3: FEATURES GRID -->
+    <section class="panel panel-features" id="slide-2">
+      <div class="panel-intro panel-intro-dark">
+        <p class="eyebrow" style="color:var(--color-accent)">What you get</p>
+        <h2>Everything a<br>creator needs.</h2>
+        <p class="intro-sub" style="color:rgba(255,255,255,0.6)">Built for modern professionals who want to display verifiable artifacts.</p>
+        <button class="btn btn-ghost btn-sm" onclick="scrollToSlide(3)" style="border-color:rgba(255,255,255,0.3);color:#fff">See it in action →</button>
+      </div>
+      <div class="panel-feature-grid">
+        <div class="feat">
+          <div class="feat-icon">🧱</div>
+          <h3>Gumroad Editing</h3>
+          <p>Manage physical records, code artifacts, or digital goods like simple store products.</p>
+        </div>
+        <div class="feat">
+          <div class="feat-icon">👁</div>
+          <h3>Live Subdomain</h3>
+          <p>Your workspace streams cleanly into a customized deployment path.</p>
+        </div>
+        <div class="feat">
+          <div class="feat-icon">🌍</div>
+          <h3>Public Showcase</h3>
+          <p>Opt in to the community gallery. Let your working artifacts speak for themselves.</p>
+        </div>
+        <div class="feat">
+          <div class="feat-icon">🔒</div>
+          <h3>Privacy Controls</h3>
+          <p>Hide revenue stats, redact names, or swap private case details per setup toggle.</p>
+        </div>
+        <div class="feat">
+          <div class="feat-icon">📄</div>
+          <h3>PDF Export</h3>
+          <p>One-click pristine vector PDF output mirroring your actual digital dashboard layout.</p>
+        </div>
+        <div class="feat">
+          <div class="feat-icon">✨</div>
+          <h3>Verifiable Proof</h3>
+          <p>Let viewers verify asset origins directly through embedded cryptographic hooks.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 4: SPLIT DEMO / TESTIMONIAL -->
+    <section class="panel panel-split" id="slide-3">
+      <div class="split-left">
+        <p class="eyebrow">Real results</p>
+        <h2>Portfolios that<br>close deals.</h2>
+        <div class="testimonials">
+          <blockquote class="testi">
+            <p>"Switching to a live verification shop format completely altered client negotiations. They can view the proof before jumping on a call."</p>
+            <cite>— Joven R., Technical Designer</cite>
+          </blockquote>
+          <blockquote class="testi">
+            <p>"The ability to present my live artifacts and print an cleanly sync'd PDF at the exact same moment saves hours."</p>
+            <cite>— Patricia M., Product Engineer</cite>
+          </blockquote>
+        </div>
+        <button class="btn btn-gradient" onclick="scrollToSlide(4)">See pricing →</button>
+      </div>
+      <div class="split-right">
+        <div class="block-demo" id="liveBlockDemo">
+          <div class="demo-block" data-label="Experience" data-icon="📌">
+            <span class="demo-grip">⠿</span>
+            <span class="demo-icon">📌</span>
+            <span>Digital Products</span>
+          </div>
+          <div class="demo-block" data-label="Education" data-icon="🎓">
+            <span class="demo-grip">⠿</span>
+            <span class="demo-icon">🎓</span>
+            <span>PDF Résumé Assets</span>
+          </div>
+          <div class="demo-block demo-block-active" data-label="Skills" data-icon="⚡">
+            <span class="demo-grip">⠿</span>
+            <span class="demo-icon">⚡</span>
+            <span>Live Web Embeds</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: PRICING -->
+    <section class="panel panel-pricing" id="slide-4">
+      <div class="panel-intro">
+        <p class="eyebrow">Pricing</p>
+        <h2>Start free.<br>Upgrade when ready.</h2>
+        <p class="intro-sub">No credit card needed to start. Deploy your first live project tracking block today.</p>
+      </div>
+      <div class="pricing-cards">
+        <div class="price-card">
+          <div class="price-name">Free</div>
+          <div class="price-amount">₱0 <span>/forever</span></div>
+          <ul class="price-features">
+            <li>✓ Gumroad-style workspace</li>
+            <li>✓ Unlimited product entries</li>
+            <li>✓ Custom public path</li>
+            <li>✓ PDF résumé export capability</li>
+          </ul>
+          <a href="editor.html" class="btn btn-ghost" style="width:100%;justify-content:center">Start free</a>
+        </div>
+        <div class="price-card price-featured">
+          <div class="price-badge">Most popular</div>
+          <div class="price-name">Pro</div>
+          <div class="price-amount">₱149 <span>/mo</span></div>
+          <ul class="price-features">
+            <li>✓ Everything in Free</li>
+            <li>✓ Custom Root Domain Mapping</li>
+            <li>✓ Advanced analytical views</li>
+            <li>✓ Priority asset rendering</li>
+          </ul>
+          <a href="#" class="btn btn-primary" style="width:100%;justify-content:center">Get Pro</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 6: CTA / FOOTER -->
+    <section class="panel panel-cta" id="slide-5">
+      <div class="cta-inner">
+        <p class="eyebrow" style="color:var(--color-accent)">You're one link away</p>
+        <h2 class="cta-title">Ready to back up<br>your statements?</h2>
+        <p class="cta-sub">Your work is your best proof. Make it visible.</p>
+        <a href="editor.html" class="btn btn-gradient cta-btn">Deploy your dashboard — it's free →</a>
+        <div class="cta-links">
+          <a href="showcase.html">Browse Showcase</a>
+          <span>·</span>
+          <a href="editor.html">Open Dashboard</a>
+        </div>
+        <p class="cta-copy">© 2026 proves.work · Built with ❤️</p>
+      </div>
+    </section>
+
+  </div><!-- /#wrapper -->
+
+  <script src="home.js"></script>
+  
+  <!-- SMOOTH FADE TICKER CORE -->
   <script type="module">
     document.addEventListener('DOMContentLoaded', () => {
       const tickerTarget = document.getElementById('tickerTarget');
       const taglineTarget = document.getElementById('taglineTarget');
       const actionsTarget = document.getElementById('actionsTarget');
 
-      const names = [
+      const urlParams = new URLSearchParams(window.location.search);
+      const customName = urlParams.get('name');
+
+      const baseNames = [
         "luca", "lebron", "leni", "juan", "yuki", 
         "mei", "aarav", "sofia", "kwame", "amélie", 
         "nikolai", "tariq", "chloe", "mateo", "soraya", 
-        "sven", "ji-woo", "kenji", "anya", "oxana", "your-name"
+        "sven", "ji-woo", "kenji", "anya", "oxana"
       ];
 
-      let currentIndex = 0;
-      const normalIntervalTime = 125; 
-      let tickerInterval;
+      // Use target query name, fallback to localStorage, then default to "everyone"
+      const storedName = localStorage.getItem('user_first_name');
+      const finalTargetName = customName || storedName || "everyone";
 
-      function runTicker() {
+      const names = [...baseNames, finalTargetName];
+
+      let currentIndex = 0;
+      const fadeTime = 250; 
+      const displayTime = 150; 
+
+      function updateTicker() {
         if (currentIndex < names.length) {
           const currentName = names[currentIndex];
           
-          if (currentName === "your-name") {
-            // Italicize "your-name" and pause execution context for 3000ms
-            tickerTarget.innerHTML = `<em>your-name</em><span class="tld-accent">.proves.work</span>`;
-            currentIndex++;
-            
-            setTimeout(() => {
-              resolveToFinalState();
-            }, 3000);
-          } else {
-            // Regular quick-cycling names
-            tickerTarget.innerHTML = `${currentName}<span class="tld-accent">.proves.work</span>`;
-            currentIndex++;
-            tickerInterval = setTimeout(runTicker, normalIntervalTime);
-          }
+          // Step 1: Smooth Fade Out
+          tickerTarget.classList.add('fade-out');
+          
+          setTimeout(() => {
+            if (currentName === finalTargetName) {
+              // The last entry matches your italicized constraints perfectly
+              tickerTarget.innerHTML = `<em>${currentName}</em><span class="tld-accent">.proves.work</span>`;
+              tickerTarget.classList.remove('fade-out');
+              currentIndex++;
+              
+              // Custom heavy three-second pause condition
+              setTimeout(resolveToFinalState, 3000);
+            } else {
+              // Process standard quick iteration entries
+              tickerTarget.innerHTML = `${currentName}<span class="tld-accent">.proves.work</span>`;
+              tickerTarget.classList.remove('fade-out');
+              currentIndex++;
+              
+              setTimeout(updateTicker, displayTime + fadeTime);
+            }
+          }, fadeTime);
         }
       }
 
-      // Start the loop sequence
-      tickerInterval = setTimeout(runTicker, normalIntervalTime);
+      // Start processing first fade action gracefully
+      setTimeout(updateTicker, displayTime);
 
       function resolveToFinalState() {
-        tickerTarget.innerHTML = `proves<span class="tld-accent">.work</span>`;
+        tickerTarget.classList.add('fade-out');
         
         setTimeout(() => {
-          taglineTarget.classList.add('visible');
-        }, 150);
+          tickerTarget.innerHTML = `proves<span class="tld-accent">.work</span>`;
+          tickerTarget.classList.remove('fade-out');
+          
+          setTimeout(() => {
+            taglineTarget.classList.add('visible');
+          }, 150);
 
-        setTimeout(() => {
-          actionsTarget.classList.add('visible');
-        }, 450);
+          setTimeout(() => {
+            actionsTarget.classList.add('visible');
+          }, 450);
+        }, fadeTime);
       }
     });
   </script>
-
 </body>
 </html>
