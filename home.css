@@ -236,21 +236,21 @@ body.is-loading #wrapper { opacity: 0; transform: translateX(1.5rem); }
 .mockup-lock { font-size: 0.55rem; }
 .mockup-url strong { color: var(--color-primary); }
 
-.mockup-resume { padding: 1.25rem 1.5rem; font-family: 'Times New Roman', Times, serif; }
+.mockup-resume { padding: 1.25rem 1.5rem; font-family: var(--font-sans); }
 
 .mr-header { text-align: center; margin-bottom: 0.6rem; }
-.mr-name { font-size: 1rem; font-weight: 700; letter-spacing: 0.04em; }
-.mr-contact { font-size: 0.58rem; color: #555; margin-top: 2px; }
+.mr-name { font-size: 1rem; font-weight: 700; letter-spacing: 0.01em; font-family: var(--font-display); }
+.mr-contact { font-size: 0.58rem; color: #666; margin-top: 2px; }
 .mr-rule { border: none; border-top: 1.5px solid #111; margin: 0.45rem 0; }
-.mr-section { font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.3rem; }
+.mr-section { font-size: 0.58rem; font-weight: 700; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.3rem; }
 
 /* Best work block */
 .mr-best-work {
   background: #fff9e6;
   border: 1.5px solid #FFB400;
-  padding: 0.5rem 0.6rem;
-  margin-bottom: 0.5rem;
-  border-radius: 2px;
+  padding: 0.55rem 0.65rem;
+  margin-bottom: 0.6rem;
+  border-radius: 6px;
 }
 .mr-best-label {
   font-family: var(--font-sans, sans-serif);
@@ -259,20 +259,22 @@ body.is-loading #wrapper { opacity: 0; transform: translateX(1.5rem); }
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: #b37800;
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.35rem;
 }
 .mr-best-item {
-  display: flex;
-  align-items: baseline;
-  gap: 0.3rem;
-  margin-bottom: 0.15rem;
+  display: block;
+  font-size: 0.6rem;
+  line-height: 1.55;
+  color: #444;
+  margin-bottom: 0.2rem;
 }
-.mr-best-metric { font-size: 0.7rem; font-weight: 700; color: #111; flex-shrink: 0; }
-.mr-best-desc { font-size: 0.55rem; color: #444; flex: 1; }
-.mr-best-link { font-size: 0.52rem; color: #FF3366; flex-shrink: 0; }
+.mr-best-item:last-child { margin-bottom: 0; }
+.mr-best-metric { font-size: 0.66rem; font-weight: 700; color: #111; margin-right: 0.25em; }
+.mr-best-desc { color: #444; }
+.mr-best-link { font-size: 0.58rem; color: #FF3366; margin-left: 0.2em; white-space: nowrap; }
 
 .mr-bullets { padding-left: 0.9rem; }
-.mr-bullets li { font-size: 0.58rem; line-height: 1.5; color: #222; }
+.mr-bullets li { font-size: 0.58rem; line-height: 1.55; color: #333; margin-bottom: 0.15rem; }
 .mr-bullets li strong { color: #000; }
 
 .mockup-chip {
