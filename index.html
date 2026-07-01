@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>proves.work — Stop claiming. Start proving.</title>
+  <title>proves.work — Sell your work. Print your résumé.</title>
   <link rel="stylesheet" href="dazed.css" />
   <link rel="stylesheet" href="styles.css" />
   <style>
-    /* ── WIDENED PREMIUM HEADER & RESET ── */
+    /* ── RESET & LAYOUT ── */
     body {
       margin: 0;
       padding: 0;
@@ -48,6 +48,7 @@
       border-radius: 50%;
     }
 
+    /* ── WIDENED GUMROAD-STYLE HERO ── */
     .hero-header {
       width: 100%;
       min-height: 100vh;
@@ -62,7 +63,7 @@
 
     .brand-container {
       margin-bottom: 1.5rem;
-      height: 5rem; /* Explicit structural height blocks layout jumping during name cycles */
+      height: 5rem; 
       display: flex;
       align-items: center;
       justify-content: center;
@@ -75,6 +76,11 @@
       letter-spacing: -0.05em;
       color: var(--color-text, #000000);
       margin: 0;
+    }
+
+    .dynamic-subdomain em {
+      font-style: italic;
+      font-weight: 700;
     }
 
     .tld-accent {
@@ -113,20 +119,17 @@
 </head>
 <body>
 
-  <!-- CLEAN VERIFIABLE FIXED NAVIGATION -->
   <nav class="site-nav">
     <a href="index.html" class="nav-logo">
       <span class="logo-dot"></span>proves.work
     </a>
     <ul class="nav-links" style="list-style: none; display: flex; gap: 1.5rem; margin: 0; padding: 0; align-items: center;">
-      <li><a href="#" style="text-decoration: none; color: var(--color-text-muted); font-weight: 500;">Showcase</a></li>
-      <li><a href="#" class="btn btn-primary btn-sm">Claim Subdomain →</a></li>
+      <li><a href="#" style="text-decoration: none; color: var(--color-text-muted); font-weight: 500;">Dashboard Preview</a></li>
+      <li><a href="#" class="btn btn-primary btn-sm">Start Publishing →</a></li>
     </ul>
   </nav>
 
-  <!-- WIDENED HERO AREA -->
   <header class="hero-header">
-    
     <div class="brand-container">
       <h1 class="dynamic-subdomain" id="tickerTarget">
         claims<span class="tld-accent">.work</span>
@@ -136,45 +139,56 @@
     <p class="hero-tagline" id="taglineTarget">Stop claiming. Start proving.</p>
 
     <div class="hero-actions" id="actionsTarget">
-      <a href="#" class="btn btn-primary btn-lg">Claim Your Free Subdomain</a>
-      <a href="#" class="btn btn-ghost btn-lg">Explore Proofs</a>
+      <a href="#" class="btn btn-primary btn-lg">Create Your Shop & Résumé</a>
+      <a href="#" class="btn btn-ghost btn-lg">View Templates</a>
     </div>
-
   </header>
 
-  <!-- THE MULTILINGUAL TICKER CORE -->
+  <!-- RE-ENGINEERED STEP TICKER CONSOLE -->
   <script type="module">
     document.addEventListener('DOMContentLoaded', () => {
       const tickerTarget = document.getElementById('tickerTarget');
       const taglineTarget = document.getElementById('taglineTarget');
       const actionsTarget = document.getElementById('actionsTarget');
 
-      // 20 Multilingual professional names spanning diverse creator profiles
       const names = [
         "luca", "lebron", "leni", "juan", "yuki", 
         "mei", "aarav", "sofia", "kwame", "amélie", 
         "nikolai", "tariq", "chloe", "mateo", "soraya", 
-        "sven", "ji-woo", "kenji", "anya", "oxana", "you"
+        "sven", "ji-woo", "kenji", "anya", "oxana", "your-name"
       ];
 
       let currentIndex = 0;
-      const intervalTime = 225; // 125ms per name change * 20 names = 2.5 seconds total
-      
-      const tickerInterval = setInterval(() => {
+      const normalIntervalTime = 125; 
+      let tickerInterval;
+
+      function runTicker() {
         if (currentIndex < names.length) {
-          tickerTarget.innerHTML = `${names[currentIndex]}<span class="tld-accent">.proves.work</span>`;
-          currentIndex++;
-        } else {
-          clearInterval(tickerInterval);
-          resolveToFinalState();
+          const currentName = names[currentIndex];
+          
+          if (currentName === "your-name") {
+            // Italicize "your-name" and pause execution context for 3000ms
+            tickerTarget.innerHTML = `<em>your-name</em><span class="tld-accent">.proves.work</span>`;
+            currentIndex++;
+            
+            setTimeout(() => {
+              resolveToFinalState();
+            }, 3000);
+          } else {
+            // Regular quick-cycling names
+            tickerTarget.innerHTML = `${currentName}<span class="tld-accent">.proves.work</span>`;
+            currentIndex++;
+            tickerInterval = setTimeout(runTicker, normalIntervalTime);
+          }
         }
-      }, intervalTime);
+      }
+
+      // Start the loop sequence
+      tickerInterval = setTimeout(runTicker, normalIntervalTime);
 
       function resolveToFinalState() {
-        // Resolve cleanly back to the foundational root brand
         tickerTarget.innerHTML = `proves<span class="tld-accent">.work</span>`;
         
-        // Staggered presentation fades
         setTimeout(() => {
           taglineTarget.classList.add('visible');
         }, 150);
