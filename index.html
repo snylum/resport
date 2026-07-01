@@ -13,51 +13,96 @@
       margin: 0;
       padding: 0;
       overflow: hidden; 
+      width: 100vw;
+      height: 100vh;
     }
 
-    /* ── PERFECT CENTERING FOR PANEL HERO ── */
-    .panel-hero {
-      display: flex !important;
-      justify-content: center !important;
-      align-items: center !important;
+    /* Ensures the horizontal tracking parent doesn't squish individual panels */
+    #wrapper {
+      display: flex;
+      width: 600vw; 
+      height: 100vh;
+    }
+
+    .panel {
+      flex-shrink: 0;
       width: 100vw;
       height: 100vh;
       box-sizing: border-box;
-      padding: 0;
+    }
+
+    /* ── TALLER, WIDER, MORE SPACIOUS NAVIGATION ── */
+    .site-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 90px;            /* Gives the menu plenty of vertical height and breathing room */
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 4rem;         /* Expands horizontal depth across wide viewports */
+      box-sizing: border-box;
+      z-index: 1000;           /* Keeps it cleanly floating above slide contents */
+    }
+
+    /* ── FLOATING DOTS (PERFECTLY CENTERED VIA FIXED COORDS) ── */
+    .slide-dots {
+      position: fixed;
+      right: 2.5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    /* ── ABSOLUTE VIEWPORT CENTERING FOR HERO CONTENT ── */
+    .panel-hero {
+      position: relative;       /* Serves as the precise bounding box anchor */
+      width: 100vw;
+      height: 100vh;
+      box-sizing: border-box;
+      overflow: hidden;
     }
 
     .hero-header {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%); /* Uses the dots' exact structural alignment strategy */
       width: 100%;
-      max-width: 100%;         /* Changed from 800px to allow it to stretch wide */
-      height: auto;            /* Removed fixed min-height to give you clean structural control */
+      max-width: 100%;
+      height: auto;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       text-align: center;
-      gap: 1.5rem;
+      gap: 1.75rem;
     }
 
     .brand-container {
-      margin-bottom: 0;        /* removed, gap above handles it now */
+      margin-bottom: 0;
       min-height: 5rem; 
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 100%;             /* Explicit width secures absolute horizontal centering */
+      width: 100%;
       max-width: 100%;
-      overflow: visible;       /* Prevents accidental clipping/shifts during ticker shifts */
+      overflow: visible;
     }
 
     .hero-actions {
-      margin-top: 0;           /* removed, gap on .hero-header handles it now */
+      margin-top: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       text-align: center;
-      width: 100%;             /* Ensures container alignment targets the true viewport center */
-      gap: 1.5rem;             /* same value → button-group → tagline spacing matches logo → buttons */
+      width: 100%;
+      gap: 1.5rem;
       opacity: 0;
       transform: translateY(15px);
       transition: opacity 0.6s ease, transform 0.6s ease;
@@ -65,12 +110,12 @@
 
     .dynamic-subdomain {
       font-family: var(--font-display, 'Courier New', monospace);
-      font-size: clamp(1.8rem, 6vw, 4rem); /* shrinks on narrow viewports, caps at 4rem */
+      font-size: clamp(1.8rem, 6vw, 4rem);
       font-weight: 800;
       letter-spacing: -0.05em;
       color: var(--color-text, #000000);
       margin: 0;
-      white-space: nowrap;     /* keep it on one line since it has no natural wrap point */
+      white-space: nowrap;
       text-align: center;
     }
 
@@ -88,6 +133,7 @@
       opacity: 0;
       transition: opacity 0.5s ease-in-out;
       text-align: center;
+      width: 100%;
     }
 
     .hero-tagline.visible {
@@ -101,9 +147,10 @@
 
     .button-group {
       display: flex;
-      gap: 1rem;
-      justify-content: center; /* Centers individual action elements inside the group */
+      gap: 1.25rem;
+      justify-content: center;
       align-items: center;
+      width: 100%;
     }
 
     .user-count-tag {
@@ -112,6 +159,7 @@
       color: var(--color-text-muted, #6b7280);
       margin-top: 0.5rem;
       text-align: center;
+      width: 100%;
     }
   </style>
 </head>
