@@ -67,29 +67,27 @@
       gap: 0.75rem;
     }
 
-    /* ── PERFECT CENTERING FOR PANEL HERO (NON-HEADER BASIS) ──
-       .panel already adds padding-top: var(--header-height) above.
-       Because that padding shrinks the flex container's content box,
-       justify-content: center here centers .hero-header (title AND
-       buttons, as one block) within the leftover (100vh - header)
-       space — not the full viewport. That's what keeps the buttons
-       from looking "off" relative to the header. */
+    /* ── PANEL HERO: NO LONGER CENTERS VIA FLEX+PADDING ──
+       Flex-centering inside a padded box *should* land on the same point
+       as the dots' calc(50% + header/2), but it relies on padding and
+       box-sizing math staying untouched by every other stylesheet in the
+       cascade — and it visibly didn't. So instead .hero-header is
+       positioned directly, using the identical formula the dots use.
+       Same formula in both places = guaranteed to line up, always. */
     .panel-hero {
-      display: flex !important;
-      flex-direction: column !important;
-      justify-content: center !important;
-      align-items: center !important;
+      position: relative;
       width: 100vw;
       height: 100vh;
-      padding-bottom: 0;
-      padding-left: 0;
-      padding-right: 0;
-      /* padding-top now inherited from .panel via var(--header-height) */
+      padding: 0 !important;   /* centering no longer depends on padding */
     }
 
     .hero-header {
+      position: absolute;
+      left: 50%;
+      top: calc(50% + (var(--header-height) / 2));
+      transform: translate(-50%, -50%);
       width: 100%;
-      max-width: 100%;
+      max-width: 900px;
       display: flex;
       flex-direction: column;
       justify-content: center;
