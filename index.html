@@ -16,8 +16,10 @@
       <span class="logo-dot"></span>proves.work
     </a>
     <ul class="nav-links">
+      <li><a href="#" onclick="scrollToSlide(2);return false;">How it works</a></li>
       <li><a href="showcase.html">Showcase</a></li>
       <li><a href="#" onclick="scrollToSlide(4);return false;">Pricing</a></li>
+      <li><a href="editor.html">Log in</a></li>
       <li><a href="editor.html" class="btn btn-primary btn-sm">Claim your link →</a></li>
     </ul>
   </nav>
@@ -44,8 +46,7 @@
           <span class="url-badge">yours to claim</span>
         </div>
         <h1 class="hero-title">
-          Stop saying it.<br>
-          <span class="gradient-text">Prove it.</span>
+          Stop saying it. <span class="gradient-text">Prove it.</span>
         </h1>
         <p class="hero-sub">
           Most résumés claim things. Yours will prove them.
@@ -325,6 +326,17 @@
   <script src="home.js"></script>
   <script>
   (function() {
+    // Prevent copying page content
+    ['copy', 'cut', 'contextmenu', 'selectstart', 'dragstart'].forEach(evt => {
+      document.addEventListener(evt, function(e) { e.preventDefault(); });
+    });
+    document.addEventListener('keydown', function(e) {
+      const key = e.key.toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'u', 's', 'p'].includes(key)) {
+        e.preventDefault();
+      }
+    });
+
     function initDemo() {
       const demo = document.getElementById('liveBlockDemo');
       if (!demo) return;
