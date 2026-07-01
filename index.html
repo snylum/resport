@@ -8,56 +8,33 @@
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="home.css" />
   <style>
-    /* ── LAYOUT VARIABLES ── */
-    :root {
-      --header-height: 90px; /* Clean tracking for our expanded header */
-    }
-
     /* ── RESET & LAYOUT FIXES FOR HORIZONTAL WRAPPER ── */
     body {
       margin: 0;
       padding: 0;
       overflow: hidden; 
-      width: 100vw;
-      height: 100vh;
     }
 
-    #wrapper {
-      display: flex;
-      width: 600vw; 
-      height: 100vh;
-    }
-
-    .panel {
-      flex-shrink: 0;
-      width: 100vw;
-      height: 100vh;
-      box-sizing: border-box;
-      /* Pushes internal content down cleanly on slides 2-6 so the header never overlaps */
-      padding-top: var(--header-height); 
-    }
-
-    /* ── TALLER, WIDER, MORE SPACIOUS NAVIGATION ── */
+    /* ── WIDER, MORE SPACIOUS NAVIGATION ── */
     .site-nav {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
-      height: var(--header-height);
+      height: 90px;            /* Gives the menu plenty of vertical height and breathing room */
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0 4rem;         
+      padding: 0 4rem;         /* Expands horizontal depth across wide viewports */
       box-sizing: border-box;
-      z-index: 1000;           
+      z-index: 1000;           /* Keeps it cleanly floating above slide contents */
     }
 
-    /* ── FLOATING DOTS: CENTERED ONLY IN NON-HEADER SPACE ── */
+    /* ── FLOATING DOTS: PERFECTLY BALANCED IN NON-HEADER VIEWPORT SPACE ── */
     .slide-dots {
       position: fixed;
       right: 2.5rem;
-      /* Math: Find screen true 50%, then drop down by exactly half the header height */
-      top: calc(50% + (var(--header-height) / 2));
+      top: calc(50% + 45px);   /* Shifts center point down by exactly half of the 90px header */
       transform: translateY(-50%);
       z-index: 1000;
       display: flex;
@@ -65,54 +42,51 @@
       gap: 0.75rem;
     }
 
-    /* ── HERO SLIDE: SPECIFIC POSITIONING OVERRIDE ── */
+    /* ── PERFECT CENTERING FOR PANEL HERO (NON-HEADER BASIS) ── */
     .panel-hero {
-      position: relative;       
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: center !important;
+      align-items: center !important;
       width: 100vw;
       height: 100vh;
       box-sizing: border-box;
-      overflow: hidden;
-      padding-top: 0; /* Reset for absolute calculation below */
+      padding-top: 90px;       /* Safely allocates space for the header without shifting layout boundaries */
+      padding-bottom: 0;
+      padding-left: 0;
+      padding-right: 0;
     }
 
-    /* ── HERO CONTENT: CENTERED ONLY IN NON-HEADER SPACE ── */
     .hero-header {
-      position: absolute;
-      /* Uses the exact same visual math balance as your navigation dots */
-      top: calc(50% + (var(--header-height) / 2));
-      left: 50%;
-      transform: translate(-50%, -50%); 
       width: 100%;
       max-width: 100%;
-      height: auto;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       text-align: center;
-      gap: 1.75rem;
+      gap: 1.5rem;
     }
 
     .brand-container {
-      margin-bottom: 0;
-      min-height: 5rem; 
+      margin-bottom: 0;        /* removed, gap above handles it now */
+      height: auto; 
       display: flex;
       align-items: center;
       justify-content: center;
       width: 100%;
       max-width: 100%;
-      overflow: visible;
+      overflow: visible; 
     }
 
     .hero-actions {
-      margin-top: 0;
+      margin-top: 0;           /* removed, gap on .hero-header handles it now */
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      text-align: center;
       width: 100%;
-      gap: 1.5rem;
+      gap: 1.5rem;             /* same value → button-group → tagline spacing matches logo → buttons */
       opacity: 0;
       transform: translateY(15px);
       transition: opacity 0.6s ease, transform 0.6s ease;
@@ -120,12 +94,12 @@
 
     .dynamic-subdomain {
       font-family: var(--font-display, 'Courier New', monospace);
-      font-size: clamp(1.8rem, 6vw, 4rem);
+      font-size: clamp(1.8rem, 6vw, 4rem); /* shrinks on narrow viewports, caps at 4rem */
       font-weight: 800;
       letter-spacing: -0.05em;
       color: var(--color-text, #000000);
       margin: 0;
-      white-space: nowrap;
+      white-space: nowrap;     /* keep it on one line since it has no natural wrap point */
       text-align: center;
     }
 
@@ -157,10 +131,9 @@
 
     .button-group {
       display: flex;
-      gap: 1.25rem;
+      gap: 1rem;
       justify-content: center;
       align-items: center;
-      width: 100%;
     }
 
     .user-count-tag {
@@ -175,6 +148,7 @@
 </head>
 <body class="is-loading">
 
+  <!-- NAV (fixed, always visible) -->
   <nav class="site-nav">
     <a href="index.html" class="nav-logo">
       <span class="logo-dot"></span>proves.work
@@ -186,6 +160,7 @@
     </ul>
   </nav>
 
+  <!-- SLIDE DOTS (right side) -->
   <nav class="slide-dots" aria-label="Page sections">
     <button class="dot active" onclick="scrollToSlide(0)" aria-label="Hero"></button>
     <button class="dot" onclick="scrollToSlide(1)" aria-label="How it works"></button>
@@ -195,8 +170,10 @@
     <button class="dot" onclick="scrollToSlide(5)" aria-label="Get started"></button>
   </nav>
 
+  <!-- HORIZONTAL SCROLL WRAPPER -->
   <div id="wrapper">
 
+    <!-- SLIDE 1: HERO (PERFECTLY CENTERED) -->
     <section class="panel panel-hero" id="slide-0">
       <header class="hero-header">
         <div class="brand-container">
@@ -204,6 +181,8 @@
             claims<span class="tld-accent">.proves.work</span>
           </h1>
         </div>
+
+        <!-- <p class="hero-tagline" id="taglineTarget">Stop claiming. Start proving.</p> -->
 
         <div class="hero-actions" id="actionsTarget">
           <div class="button-group">
@@ -215,6 +194,7 @@
       </header>
     </section>
 
+    <!-- SLIDE 2: HOW IT WORKS -->
     <section class="panel panel-how" id="slide-1">
       <div class="panel-intro">
         <p class="eyebrow">How it works</p>
@@ -244,6 +224,7 @@
       </div>
     </section>
 
+    <!-- SLIDE 3: FEATURES GRID -->
     <section class="panel panel-features" id="slide-2">
       <div class="panel-intro panel-intro-dark">
         <p class="eyebrow" style="color:var(--color-accent)">What you get</p>
@@ -285,6 +266,7 @@
       </div>
     </section>
 
+    <!-- SLIDE 4: SPLIT DEMO / TESTIMONIAL -->
     <section class="panel panel-split" id="slide-3">
       <div class="split-left">
         <p class="eyebrow">Real results</p>
@@ -322,6 +304,7 @@
       </div>
     </section>
 
+    <!-- SLIDE 5: PRICING -->
     <section class="panel panel-pricing" id="slide-4">
       <div class="panel-intro">
         <p class="eyebrow">Pricing</p>
@@ -355,6 +338,7 @@
       </div>
     </section>
 
+    <!-- SLIDE 6: CTA / FOOTER -->
     <section class="panel panel-cta" id="slide-5">
       <div class="cta-inner">
         <p class="eyebrow" style="color:var(--color-accent)">You're one link away</p>
@@ -374,6 +358,7 @@
 
   <script src="home.js"></script>
   
+  <!-- FIX ROOT DOMAIN RAPID TICKER ENGINE -->
   <script type="module">
     document.addEventListener('DOMContentLoaded', () => {
       const tickerTarget = document.getElementById('tickerTarget');
@@ -383,6 +368,7 @@
       const customName = urlParams.get('name');
       const storedName = localStorage.getItem('user_first_name');
       
+      // The final prefix target is set dynamically, defaulting to "everyone"
       const finalTargetPrefix = customName || storedName || "everyone";
 
       const basePrefixes = [
@@ -394,17 +380,21 @@
 
       const prefixes = [...basePrefixes, finalTargetPrefix];
       let currentIndex = 0;
-      const stepSpeedTime = 110; 
+      const stepSpeedTime = 110; // Rapid succession speed
 
       function cyclePrefix() {
         if (currentIndex < prefixes.length) {
           const currentPrefix = prefixes[currentIndex];
           
           if (currentPrefix === finalTargetPrefix) {
+            // Render the final string with 'everyone' or the custom name italicized
             tickerTarget.innerHTML = `<em>${currentPrefix}</em><span class="tld-accent">.proves.work</span>`;
             currentIndex++;
+            
+            // Lock on this final state for 3 seconds before displaying tags and CTAs
             setTimeout(revealSubElements, 1000);
           } else {
+            // Rapid swap without any visual fade adjustments
             tickerTarget.innerHTML = `${currentPrefix}<span class="tld-accent">.proves.work</span>`;
             currentIndex++;
             setTimeout(cyclePrefix, stepSpeedTime);
@@ -412,9 +402,11 @@
         }
       }
 
+      // Start looping elements immediately
       cyclePrefix();
 
       function revealSubElements() {
+        // Removed taglineTarget code to prevent null reference errors
         actionsTarget.classList.add('visible');
       }
     });
