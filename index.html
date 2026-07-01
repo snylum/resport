@@ -38,7 +38,7 @@
 
     .brand-container {
       margin-bottom: 1.5rem;
-      height: 5rem; 
+      height: 8rem; 
       display: flex;
       align-items: center;
       justify-content: center;
@@ -366,12 +366,11 @@
       // Start looping elements immediately
       cyclePrefix();
 
-      function revealSubElements() {
-        taglineTarget.classList.add('visible');
-        setTimeout(() => {
-          actionsTarget.classList.add('visible');
-        }, 300);
-      }
+// Locate this function at the bottom of your code and change it to this:
+function revealSubElements() {
+  // Removed taglineTarget code to prevent null reference errors
+  actionsTarget.classList.add('visible');
+}
     });
   </script>
 </body>
