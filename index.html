@@ -26,56 +26,53 @@
       padding: 0;
     }
 
-.hero-header {
-  width: 100%;
-  max-width: 800px;
-  min-height: 60vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  gap: 1.5rem;
-}
+    .hero-header {
+      width: 100%;
+      max-width: 100%;         /* Changed from 800px to allow it to stretch wide */
+      height: auto;            /* Removed fixed min-height to give you clean structural control */
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      gap: 1.5rem;
+    }
 
-.brand-container {
-  margin-bottom: 0;        /* removed, gap above handles it now */
-  height: 5rem; 
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  max-width: 100%;
-  overflow: hidden; /* extra insurance against overflow-based mis-centering */
-}
+    .brand-container {
+      margin-bottom: 0;        /* removed, gap above handles it now */
+      min-height: 5rem; 
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;             /* Explicit width secures absolute horizontal centering */
+      max-width: 100%;
+      overflow: visible;       /* Prevents accidental clipping/shifts during ticker shifts */
+    }
 
-.hero-actions {
-  margin-top: 0;           /* removed, gap on .hero-header handles it now */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.5rem;              /* same value → button-group → tagline spacing matches logo → buttons */
-  opacity: 0;
-  transform: translateY(15px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
-}
+    .hero-actions {
+      margin-top: 0;           /* removed, gap on .hero-header handles it now */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      width: 100%;             /* Ensures container alignment targets the true viewport center */
+      gap: 1.5rem;             /* same value → button-group → tagline spacing matches logo → buttons */
+      opacity: 0;
+      transform: translateY(15px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
     .dynamic-subdomain {
       font-family: var(--font-display, 'Courier New', monospace);
-      font-size: 4rem;
+      font-size: clamp(1.8rem, 6vw, 4rem); /* shrinks on narrow viewports, caps at 4rem */
       font-weight: 800;
       letter-spacing: -0.05em;
       color: var(--color-text, #000000);
       margin: 0;
+      white-space: nowrap;     /* keep it on one line since it has no natural wrap point */
+      text-align: center;
     }
-
-.dynamic-subdomain {
-  font-family: var(--font-display, 'Courier New', monospace);
-  font-size: clamp(1.8rem, 6vw, 4rem); /* shrinks on narrow viewports, caps at 4rem */
-  font-weight: 800;
-  letter-spacing: -0.05em;
-  color: var(--color-text, #000000);
-  margin: 0;
-  white-space: nowrap; /* keep it on one line since it has no natural wrap point */
-}
 
     .tld-accent {
       color: var(--color-primary, #6366f1);
@@ -90,6 +87,7 @@
       margin: 0.5rem 0 0 0;
       opacity: 0;
       transition: opacity 0.5s ease-in-out;
+      text-align: center;
     }
 
     .hero-tagline.visible {
@@ -104,6 +102,8 @@
     .button-group {
       display: flex;
       gap: 1rem;
+      justify-content: center; /* Centers individual action elements inside the group */
+      align-items: center;
     }
 
     .user-count-tag {
@@ -111,12 +111,12 @@
       font-style: italic;
       color: var(--color-text-muted, #6b7280);
       margin-top: 0.5rem;
+      text-align: center;
     }
   </style>
 </head>
 <body class="is-loading">
 
-  <!-- NAV (fixed, always visible) -->
   <nav class="site-nav">
     <a href="index.html" class="nav-logo">
       <span class="logo-dot"></span>proves.work
@@ -128,7 +128,6 @@
     </ul>
   </nav>
 
-  <!-- SLIDE DOTS (right side) -->
   <nav class="slide-dots" aria-label="Page sections">
     <button class="dot active" onclick="scrollToSlide(0)" aria-label="Hero"></button>
     <button class="dot" onclick="scrollToSlide(1)" aria-label="How it works"></button>
@@ -138,10 +137,8 @@
     <button class="dot" onclick="scrollToSlide(5)" aria-label="Get started"></button>
   </nav>
 
-  <!-- HORIZONTAL SCROLL WRAPPER -->
   <div id="wrapper">
 
-    <!-- SLIDE 1: HERO (PERFECTLY CENTERED) -->
     <section class="panel panel-hero" id="slide-0">
       <header class="hero-header">
         <div class="brand-container">
@@ -149,8 +146,6 @@
             claims<span class="tld-accent">.proves.work</span>
           </h1>
         </div>
-
-        <!-- <p class="hero-tagline" id="taglineTarget">Stop claiming. Start proving.</p> -->
 
         <div class="hero-actions" id="actionsTarget">
           <div class="button-group">
@@ -162,7 +157,6 @@
       </header>
     </section>
 
-    <!-- SLIDE 2: HOW IT WORKS -->
     <section class="panel panel-how" id="slide-1">
       <div class="panel-intro">
         <p class="eyebrow">How it works</p>
@@ -192,7 +186,6 @@
       </div>
     </section>
 
-    <!-- SLIDE 3: FEATURES GRID -->
     <section class="panel panel-features" id="slide-2">
       <div class="panel-intro panel-intro-dark">
         <p class="eyebrow" style="color:var(--color-accent)">What you get</p>
@@ -234,7 +227,6 @@
       </div>
     </section>
 
-    <!-- SLIDE 4: SPLIT DEMO / TESTIMONIAL -->
     <section class="panel panel-split" id="slide-3">
       <div class="split-left">
         <p class="eyebrow">Real results</p>
@@ -272,7 +264,6 @@
       </div>
     </section>
 
-    <!-- SLIDE 5: PRICING -->
     <section class="panel panel-pricing" id="slide-4">
       <div class="panel-intro">
         <p class="eyebrow">Pricing</p>
@@ -306,7 +297,6 @@
       </div>
     </section>
 
-    <!-- SLIDE 6: CTA / FOOTER -->
     <section class="panel panel-cta" id="slide-5">
       <div class="cta-inner">
         <p class="eyebrow" style="color:var(--color-accent)">You're one link away</p>
@@ -326,7 +316,6 @@
 
   <script src="home.js"></script>
   
-  <!-- FIX ROOT DOMAIN RAPID TICKER ENGINE -->
   <script type="module">
     document.addEventListener('DOMContentLoaded', () => {
       const tickerTarget = document.getElementById('tickerTarget');
@@ -374,11 +363,10 @@
       // Start looping elements immediately
       cyclePrefix();
 
-// Locate this function at the bottom of your code and change it to this:
-function revealSubElements() {
-  // Removed taglineTarget code to prevent null reference errors
-  actionsTarget.classList.add('visible');
-}
+      function revealSubElements() {
+        // Removed taglineTarget code to prevent null reference errors
+        actionsTarget.classList.add('visible');
+      }
     });
   </script>
 </body>
