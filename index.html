@@ -12,18 +12,28 @@
     body {
       margin: 0;
       padding: 0;
-      overflow: hidden; /* Necessary for the horizontal slider panels */
+      overflow: hidden; 
     }
 
-    /* ── WIDENED PREMIUM HERO HEADER ── */
+    /* ── PERFECT CENTERING FOR PANEL HERO ── */
+    .panel-hero {
+      display: flex !important;
+      justify-content: center !important;
+      align-items: center !important;
+      width: 100vw;
+      height: 100vh;
+      box-sizing: border-box;
+      padding: 0;
+    }
+
     .hero-header {
       width: 100%;
+      max-width: 800px;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       text-align: center;
-      box-sizing: border-box;
     }
 
     .brand-container {
@@ -32,7 +42,6 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      position: relative;
     }
 
     .dynamic-subdomain {
@@ -42,12 +51,6 @@
       letter-spacing: -0.05em;
       color: var(--color-text, #000000);
       margin: 0;
-      opacity: 1;
-      transition: opacity 0.25s ease-in-out; /* Smooth transition instead of blinking */
-    }
-
-    .dynamic-subdomain.fade-out {
-      opacity: 0;
     }
 
     .dynamic-subdomain em {
@@ -113,7 +116,7 @@
     <ul class="nav-links">
       <li><a href="showcase.html">Showcase</a></li>
       <li><a href="#" onclick="scrollToSlide(4);return false;">Pricing</a></li>
-      <li><a href="editor.html" class="btn btn-primary btn-sm">Open Dashboard →</a></li>
+      <li><a href="editor.html" class="btn btn-primary btn-sm">Open Editor →</a></li>
     </ul>
   </nav>
 
@@ -127,34 +130,28 @@
     <button class="dot" onclick="scrollToSlide(5)" aria-label="Get started"></button>
   </nav>
 
-  <!-- HORIZONTAL SCROLL WRAPPER RETURNED -->
+  <!-- HORIZONTAL SCROLL WRAPPER -->
   <div id="wrapper">
 
-    <!-- SLIDE 1: HERO -->
+    <!-- SLIDE 1: HERO (PERFECTLY CENTERED) -->
     <section class="panel panel-hero" id="slide-0">
-      <div class="panel-content" style="max-width: 100%; width: 100%;">
-        
-        <!-- WIDENED HERO AREA -->
-        <header class="hero-header">
-          <div class="brand-container">
-            <h1 class="dynamic-subdomain" id="tickerTarget">
-              claims<span class="tld-accent">.work</span>
-            </h1>
+      <header class="hero-header">
+        <div class="brand-container">
+          <h1 class="dynamic-subdomain" id="tickerTarget">
+            claims<span class="tld-accent">.proves.work</span>
+          </h1>
+        </div>
+
+        <p class="hero-tagline" id="taglineTarget">Stop claiming. Start proving.</p>
+
+        <div class="hero-actions" id="actionsTarget">
+          <div class="button-group">
+            <a href="editor.html" class="btn btn-primary btn-lg">Show yours</a>
+            <button class="btn btn-ghost btn-lg" onclick="scrollToSlide(1)">See how →</button>
           </div>
-
-          <p class="hero-tagline" id="taglineTarget">Stop claiming. Start proving.</p>
-
-          <div class="hero-actions" id="actionsTarget">
-            <div class="button-group">
-              <a href="#" class="btn btn-primary btn-lg">Show yours</a>
-              <button class="btn btn-ghost btn-lg" onclick="scrollToSlide(1)">See how →</button>
-            </div>
-            <!-- Dynamic User Proof Count Tag -->
-            <span class="user-count-tag">1,420 people have already proven theirs.</span>
-          </div>
-        </header>
-
-      </div>
+          <span class="user-count-tag">1,420 people have already proven theirs.</span>
+        </div>
+      </header>
     </section>
 
     <!-- SLIDE 2: HOW IT WORKS -->
@@ -162,27 +159,27 @@
       <div class="panel-intro">
         <p class="eyebrow">How it works</p>
         <h2>Three steps.<br>One live profile.</h2>
-        <p class="intro-sub">No filler content. No traditional padding. Just proof blocks you own.</p>
+        <p class="intro-sub">No filler content. Just blocks you control inside the website builder.</p>
         <button class="btn btn-ghost btn-sm" onclick="scrollToSlide(2)">See features →</button>
       </div>
       <div class="panel-steps">
         <div class="step">
           <div class="step-num">01</div>
           <div class="step-tape"></div>
-          <h3>Connect Assets</h3>
-          <p>Link your live goods, GitHub milestones, or shipped builds straight to your storefront dashboard.</p>
+          <h3>Design Profile</h3>
+          <p>Customize components inside your visual profile editor. Style it precisely to match your aesthetics.</p>
         </div>
         <div class="step">
           <div class="step-num">02</div>
           <div class="step-tape"></div>
-          <h3>Generate PDF</h3>
-          <p>Export a clean, vector-perfect, ATS-safe PDF résumé built automatically from your real dashboard records.</p>
+          <h3>Export PDF</h3>
+          <p>Instantly download a clean, vector-perfect, ATS-safe PDF résumé mapped directly from your page design.</p>
         </div>
         <div class="step">
           <div class="step-num">03</div>
           <div class="step-tape"></div>
-          <h3>Launch Subdomain</h3>
-          <p>Instantly deploy your standalone dashboard portfolio onto your personal verified link.</p>
+          <h3>Launch Link</h3>
+          <p>Publish your page to your personal subdomain link to display your verifiable portfolio evidence live.</p>
         </div>
       </div>
     </section>
@@ -192,19 +189,19 @@
       <div class="panel-intro panel-intro-dark">
         <p class="eyebrow" style="color:var(--color-accent)">What you get</p>
         <h2>Everything a<br>creator needs.</h2>
-        <p class="intro-sub" style="color:rgba(255,255,255,0.6)">Built for modern professionals who want to display verifiable artifacts.</p>
+        <p class="intro-sub" style="color:rgba(255,255,255,0.6)">Built for modern professionals who want to display verifiable portfolios.</p>
         <button class="btn btn-ghost btn-sm" onclick="scrollToSlide(3)" style="border-color:rgba(255,255,255,0.3);color:#fff">See it in action →</button>
       </div>
       <div class="panel-feature-grid">
         <div class="feat">
           <div class="feat-icon">🧱</div>
-          <h3>Gumroad Editing</h3>
-          <p>Manage physical records, code artifacts, or digital goods like simple store products.</p>
+          <h3>Gumroad-Style Customizer</h3>
+          <p>A simple, sleek sidebar canvas customizer to style typography, spacing, and layout columns instantly.</p>
         </div>
         <div class="feat">
           <div class="feat-icon">👁</div>
           <h3>Live Subdomain</h3>
-          <p>Your workspace streams cleanly into a customized deployment path.</p>
+          <p>Your workspace configuration compiles straight into a live web portfolio presentation path.</p>
         </div>
         <div class="feat">
           <div class="feat-icon">🌍</div>
@@ -214,17 +211,17 @@
         <div class="feat">
           <div class="feat-icon">🔒</div>
           <h3>Privacy Controls</h3>
-          <p>Hide revenue stats, redact names, or swap private case details per setup toggle.</p>
+          <p>Hide custom tabs, redact specific data blocks, or toggle visibility per setup option.</p>
         </div>
         <div class="feat">
           <div class="feat-icon">📄</div>
-          <h3>PDF Export</h3>
-          <p>One-click pristine vector PDF output mirroring your actual digital dashboard layout.</p>
+          <h3>PDF Export Optionality</h3>
+          <p>One-click pristine vector PDF output engine built straight into your live website configuration.</p>
         </div>
         <div class="feat">
           <div class="feat-icon">✨</div>
           <h3>Verifiable Proof</h3>
-          <p>Let viewers verify asset origins directly through embedded cryptographic hooks.</p>
+          <p>Let viewers verify layout asset origins directly through embedded design records.</p>
         </div>
       </div>
     </section>
@@ -236,11 +233,11 @@
         <h2>Portfolios that<br>close deals.</h2>
         <div class="testimonials">
           <blockquote class="testi">
-            <p>"Switching to a live verification shop format completely altered client negotiations. They can view the proof before jumping on a call."</p>
+            <p>"Switching to an integrated profile and canvas model completely altered client negotiations. They can view the work before jumping on a call."</p>
             <cite>— Joven R., Technical Designer</cite>
           </blockquote>
           <blockquote class="testi">
-            <p>"The ability to present my live artifacts and print an cleanly sync'd PDF at the exact same moment saves hours."</p>
+            <p>"The ability to present my live artifacts and print a cleanly sync'd PDF at the exact same moment saves hours."</p>
             <cite>— Patricia M., Product Engineer</cite>
           </blockquote>
         </div>
@@ -251,17 +248,17 @@
           <div class="demo-block" data-label="Experience" data-icon="📌">
             <span class="demo-grip">⠿</span>
             <span class="demo-icon">📌</span>
-            <span>Digital Products</span>
+            <span>Profile Header Block</span>
           </div>
           <div class="demo-block" data-label="Education" data-icon="🎓">
             <span class="demo-grip">⠿</span>
             <span class="demo-icon">🎓</span>
-            <span>PDF Résumé Assets</span>
+            <span>PDF Résumé Template</span>
           </div>
           <div class="demo-block demo-block-active" data-label="Skills" data-icon="⚡">
             <span class="demo-grip">⠿</span>
             <span class="demo-icon">⚡</span>
-            <span>Live Web Embeds</span>
+            <span>Custom Portfolio Section</span>
           </div>
         </div>
       </div>
@@ -272,17 +269,17 @@
       <div class="panel-intro">
         <p class="eyebrow">Pricing</p>
         <h2>Start free.<br>Upgrade when ready.</h2>
-        <p class="intro-sub">No credit card needed to start. Deploy your first live project tracking block today.</p>
+        <p class="intro-sub">No credit card needed to start. Customize your first layout block today.</p>
       </div>
       <div class="pricing-cards">
         <div class="price-card">
           <div class="price-name">Free</div>
           <div class="price-amount">₱0 <span>/forever</span></div>
           <ul class="price-features">
-            <li>✓ Gumroad-style workspace</li>
-            <li>✓ Unlimited product entries</li>
+            <li>✓ Gumroad-style profile editor</li>
             <li>✓ Custom public path</li>
-            <li>✓ PDF résumé export capability</li>
+            <li>✓ Basic layouts</li>
+            <li>✓ PDF résumé export</li>
           </ul>
           <a href="editor.html" class="btn btn-ghost" style="width:100%;justify-content:center">Start free</a>
         </div>
@@ -293,7 +290,7 @@
           <ul class="price-features">
             <li>✓ Everything in Free</li>
             <li>✓ Custom Root Domain Mapping</li>
-            <li>✓ Advanced analytical views</li>
+            <li>✓ Advanced styling profiles</li>
             <li>✓ Priority asset rendering</li>
           </ul>
           <a href="#" class="btn btn-primary" style="width:100%;justify-content:center">Get Pro</a>
@@ -307,21 +304,21 @@
         <p class="eyebrow" style="color:var(--color-accent)">You're one link away</p>
         <h2 class="cta-title">Ready to back up<br>your statements?</h2>
         <p class="cta-sub">Your work is your best proof. Make it visible.</p>
-        <a href="editor.html" class="btn btn-gradient cta-btn">Deploy your dashboard — it's free →</a>
+        <a href="editor.html" class="btn btn-gradient cta-btn">Open your workspace — it's free →</a>
         <div class="cta-links">
           <a href="showcase.html">Browse Showcase</a>
           <span>·</span>
-          <a href="editor.html">Open Dashboard</a>
+          <a href="editor.html">Open Editor</a>
         </div>
         <p class="cta-copy">© 2026 proves.work · Built with ❤️</p>
       </div>
     </section>
 
-  </div><!-- /#wrapper -->
+  </div>
 
   <script src="home.js"></script>
   
-  <!-- SMOOTH FADE TICKER CORE -->
+  <!-- FIX ROOT DOMAIN RAPID TICKER ENGINE -->
   <script type="module">
     document.addEventListener('DOMContentLoaded', () => {
       const tickerTarget = document.getElementById('tickerTarget');
@@ -330,70 +327,50 @@
 
       const urlParams = new URLSearchParams(window.location.search);
       const customName = urlParams.get('name');
+      const storedName = localStorage.getItem('user_first_name');
+      
+      // The final prefix target is set dynamically, defaulting to "everyone"
+      const finalTargetPrefix = customName || storedName || "everyone";
 
-      const baseNames = [
+      const basePrefixes = [
         "luca", "lebron", "leni", "juan", "yuki", 
         "mei", "aarav", "sofia", "kwame", "amélie", 
         "nikolai", "tariq", "chloe", "mateo", "soraya", 
         "sven", "ji-woo", "kenji", "anya", "oxana"
       ];
 
-      // Use target query name, fallback to localStorage, then default to "everyone"
-      const storedName = localStorage.getItem('user_first_name');
-      const finalTargetName = customName || storedName || "everyone";
-
-      const names = [...baseNames, finalTargetName];
-
+      const prefixes = [...basePrefixes, finalTargetPrefix];
       let currentIndex = 0;
-      const fadeTime = 250; 
-      const displayTime = 150; 
+      const stepSpeedTime = 110; // Rapid succession speed
 
-      function updateTicker() {
-        if (currentIndex < names.length) {
-          const currentName = names[currentIndex];
+      function cyclePrefix() {
+        if (currentIndex < prefixes.length) {
+          const currentPrefix = prefixes[currentIndex];
           
-          // Step 1: Smooth Fade Out
-          tickerTarget.classList.add('fade-out');
-          
-          setTimeout(() => {
-            if (currentName === finalTargetName) {
-              // The last entry matches your italicized constraints perfectly
-              tickerTarget.innerHTML = `<em>${currentName}</em><span class="tld-accent">.proves.work</span>`;
-              tickerTarget.classList.remove('fade-out');
-              currentIndex++;
-              
-              // Custom heavy three-second pause condition
-              setTimeout(resolveToFinalState, 3000);
-            } else {
-              // Process standard quick iteration entries
-              tickerTarget.innerHTML = `${currentName}<span class="tld-accent">.proves.work</span>`;
-              tickerTarget.classList.remove('fade-out');
-              currentIndex++;
-              
-              setTimeout(updateTicker, displayTime + fadeTime);
-            }
-          }, fadeTime);
+          if (currentPrefix === finalTargetPrefix) {
+            // Render the final string with 'everyone' or the custom name italicized
+            tickerTarget.innerHTML = `<em>${currentPrefix}</em><span class="tld-accent">.proves.work</span>`;
+            currentIndex++;
+            
+            // Lock on this final state for 3 seconds before displaying tags and CTAs
+            setTimeout(revealSubElements, 3000);
+          } else {
+            // Rapid swap without any visual fade adjustments
+            tickerTarget.innerHTML = `${currentPrefix}<span class="tld-accent">.proves.work</span>`;
+            currentIndex++;
+            setTimeout(cyclePrefix, stepSpeedTime);
+          }
         }
       }
 
-      // Start processing first fade action gracefully
-      setTimeout(updateTicker, displayTime);
+      // Start looping elements immediately
+      cyclePrefix();
 
-      function resolveToFinalState() {
-        tickerTarget.classList.add('fade-out');
-        
+      function revealSubElements() {
+        taglineTarget.classList.add('visible');
         setTimeout(() => {
-          tickerTarget.innerHTML = `proves<span class="tld-accent">.work</span>`;
-          tickerTarget.classList.remove('fade-out');
-          
-          setTimeout(() => {
-            taglineTarget.classList.add('visible');
-          }, 150);
-
-          setTimeout(() => {
-            actionsTarget.classList.add('visible');
-          }, 450);
-        }, fadeTime);
+          actionsTarget.classList.add('visible');
+        }, 300);
       }
     });
   </script>
