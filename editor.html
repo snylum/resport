@@ -3,312 +3,118 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Résumé Editor</title>
+  <title>Résumé Editor — Premium Engine</title>
   <link rel="stylesheet" href="dazed.css" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="editor.css" />
 </head>
 <body>
 
-  <!-- TOP TOOLBAR -->
   <header class="editor-toolbar">
-    <a href="index.html" class="nav-logo">
-      <span class="logo-dot"></span>résumé
-    </a>
+    <a href="index.html" class="nav-logo"><span class="logo-dot"></span>résumé</a>
     <div class="toolbar-center">
       <div class="mode-tabs" role="tablist">
-        <button class="mode-tab active" id="tabEditBtn" onclick="setMode('edit')">Edit</button>
-        <button class="mode-tab" id="tabCustomizeBtn" onclick="setMode('customize')">Customize</button>
+        <button class="mode-tab active" id="tabEditBtn">Edit</button>
+        <button class="mode-tab" id="tabCustomizeBtn">Customize</button>
       </div>
     </div>
     <div class="toolbar-actions">
       <span class="toolbar-filename" id="resumeTitle" contenteditable="true" spellcheck="false">Untitled résumé</span>
-      <button class="btn btn-ghost btn-sm" onclick="downloadPDF()">⬇ PDF</button>
-      <button class="btn btn-ghost btn-sm" onclick="openPortfolioModal()">🌐 Portfolio</button>
-      <button class="btn btn-primary btn-sm" onclick="openShowcaseModal()">✦ Publish</button>
+      <button class="btn btn-ghost btn-sm" id="btnDownloadPDF">⬇ PDF</button>
+      <button class="btn btn-ghost btn-sm" id="btnOpenPortfolio">🌐 Portfolio</button>
+      <button class="btn btn-primary btn-sm" id="btnPublishShowcase">✦ Publish</button>
     </div>
   </header>
 
-  <!-- MAIN LAYOUT -->
-  <div class="editor-layout">
-
-    <!-- LEFT SIDEBAR -->
-    <aside class="editor-sidebar" id="sidebar">
-
-      <!-- EDIT MODE -->
-      <div id="editModePanel" class="mode-panel">
-
-        <div class="sidebar-section">
-          <p class="sidebar-label">Personal Details</p>
-          <p class="sidebar-hint">Users who added phone number and email received 64% more positive feedback from recruiters.</p>
-
-          <label class="sidebar-field-label" for="pdJobTitle">Job Target</label>
-          <input type="text" id="pdJobTitle" class="pf-input" placeholder="The role you want" oninput="updateProfile('jobTitle', this.value)" />
-
-          <div class="pd-photo-row">
-            <div class="pd-photo-box" id="pdPhotoBox" onclick="document.getElementById('pdPhotoInput').click()">
-              <span id="pdPhotoIcon">👤</span>
-            </div>
-            <button class="link-btn" onclick="document.getElementById('pdPhotoInput').click()">Upload photo</button>
-            <input type="file" id="pdPhotoInput" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)" />
-          </div>
-
-          <div class="pd-grid-2">
-            <div>
-              <label class="sidebar-field-label" for="pdFirst">First Name</label>
-              <input type="text" id="pdFirst" class="pf-input" placeholder="First name" oninput="updateProfile('firstName', this.value)" />
-            </div>
-            <div>
-              <label class="sidebar-field-label" for="pdLast">Last Name</label>
-              <input type="text" id="pdLast" class="pf-input" placeholder="Last name" oninput="updateProfile('lastName', this.value)" />
-            </div>
-          </div>
-
-          <div class="pd-grid-2">
-            <div>
-              <label class="sidebar-field-label" for="pdEmail">Email*</label>
-              <input type="email" id="pdEmail" class="pf-input" placeholder="you@example.com" oninput="updateProfile('email', this.value)" />
-            </div>
-            <div>
-              <label class="sidebar-field-label" for="pdPhone">Phone</label>
-              <input type="text" id="pdPhone" class="pf-input" placeholder="+63 912 345 6789" oninput="updateProfile('phone', this.value)" />
-            </div>
-          </div>
-
-          <label class="sidebar-field-label" for="pdAddress">Address</label>
-          <input type="text" id="pdAddress" class="pf-input" placeholder="City, Country" oninput="updateProfile('address', this.value)" />
-        </div>
-
-        <div class="sidebar-section">
-          <p class="sidebar-label">Layout</p>
-          <label class="sidebar-field-label" for="columnLayout">Columns</label>
-          <select id="columnLayout" class="modal-select sidebar-select" onchange="setColumnLayout(this.value)">
-            <option value="1">Single column</option>
-            <option value="2-30">Two columns — narrow sidebar (30%)</option>
-            <option value="2-35">Two columns — sidebar (35%)</option>
-            <option value="2-40">Two columns — wide sidebar (40%)</option>
-          </select>
-          <label class="sidebar-field-label" for="sidebarPosition">Sidebar position</label>
-          <select id="sidebarPosition" class="modal-select sidebar-select" onchange="setSidebarPosition(this.value)">
-            <option value="left">Left</option>
-            <option value="right">Right</option>
-          </select>
-        </div>
-
-        <div class="sidebar-section">
-          <div class="sidebar-label-row">
-            <p class="sidebar-label" style="border:0;padding:0;margin:0">Sections</p>
-            <div class="add-section-dropdown" id="addSectionDropdown">
-              <button class="add-section-btn" id="addSectionBtn" onclick="toggleAddSectionMenu(event)">+ Add</button>
-              <div class="add-section-menu" id="addSectionMenu">
-                <button onclick="addSection('section')">📌 Section Title</button>
-                <button onclick="addSection('experience')">💼 Experience</button>
-                <button onclick="addSection('education')">🎓 Education</button>
-                <button onclick="addSection('skills')">⚡ Skills</button>
-                <button onclick="addSection('text')">📝 Text Block</button>
-                <button onclick="addSection('links')">🔗 Links</button>
-                <button onclick="addSection('spacer')">↕️ Spacer</button>
+  <main class="editor-workspace">
+    
+    <section class="editor-sidebar" id="editorSidebar">
+      
+      <div class="sidebar-panel active" id="panelEdit">
+        <div class="panel-scroll-container">
+          
+          <div class="form-section active">
+            <button class="form-section-toggle" type="button">
+              <span class="fs-title">Personal Details</span>
+              <span class="fs-chevron">▼</span>
+            </button>
+            <div class="form-section-content">
+              <div class="form-grid">
+                <div class="field-box full-width">
+                  <label>Wanted Job Title</label>
+                  <input type="text" id="inJobTitle" placeholder="e.g. Software Engineer" />
+                </div>
+                <div class="field-box">
+                  <label>First Name</label>
+                  <input type="text" id="inFirstName" />
+                </div>
+                <div class="field-box">
+                  <label>Last Name</label>
+                  <input type="text" id="inLastName" />
+                </div>
+                <div class="field-box">
+                  <label>Email</label>
+                  <input type="email" id="inEmail" />
+                </div>
+                <div class="field-box">
+                  <label>Phone</label>
+                  <input type="tel" id="inPhone" />
+                </div>
+                <div class="field-box">
+                  <label>Address</label>
+                  <input type="text" id="inAddress" />
+                </div>
+                <div class="field-box" id="photoUploadBox">
+                  <label>Photo</label>
+                  <div class="photo-input-row">
+                    <div class="photo-preview-placeholder" id="photoSidebarPreview"></div>
+                    <label class="btn btn-ghost btn-sm btn-file">
+                      Upload Image <input type="file" id="inPhoto" accept="image/*" style="display:none;" />
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-          <div class="sections-list" id="sectionsList"></div>
-        </div>
 
-        <div class="sidebar-section">
-          <p class="sidebar-label" style="border:0;padding:0;margin:0 0 0.1rem">View options</p>
-          <div class="toggle-pill-row">
-            <button type="button" class="toggle-pill" id="showGuidesBtn" onclick="toggleGuides()">▦ Block guides</button>
-            <button type="button" class="toggle-pill" id="darkPaperBtn" onclick="toggleDarkPaper()">🌙 Dark canvas</button>
+          <div class="sections-manager-wrap">
+            <h3 class="sm-title">Résumé Sections</h3>
+            <p class="sm-subtitle">Drag to reorder sections. Click to modify block parameters.</p>
+            <div class="sections-drag-list" id="sidebarSectionsList">
+              </div>
+          </div>
+          
+        </div>
+      </section>
+
+      <div class="sidebar-resizer" id="sidebarResizer"></div>
+
+      <section class="editor-canvas" id="canvasWrap">
+        <div class="canvas-container">
+          <div class="resume-paper" id="resumePaper" data-layout="1" data-header-align="left" data-date-align="right" data-skills-layout="pills">
+            
+            <header class="rb-header" id="canvasHeader">
+              <div class="rb-header-photo-wrap hidden" id="canvasPhotoWrap">
+                <img src="" alt="Profile" id="canvasPhotoImg" />
+              </div>
+              <div class="rb-header-text">
+                <h1 class="rb-name" id="canvasName">Juan Lala</h1>
+                <div class="rb-title" id="canvasJobTitle"></div>
+                <div class="rb-contact-line" id="canvasContactLine"></div>
+              </div>
+            </header>
+
+            <div id="canvasTracks" class="tracks-layout-1">
+              <div class="col-track main-track" id="mainTrack"></div>
+              <div class="col-track side-track hidden" id="sideTrack"></div>
+            </div>
+
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- CUSTOMIZE MODE -->
-      <div id="customizeModePanel" class="mode-panel" style="display:none">
-        <div class="customize-tabs" role="tablist">
-          <button class="customize-tab active" data-ctab="template" onclick="setCustomizeTab('template')">Template &amp; Colors</button>
-          <button class="customize-tab" data-ctab="text" onclick="setCustomizeTab('text')">Text</button>
-          <button class="customize-tab" data-ctab="layout" onclick="setCustomizeTab('layout')">Layout</button>
-        </div>
+  </main>
 
-        <!-- Template & Colors -->
-        <div class="customize-pane" id="ctab-template">
-          <p class="sidebar-label" style="border:0;padding:0">Main color</p>
-          <div class="color-swatches" id="colorSwatches">
-            <button class="swatch" data-color="#1A1A1A" style="background:#1A1A1A;--swatch-color:#1A1A1A" onclick="setMainColor('#1A1A1A')"></button>
-            <button class="swatch" data-color="#7C4DFF" style="background:#7C4DFF;--swatch-color:#7C4DFF" onclick="setMainColor('#7C4DFF')"></button>
-            <button class="swatch active" data-color="#2F6FED" style="background:#2F6FED;--swatch-color:#2F6FED" onclick="setMainColor('#2F6FED')"></button>
-            <button class="swatch" data-color="#1FA463" style="background:#1FA463;--swatch-color:#1FA463" onclick="setMainColor('#1FA463')"></button>
-            <button class="swatch" data-color="#E0383D" style="background:#E0383D;--swatch-color:#E0383D" onclick="setMainColor('#E0383D')"></button>
-          </div>
-
-          <p class="sidebar-label" style="margin-top:1rem">Template</p>
-          <div class="template-grid" id="templateGrid">
-            <div class="template-card active" data-template="classic" onclick="setTemplate('classic')"><div class="template-thumb tpl-classic"></div><span>Classic</span></div>
-            <div class="template-card" data-template="professional" onclick="setTemplate('professional')"><div class="template-thumb tpl-professional"></div><span>Professional</span></div>
-            <div class="template-card" data-template="prime" onclick="setTemplate('prime')"><div class="template-thumb tpl-prime"></div><span>Prime</span></div>
-            <div class="template-card" data-template="clean" onclick="setTemplate('clean')"><div class="template-thumb tpl-clean"></div><span>Clean</span></div>
-          </div>
-        </div>
-
-        <!-- Text -->
-        <div class="customize-pane" id="ctab-text" style="display:none">
-          <label class="sidebar-field-label" for="primaryFont">Primary Font</label>
-          <select id="primaryFont" class="modal-select sidebar-select" onchange="setPrimaryFont(this.value)">
-            <option value="'Source Sans Pro', var(--font-sans)">Source Sans Pro</option>
-            <option value="var(--font-sans)">Inter</option>
-            <option value="Georgia, serif">Georgia</option>
-            <option value="'Times New Roman', serif">Times New Roman</option>
-            <option value="var(--font-mono)">Roboto Mono</option>
-          </select>
-
-          <p class="sidebar-label" style="margin-top:1rem">Line Height</p>
-          <div class="slider-row">
-            <input type="range" min="80" max="160" value="100" id="lineHeightSlider" oninput="setLineHeight(this.value)" />
-            <span class="slider-val" id="lineHeightVal">100%</span>
-          </div>
-
-          <p class="sidebar-label" style="margin-top:1rem">Font Size</p>
-          <div class="slider-row">
-            <input type="range" min="0" max="2" step="1" value="0" id="fontSizeSlider" oninput="setFontSize(this.value)" />
-            <span class="slider-val" id="fontSizeVal">S</span>
-          </div>
-        </div>
-
-        <!-- Layout -->
-        <div class="customize-pane" id="ctab-layout" style="display:none">
-          <p class="sidebar-label" style="border:0;padding:0">Format</p>
-          <select id="pageFormat" class="modal-select sidebar-select" onchange="setPageFormat(this.value)">
-            <option value="a4">A4 (8.27" x 11.69")</option>
-            <option value="letter">Letter (8.5" x 11")</option>
-          </select>
-
-          <p class="sidebar-label" style="margin-top:1rem">Margins &amp; Paddings</p>
-
-          <div class="layout-slider">
-            <label>Top &amp; bottom <span class="slider-val" id="marginTBVal">48px</span></label>
-            <input type="range" min="20" max="80" value="48" oninput="setMargin('tb', this.value)" />
-          </div>
-          <div class="layout-slider">
-            <label>Left &amp; right <span class="slider-val" id="marginLRVal">48px</span></label>
-            <input type="range" min="20" max="80" value="48" oninput="setMargin('lr', this.value)" />
-          </div>
-          <div class="layout-slider">
-            <label>Between sections <span class="slider-val" id="gapSectionVal">18px</span></label>
-            <input type="range" min="4" max="40" value="18" oninput="setSpacing('section', this.value)" />
-          </div>
-          <div class="layout-slider">
-            <label>Between content blocks <span class="slider-val" id="gapBlockVal">10px</span></label>
-            <input type="range" min="2" max="30" value="10" oninput="setSpacing('block', this.value)" />
-          </div>
-
-          <p class="sidebar-label" style="margin-top:1rem">Header Alignment</p>
-          <div class="align-toggle">
-            <button class="align-btn active" data-val="left" onclick="setHeaderAlign('left')">Left</button>
-            <button class="align-btn" data-val="center" onclick="setHeaderAlign('center')">Center</button>
-            <button class="align-btn" data-val="right" onclick="setHeaderAlign('right')">Right</button>
-          </div>
-
-          <p class="sidebar-label" style="margin-top:1rem">Date Alignment</p>
-          <div class="align-toggle">
-            <button class="align-btn active" data-val="right" onclick="setDateAlign('right')">Right</button>
-            <button class="align-btn" data-val="left" onclick="setDateAlign('left')">Left</button>
-          </div>
-
-          <p class="sidebar-label" style="margin-top:1rem">Skills Layout</p>
-          <div class="align-toggle">
-            <button class="align-btn active" data-val="inline" onclick="setSkillsLayout('inline')">In line</button>
-            <button class="align-btn" data-val="columns" onclick="setSkillsLayout('columns')">Tags</button>
-          </div>
-        </div>
-      </div>
-
-    </aside>
-
-    <!-- RESIZER -->
-    <div class="sidebar-resizer" id="sidebarResizer"></div>
-
-    <!-- CANVAS -->
-    <main class="editor-canvas" id="canvasWrap">
-      <div class="resume-paper" id="resumePaper" style="position:relative"></div>
-      <div class="page-nav">
-        <button class="page-nav-btn" onclick="pageNav(-1)">‹</button>
-        <span id="pageIndicator">1 / 1</span>
-        <button class="page-nav-btn" onclick="pageNav(1)">›</button>
-      </div>
-    </main>
-
-    <!-- (selected-block field editor renders inline inside the Sections list) -->
-
-  </div>
-
-  <!-- PORTFOLIO MODAL -->
-  <div class="modal-overlay" id="portfolioModal" style="display:none" onclick="closePortfolioModal(event)">
-    <div class="modal-box modal-box-wide">
-      <div class="modal-header">
-        <div>
-          <h2>Portfolio Website</h2>
-          <p class="modal-sub">Your résumé, auto-converted into a personal website. Pick a theme and download.</p>
-        </div>
-        <button class="bc-btn del" onclick="closePortfolioModal()" style="width:32px;height:32px;font-size:16px">✕</button>
-      </div>
-
-      <div class="theme-picker">
-        <div class="theme-card theme-selected" data-theme="minimal" onclick="selectTheme('minimal')">
-          <div class="theme-swatch theme-swatch-minimal"></div>
-          <div class="theme-info"><strong>Minimal</strong><span>Clean, typographic</span></div>
-        </div>
-        <div class="theme-card" data-theme="bold" onclick="selectTheme('bold')">
-          <div class="theme-swatch theme-swatch-bold"></div>
-          <div class="theme-info"><strong>Bold</strong><span>Editorial, dark</span></div>
-        </div>
-        <div class="theme-card" data-theme="warm" onclick="selectTheme('warm')">
-          <div class="theme-swatch theme-swatch-warm"></div>
-          <div class="theme-info"><strong>Warm</strong><span>Earthy, approachable</span></div>
-        </div>
-        <div class="theme-card" data-theme="neon" onclick="selectTheme('neon')">
-          <div class="theme-swatch theme-swatch-neon"></div>
-          <div class="theme-info"><strong>Neon</strong><span>Tech-forward</span></div>
-        </div>
-      </div>
-
-      <div class="portfolio-preview-wrap">
-        <iframe id="portfolioPreviewFrame" class="portfolio-preview-frame"></iframe>
-      </div>
-
-      <div class="modal-actions" style="margin-top:1rem">
-        <button class="btn btn-ghost btn-sm" onclick="closePortfolioModal()">Cancel</button>
-        <button class="btn btn-gradient btn-sm" onclick="downloadPortfolio()">⬇ Download HTML →</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- SHOWCASE MODAL -->
-  <div class="modal-overlay" id="showcaseModal" style="display:none" onclick="closeShowcaseModal(event)">
-    <div class="modal-box">
-      <h2>Publish to Showcase</h2>
-      <p class="modal-sub">Your résumé will appear in the public gallery. Choose what to show.</p>
-      <div class="modal-fields">
-        <label class="modal-field"><input type="checkbox" id="showPhoto" checked /> Show profile photo</label>
-        <label class="modal-field"><input type="checkbox" id="showFullName" checked /> Show full name <span class="modal-hint">(uncheck for initials only)</span></label>
-        <label class="modal-field"><input type="checkbox" id="showLocation" checked /> Show location</label>
-        <label class="modal-field"><input type="checkbox" id="showContact" /> Show contact info</label>
-        <div class="modal-category">
-          <label for="categorySelect" style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.3rem">Category</label>
-          <select id="categorySelect" class="modal-select">
-            <option>Technology</option><option>Design</option><option>Marketing</option>
-            <option>Finance</option><option>Healthcare</option><option>Education</option>
-            <option>Engineering</option><option>Other</option>
-          </select>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost btn-sm" onclick="closeShowcaseModal()">Cancel</button>
-        <button class="btn btn-gradient btn-sm" onclick="publishToShowcase()">Publish →</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="editor.js"></script>
+  <script type="module" src="editor.js"></script>
 </body>
 </html>

@@ -3,33 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>proves.work — Your résumé that proves it</title>
+  <title>Résumé — Build your story</title>
   <link rel="stylesheet" href="dazed.css" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="home.css" />
 </head>
 <body class="is-loading">
 
-  <!-- NAV -->
+  <!-- NAV (fixed, always visible) -->
   <nav class="site-nav">
     <a href="index.html" class="nav-logo">
-      <span class="logo-dot"></span>proves.work
+      <span class="logo-dot"></span>résumé
     </a>
     <ul class="nav-links">
-      <li><a href="#" onclick="scrollToSlide(2);return false;">How it works</a></li>
       <li><a href="showcase.html">Showcase</a></li>
       <li><a href="#" onclick="scrollToSlide(4);return false;">Pricing</a></li>
-      <li><a href="editor.html">Log in</a></li>
-      <li><a href="editor.html" class="btn btn-primary btn-sm">Claim your link →</a></li>
+      <li><a href="editor.html" class="btn btn-primary btn-sm">Open Editor →</a></li>
     </ul>
   </nav>
 
-  <!-- SLIDE DOTS -->
+  <!-- SLIDE DOTS (right side) -->
   <nav class="slide-dots" aria-label="Page sections">
     <button class="dot active" onclick="scrollToSlide(0)" aria-label="Hero"></button>
-    <button class="dot" onclick="scrollToSlide(1)" aria-label="The problem"></button>
-    <button class="dot" onclick="scrollToSlide(2)" aria-label="How it works"></button>
-    <button class="dot" onclick="scrollToSlide(3)" aria-label="Proof blocks"></button>
+    <button class="dot" onclick="scrollToSlide(1)" aria-label="How it works"></button>
+    <button class="dot" onclick="scrollToSlide(2)" aria-label="Features"></button>
+    <button class="dot" onclick="scrollToSlide(3)" aria-label="Demo"></button>
     <button class="dot" onclick="scrollToSlide(4)" aria-label="Pricing"></button>
     <button class="dot" onclick="scrollToSlide(5)" aria-label="Get started"></button>
   </nav>
@@ -40,226 +38,174 @@
     <!-- SLIDE 1: HERO -->
     <section class="panel panel-hero" id="slide-0">
       <div class="panel-content">
-        <div class="url-claim-pill">
-          <span class="url-dot"></span>
-          <span class="url-text">yourname<span class="url-accent">.proves.work</span></span>
-          <span class="url-badge">yours to claim</span>
-        </div>
+        <p class="pill pill-accent">Free to start · No account needed</p>
         <h1 class="hero-title">
-          Stop claiming. <span class="gradient-text">Start proving.</span>
+          Your résumé,<br>
+          <span class="gradient-text">finally alive.</span>
         </h1>
         <p class="hero-sub">
-          Most résumés claim things. Yours will prove them.
-          Get a <strong>yourname.proves.work</strong> link that shows exactly
-          what you shipped — before a recruiter opens a single file.
+          Drag. Drop. Done. Build a résumé that recruiters actually
+          read — in minutes, not hours.
         </p>
         <div class="hero-cta">
-          <a href="editor.html" class="btn btn-gradient">Claim your proves.work →</a>
-          <button class="btn btn-ghost" onclick="scrollToSlide(1)">See the difference</button>
+          <a href="editor.html" class="btn btn-gradient">Start building free</a>
+          <button class="btn btn-ghost" onclick="scrollToSlide(1)">See how it works →</button>
         </div>
       </div>
       <div class="panel-visual panel-hero-visual">
-        <!-- Browser mockup showing proves.work URL -->
+        <!-- Floating résumé mockup -->
         <div class="mockup-card">
           <div class="mockup-bar">
             <span class="mockup-dot" style="background:#FF3366"></span>
             <span class="mockup-dot" style="background:#FFB400"></span>
             <span class="mockup-dot" style="background:#00E5B0"></span>
-            <div class="mockup-url-bar">
-              <span class="mockup-lock">🔒</span>
-              <span class="mockup-url">maria<strong>.proves.work</strong></span>
-            </div>
+            <span class="mockup-title">résumé · editor</span>
           </div>
           <div class="mockup-resume">
             <div class="mr-header">
               <div class="mr-name">Maria Santos</div>
-              <div class="mr-contact">Frontend Engineer · Manila, PH</div>
-            </div>
-            <div class="mr-best-work">
-              <div class="mr-best-label">⚡ Best work</div>
-              <div class="mr-best-item">
-                <span class="mr-best-metric">+18%</span>
-                <span class="mr-best-desc">conversion — Shopify PH cart redesign</span>
-                <span class="mr-best-link">→</span>
-              </div>
-              <div class="mr-best-item">
-                <span class="mr-best-metric">2×</span>
-                <span class="mr-best-desc">faster load after performance audit</span>
-                <span class="mr-best-link">→</span>
-              </div>
+              <div class="mr-contact">maria@example.com · Manila, PH · linkedin.com/in/maria</div>
             </div>
             <div class="mr-rule"></div>
-            <div class="mr-section">What I shipped</div>
+            <div class="mr-section">Experience</div>
+            <div class="mr-exp">
+              <span class="mr-company">Shopify PH</span>
+              <span class="mr-dates">2022 – Present</span>
+            </div>
+            <div class="mr-role">Frontend Engineer · Makati</div>
             <ul class="mr-bullets">
-              <li>Cart redesign → +18% conversion in 3 weeks</li>
-              <li>Mentored 4 juniors, all promoted within 6 months</li>
-              <li>Led perf audit → 2× faster load, 40-pt Lighthouse jump</li>
+              <li>Shipped cart redesign → +18% conversion</li>
+              <li>Mentored 4 junior engineers on React</li>
+              <li>Led performance audit → 2× faster load</li>
             </ul>
+            <div class="mr-rule"></div>
+            <div class="mr-section">Skills</div>
+            <div class="mr-skills">
+              <span class="mr-tag">React</span>
+              <span class="mr-tag">TypeScript</span>
+              <span class="mr-tag">Node.js</span>
+              <span class="mr-tag">Figma</span>
+            </div>
           </div>
           <div class="mockup-chip">
-            <span style="color:var(--color-accent)">✓</span> Proof, not claims
+            <span>⠿</span> Drag to reorder
           </div>
         </div>
         <div class="next-arrow" onclick="scrollToSlide(1)" aria-label="Next slide">→</div>
       </div>
     </section>
 
-    <!-- SLIDE 2: THE PROBLEM (claims vs proof) -->
-    <section class="panel panel-versus" id="slide-1">
-      <div class="panel-intro">
-        <p class="eyebrow">The problem</p>
-        <h2>Every résumé<br>sounds the same.</h2>
-        <p class="intro-sub">
-          Recruiters read "drove growth" 80 times a day.
-          They're not slow — your résumé just looks like everyone else's.
-          <em>Proof ends the debate.</em>
-        </p>
-        <button class="btn btn-ghost btn-sm" onclick="scrollToSlide(2)">How it works →</button>
-      </div>
-      <div class="versus-panel">
-        <div class="versus-col versus-bad">
-          <div class="versus-label versus-label-bad">
-            <span>✗</span> What every résumé says
-          </div>
-          <div class="versus-card">
-            <div class="vc-section">Experience</div>
-            <div class="vc-role">Marketing Manager · Some Company</div>
-            <ul class="vc-bullets">
-              <li>Drove significant revenue growth</li>
-              <li>Managed cross-functional teams</li>
-              <li>Improved brand awareness</li>
-              <li>Led strategic initiatives</li>
-            </ul>
-          </div>
-          <div class="versus-verdict versus-verdict-bad">
-            Recruiter thinks: <em>"Could be anyone."</em>
-          </div>
-        </div>
-        <div class="versus-divider">
-          <div class="versus-arrow">→</div>
-        </div>
-        <div class="versus-col versus-good">
-          <div class="versus-label versus-label-good">
-            <span>✓</span> What your proves.work shows
-          </div>
-          <div class="versus-card versus-card-good">
-            <div class="vc-section" style="color:var(--color-primary)">What I shipped</div>
-            <div class="vc-role">Patricia M. · Marketing Lead</div>
-            <ul class="vc-bullets">
-              <li><strong>+₱4.2M revenue</strong> — Q3 launch campaign, 6 weeks</li>
-              <li><strong>Team of 6</strong> → all hit OKRs for 3 quarters straight</li>
-              <li><strong>3× brand search volume</strong> after rebrand I led</li>
-              <li><strong>See the case study</strong> → patriciam.proves.work/launch</li>
-            </ul>
-          </div>
-          <div class="versus-verdict versus-verdict-good">
-            Recruiter thinks: <em>"Call her today."</em>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- SLIDE 3: HOW IT WORKS -->
-    <section class="panel panel-how" id="slide-2">
+    <!-- SLIDE 2: HOW IT WORKS -->
+    <section class="panel panel-how" id="slide-1">
       <div class="panel-intro">
         <p class="eyebrow">How it works</p>
-        <h2>Built for<br>proof, not claims.</h2>
-        <p class="intro-sub">Three steps. Each one forces specificity — which is the whole point.</p>
-        <button class="btn btn-ghost btn-sm" onclick="scrollToSlide(3)">See proof blocks →</button>
+        <h2>Three steps.<br>One great résumé.</h2>
+        <p class="intro-sub">No templates. No locked sections. Just blocks you control.</p>
+        <button class="btn btn-ghost btn-sm" onclick="scrollToSlide(2)">See features →</button>
       </div>
       <div class="panel-steps">
         <div class="step">
           <div class="step-num">01</div>
           <div class="step-tape"></div>
-          <div>
-            <h3>Write what you shipped</h3>
-            <p>Not what you "managed" or "drove." Our fields ask: <em>what, by how much, compared to what baseline?</em> Specificity is forced, not optional.</p>
-          </div>
+          <h3>Drag a block</h3>
+          <p>Pick Experience, Education, Skills, or Text. Drop it anywhere on the canvas. Reorder freely.</p>
         </div>
         <div class="step">
           <div class="step-num">02</div>
           <div class="step-tape"></div>
-          <div>
-            <h3>Drop your best work up top</h3>
-            <p>A link, a number, an image — your single best proof goes above the fold in a dedicated block. Recruiters see it before anything else.</p>
-          </div>
+          <h3>Edit in place</h3>
+          <p>Click any field and type. Every change is instant — no save-and-preview loops.</p>
         </div>
         <div class="step">
           <div class="step-num">03</div>
           <div class="step-tape"></div>
-          <div>
-            <h3>Share yourname.proves.work</h3>
-            <p>Your URL is already a claim. Before anyone reads a line, the domain tells them: this person shows receipts.</p>
-          </div>
+          <h3>Share or export</h3>
+          <p>Download PDF, copy a public link, or appear in the community Showcase.</p>
         </div>
       </div>
     </section>
 
-    <!-- SLIDE 4: PROOF BLOCKS DEMO -->
+    <!-- SLIDE 3: FEATURES GRID -->
+    <section class="panel panel-features" id="slide-2">
+      <div class="panel-intro panel-intro-dark">
+        <p class="eyebrow" style="color:var(--color-accent)">What you get</p>
+        <h2>Everything a<br>great résumé needs.</h2>
+        <p class="intro-sub" style="color:rgba(255,255,255,0.6)">Built for job seekers who want control, not constraints.</p>
+        <button class="btn btn-ghost btn-sm" onclick="scrollToSlide(3)" style="border-color:rgba(255,255,255,0.3);color:#fff">See it in action →</button>
+      </div>
+      <div class="panel-feature-grid">
+        <div class="feat">
+          <div class="feat-icon">🧱</div>
+          <h3>Block editor</h3>
+          <p>Every section is a movable, deletable, duplicatable block.</p>
+        </div>
+        <div class="feat">
+          <div class="feat-icon">👁</div>
+          <h3>Live preview</h3>
+          <p>What you edit is exactly what prints. No surprises at export.</p>
+        </div>
+        <div class="feat">
+          <div class="feat-icon">🌍</div>
+          <h3>Public showcase</h3>
+          <p>Opt in to the community gallery. Let your work speak for itself.</p>
+        </div>
+        <div class="feat">
+          <div class="feat-icon">🔒</div>
+          <h3>Privacy controls</h3>
+          <p>Hide photo, redact name, or remove location per showcase setting.</p>
+        </div>
+        <div class="feat">
+          <div class="feat-icon">📄</div>
+          <h3>PDF export</h3>
+          <p>One-click, ATS-safe PDF. Recruiters can actually read it.</p>
+        </div>
+        <div class="feat">
+          <div class="feat-icon">✨</div>
+          <h3>AI polish <span class="feat-pro">Pro</span></h3>
+          <p>Let AI tighten bullets and match keywords from any job description.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 4: SPLIT DEMO / TESTIMONIAL -->
     <section class="panel panel-split" id="slide-3">
       <div class="split-left">
-        <p class="eyebrow">Proof blocks</p>
-        <h2>Every section<br>earns its place.</h2>
-        <p class="intro-sub" style="font-size:0.9rem;line-height:1.7">
-          Drag to reorder. Every block is designed around one question:
-          <strong>does this prove something, or does it just claim something?</strong>
-          If it can't answer that, cut it.
-        </p>
-        <div class="block-verdict">
-          <div class="bv-item">
-            <span class="bv-icon" style="color:var(--color-accent)">✓</span>
-            <span>PDF export — ATS-safe, one click</span>
-          </div>
-          <div class="bv-item">
-            <span class="bv-icon" style="color:var(--color-accent)">✓</span>
-            <span>yourname.proves.work — free forever</span>
-          </div>
-          <div class="bv-item">
-            <span class="bv-icon" style="color:var(--color-accent)">✓</span>
-            <span>AI bullet rewriter — turns claims into proof <span class="feat-pro">Pro</span></span>
-          </div>
-          <div class="bv-item">
-            <span class="bv-icon" style="color:var(--color-accent)">✓</span>
-            <span>Link analytics — see who's reading <span class="feat-pro">Pro</span></span>
-          </div>
+        <p class="eyebrow">Real results</p>
+        <h2>Résumés that<br>get callbacks.</h2>
+        <div class="testimonials">
+          <blockquote class="testi">
+            <p>"Landed 3 interviews in a week after switching to this. The block layout finally let me put education after skills."</p>
+            <cite>— Joven R., Fresh Graduate, Cebu</cite>
+          </blockquote>
+          <blockquote class="testi">
+            <p>"I just dragged my experience section up and instantly looked more senior. Got hired at a startup in Manila."</p>
+            <cite>— Patricia M., Marketing Manager</cite>
+          </blockquote>
         </div>
         <button class="btn btn-gradient" onclick="scrollToSlide(4)">See pricing →</button>
       </div>
       <div class="split-right">
-        <!-- Draggable proof blocks -->
-        <p class="demo-sublabel">Drag to reorder ↕</p>
+        <!-- Live draggable block demo -->
         <div class="block-demo" id="liveBlockDemo">
-          <div class="demo-block demo-block-active" data-label="Best Work" data-icon="⚡">
-            <span class="demo-grip">⠿</span>
-            <span class="demo-icon">⚡</span>
-            <div class="demo-block-inner">
-              <span class="demo-block-name">Best Work</span>
-              <span class="demo-block-hint">Your #1 proof — always above the fold</span>
-            </div>
-          </div>
-          <div class="demo-block" data-label="What I Shipped" data-icon="📦">
-            <span class="demo-grip">⠿</span>
-            <span class="demo-icon">📦</span>
-            <div class="demo-block-inner">
-              <span class="demo-block-name">What I Shipped</span>
-              <span class="demo-block-hint">Metrics-first experience blocks</span>
-            </div>
-          </div>
-          <div class="demo-block" data-label="Where I've Been" data-icon="📌">
+          <div class="demo-block" data-label="Experience" data-icon="📌">
             <span class="demo-grip">⠿</span>
             <span class="demo-icon">📌</span>
-            <div class="demo-block-inner">
-              <span class="demo-block-name">Where I've Been</span>
-              <span class="demo-block-hint">Timeline, dates, context</span>
-            </div>
+            <span>Experience</span>
           </div>
-          <div class="demo-block" data-label="What I Know" data-icon="🧠">
+          <div class="demo-block" data-label="Education" data-icon="🎓">
             <span class="demo-grip">⠿</span>
-            <span class="demo-icon">🧠</span>
-            <div class="demo-block-inner">
-              <span class="demo-block-name">What I Know</span>
-              <span class="demo-block-hint">Skills, tools, languages</span>
-            </div>
+            <span class="demo-icon">🎓</span>
+            <span>Education</span>
+          </div>
+          <div class="demo-block demo-block-active" data-label="Skills" data-icon="⚡">
+            <span class="demo-grip">⠿</span>
+            <span class="demo-icon">⚡</span>
+            <span>Skills</span>
+          </div>
+          <div class="demo-block" data-label="Links" data-icon="🔗">
+            <span class="demo-grip">⠿</span>
+            <span class="demo-icon">🔗</span>
+            <span>Links</span>
           </div>
         </div>
       </div>
@@ -269,21 +215,21 @@
     <section class="panel panel-pricing" id="slide-4">
       <div class="panel-intro">
         <p class="eyebrow">Pricing</p>
-        <h2>Your link is<br>free. Forever.</h2>
-        <p class="intro-sub">Claim <strong>yourname.proves.work</strong> at no cost. Upgrade when you want to own your domain and see who's watching.</p>
+        <h2>Start free.<br>Upgrade when ready.</h2>
+        <p class="intro-sub">No credit card needed to start. Export your first PDF today.</p>
       </div>
       <div class="pricing-cards">
         <div class="price-card">
           <div class="price-name">Free</div>
           <div class="price-amount">₱0 <span>/forever</span></div>
           <ul class="price-features">
-            <li>✓ <strong>yourname.proves.work</strong> subdomain</li>
-            <li>✓ All proof block types</li>
-            <li>✓ ATS-safe PDF export</li>
-            <li>✓ Showcase listing</li>
-            <li>✓ Drag-to-reorder sections</li>
+            <li>✓ Drag-and-drop editor</li>
+            <li>✓ Unlimited blocks</li>
+            <li>✓ PDF export</li>
+            <li>✓ Public showcase listing</li>
+            <li>✓ Privacy controls</li>
           </ul>
-          <a href="editor.html" class="btn btn-ghost" style="width:100%;justify-content:center">Claim your link free</a>
+          <a href="editor.html" class="btn btn-ghost" style="width:100%;justify-content:center">Start free</a>
         </div>
         <div class="price-card price-featured">
           <div class="price-badge">Most popular</div>
@@ -291,33 +237,30 @@
           <div class="price-amount">₱149 <span>/mo</span></div>
           <ul class="price-features">
             <li>✓ Everything in Free</li>
-            <li>✓ Custom domain (john.com)</li>
-            <li>✓ <strong>Analytics</strong> — see who's reading & where</li>
-            <li>✓ AI bullet → proof rewriter</li>
-            <li>✓ Multiple variants (john.proves.work/ux)</li>
+            <li>✓ AI bullet rewriter</li>
             <li>✓ Word (.docx) export</li>
+            <li>✓ Remove from showcase</li>
+            <li>✓ Custom domain link</li>
+            <li>✓ Priority support</li>
           </ul>
           <a href="#" class="btn btn-primary" style="width:100%;justify-content:center">Get Pro</a>
         </div>
       </div>
     </section>
 
-    <!-- SLIDE 6: CTA -->
+    <!-- SLIDE 6: CTA / FOOTER -->
     <section class="panel panel-cta" id="slide-5">
       <div class="cta-inner">
-        <p class="eyebrow" style="color:var(--color-accent)">The simplest thing you can do today</p>
-        <h2 class="cta-title">What have you<br>actually proved?</h2>
-        <div class="cta-url-preview">
-          <span class="cta-url-label">your link, in 3 minutes:</span>
-          <span class="cta-url-display">yourname<span>.proves.work</span></span>
-        </div>
-        <a href="editor.html" class="btn btn-gradient cta-btn">Build your proves.work — it's free →</a>
+        <p class="eyebrow" style="color:var(--color-accent)">You're one drag away</p>
+        <h2 class="cta-title">Ready to stand<br>out from the pile?</h2>
+        <p class="cta-sub">Your résumé is the first impression. Make it count.</p>
+        <a href="editor.html" class="btn btn-gradient cta-btn">Build your résumé — it's free →</a>
         <div class="cta-links">
           <a href="showcase.html">Browse Showcase</a>
           <span>·</span>
           <a href="editor.html">Open Editor</a>
         </div>
-        <p class="cta-copy">© 2025 proves.work · Built in PH · Every link is a statement.</p>
+        <p class="cta-copy">© 2025 Résumé · Built with ❤️ in PH</p>
       </div>
     </section>
 
@@ -326,27 +269,20 @@
   <script src="home.js"></script>
   <script>
   (function() {
-    // Prevent copying page content
-    ['copy', 'cut', 'contextmenu', 'selectstart', 'dragstart'].forEach(evt => {
-      document.addEventListener(evt, function(e) { e.preventDefault(); });
-    });
-    document.addEventListener('keydown', function(e) {
-      const key = e.key.toLowerCase();
-      if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'u', 's', 'p'].includes(key)) {
-        e.preventDefault();
-      }
-    });
-
     function initDemo() {
       const demo = document.getElementById('liveBlockDemo');
       if (!demo) return;
-      let dragEl = null, placeholder = null, offsetY = 0, originRect = null;
+
+      let dragEl = null;
+      let placeholder = null;
+      let startY = 0, startX = 0, offsetY = 0, offsetX = 0;
+      let originRect = null;
 
       function getBlocks() {
         return Array.from(demo.querySelectorAll('.demo-block')).filter(b => b !== dragEl);
       }
 
-      demo.addEventListener('pointerdown', (e) => {
+      function onPointerDown(e) {
         const grip = e.target.closest('.demo-grip');
         const card = e.target.closest('.demo-block');
         if (!grip || !card) return;
@@ -354,7 +290,12 @@
 
         dragEl = card;
         originRect = card.getBoundingClientRect();
+        const demoRect = demo.getBoundingClientRect();
+
+        startY = e.clientY;
+        startX = e.clientX;
         offsetY = e.clientY - originRect.top;
+        offsetX = e.clientX - originRect.left;
 
         placeholder = document.createElement('div');
         placeholder.className = 'demo-placeholder';
@@ -365,48 +306,72 @@
         card.style.width = originRect.width + 'px';
         card.style.position = 'fixed';
         card.style.left = originRect.left + 'px';
-        card.style.top  = originRect.top  + 'px';
+        card.style.top = originRect.top + 'px';
         card.style.zIndex = '999';
         card.style.pointerEvents = 'none';
 
-        document.addEventListener('pointermove', onMove);
-        document.addEventListener('pointerup',   onUp);
-      });
+        document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('pointerup', onPointerUp);
+      }
 
-      function onMove(e) {
+      function onPointerMove(e) {
         if (!dragEl) return;
-        dragEl.style.top = (e.clientY - offsetY) + 'px';
-        const midY = e.clientY - offsetY + originRect.height / 2;
+        const newLeft = e.clientX - offsetX;
+        const newTop = e.clientY - offsetY;
+        dragEl.style.left = newLeft + 'px';
+        dragEl.style.top = newTop + 'px';
+
+        const dragCenterY = newTop + originRect.height / 2;
+
+        const blocks = getBlocks();
         let inserted = false;
-        for (const b of getBlocks()) {
-          if (b === placeholder) continue;
-          const r = b.getBoundingClientRect();
-          if (midY < r.top + r.height / 2) {
-            if (placeholder.nextSibling !== b) b.before(placeholder);
-            inserted = true; break;
+        for (const block of blocks) {
+          if (block === placeholder) continue;
+          const rect = block.getBoundingClientRect();
+          const blockCenterY = rect.top + rect.height / 2;
+          if (dragCenterY < blockCenterY) {
+            if (placeholder.nextSibling !== block) {
+              block.before(placeholder);
+            }
+            inserted = true;
+            break;
           }
         }
         if (!inserted) {
-          const last = getBlocks().slice(-1)[0];
-          if (last && placeholder !== last.nextSibling) last.after(placeholder);
+          const last = blocks[blocks.length - 1];
+          if (last && placeholder !== last.nextSibling) {
+            last.after(placeholder);
+          }
         }
       }
 
-      function onUp() {
+      function onPointerUp(e) {
         if (!dragEl) return;
-        document.removeEventListener('pointermove', onMove);
-        document.removeEventListener('pointerup',   onUp);
-        const r = placeholder.getBoundingClientRect();
-        dragEl.style.transition = 'left 0.15s ease, top 0.15s ease';
-        dragEl.style.left = r.left + 'px';
-        dragEl.style.top  = r.top  + 'px';
+        document.removeEventListener('pointermove', onPointerMove);
+        document.removeEventListener('pointerup', onPointerUp);
+
+        const finalRect = placeholder.getBoundingClientRect();
+
+        dragEl.style.transition = 'left 0.18s ease, top 0.18s ease';
+        dragEl.style.left = finalRect.left + 'px';
+        dragEl.style.top = finalRect.top + 'px';
+
         setTimeout(() => {
           placeholder.replaceWith(dragEl);
           dragEl.classList.remove('demo-lifted');
-          dragEl.style.cssText = '';
-          dragEl = null; placeholder = null;
-        }, 150);
+          dragEl.style.position = '';
+          dragEl.style.left = '';
+          dragEl.style.top = '';
+          dragEl.style.width = '';
+          dragEl.style.zIndex = '';
+          dragEl.style.pointerEvents = '';
+          dragEl.style.transition = '';
+          dragEl = null;
+          placeholder = null;
+        }, 180);
       }
+
+      demo.addEventListener('pointerdown', onPointerDown);
     }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initDemo);

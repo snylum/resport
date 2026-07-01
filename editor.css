@@ -1,9 +1,12 @@
 /* ============================================================
-   editor.css — Résumé Editor styles
+   editor.css — Layout orchestration styles
    ============================================================ */
 
-/* ── Layout shell ────────────────────────────────────────── */
-html, body { height: 100%; overflow: hidden; }
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-background);
+}
 
 body {
   display: flex;
@@ -13,888 +16,129 @@ body {
 .editor-toolbar {
   height: 68px;
   background: var(--color-surface);
-  border-bottom: 2px solid var(--color-border);
+  border-bottom: 3px solid var(--color-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 1.5rem;
-  gap: 1.25rem;
-  flex-shrink: 0;
   z-index: 50;
 }
 
-/* Toolbar buttons use a lighter shadow than the rest of the app —
-   the full 6px neobrutalist shadow reads as cramped/clipped inside
-   a slim header bar, which is what made the header feel "too thin". */
-.editor-toolbar .btn {
-  box-shadow: 3px 3px 0 0 var(--color-border);
-}
-.editor-toolbar .btn:hover {
-  box-shadow: 4px 4px 0 0 var(--color-border);
-  transform: translate(-1px, -1px);
-}
-.editor-toolbar .btn:active { transform: translate(2px, 2px); }
-
-.toolbar-center {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-}
-
-.toolbar-filename {
-  font-family: var(--font-display);
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--color-text);
-  padding: 0.4rem 0.6rem;
-  border-radius: 4px;
-  outline: none;
-  min-width: 140px;
-  text-align: center;
-}
-
-.toolbar-filename:hover { background: var(--color-surface-alt); }
-.toolbar-filename:focus { background: var(--color-surface-alt); box-shadow: 0 0 0 2px var(--color-primary); }
-
-.toolbar-actions { display: flex; gap: 0.5rem; align-items: center; }
-
-.editor-layout {
+.editor-workspace {
   display: flex;
   flex: 1;
   overflow: hidden;
+  position: relative;
 }
 
-/* ── Sidebar layout controls (select, hints) ────────────────── */
-.sidebar-field-label {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--color-text-muted);
-  margin-top: 0.25rem;
-}
-
-.sidebar-select {
-  width: 100%;
-  font-size: 0.78rem;
-  padding: 0.4rem 0.6rem;
-}
-
-.sidebar-hint {
-  font-size: 0.7rem;
-  color: var(--color-text-muted);
-  line-height: 1.5;
-  margin-top: 0.25rem;
-}
-
-/* ── Sidebar ─────────────────────────────────────────────── */
 .editor-sidebar {
-  width: 320px;
-  flex-shrink: 0;
+  width: 360px;
   background: var(--color-surface);
-  border-right: 2px solid var(--color-border);
+  border-right: 3px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   overflow-y: auto;
-  padding: 1rem 0.875rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
 }
 
-.sidebar-section { display: flex; flex-direction: column; gap: 0.5rem; }
-
-.sidebar-label {
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  padding-bottom: 0.4rem;
-  border-bottom: 1px solid var(--color-border);
+.panel-scroll-container {
+  padding: 1.5rem;
 }
 
-.add-section-dropdown { position: relative; }
-.add-section-btn {
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 0.3rem 0.65rem;
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-lg);
+.form-section {
+  border: 2px solid var(--color-border);
+  margin-bottom: 1rem;
   background: var(--color-surface);
-  cursor: pointer;
-  color: var(--color-text);
-  transition: background 0.1s, border-color 0.1s;
-}
-.add-section-btn:hover { background: var(--color-surface-alt); border-color: var(--color-primary); }
-.add-section-menu {
-  display: none;
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 20;
-  background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow);
-  padding: 0.3rem;
-  min-width: 170px;
-  flex-direction: column;
-}
-.add-section-dropdown.open .add-section-menu { display: flex; }
-.add-section-menu button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  border: 0;
-  background: none;
-  text-align: left;
-  font-size: 0.78rem;
-  font-weight: 500;
-  padding: 0.4rem 0.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-  color: var(--color-text);
-}
-.add-section-menu button:hover { background: var(--color-surface-alt); }
-
-.sidebar-toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.8rem;
-  cursor: pointer;
-  color: var(--color-text-muted);
-  padding: 0.25rem 0;
 }
 
-.sidebar-toggle input[type="checkbox"] { accent-color: var(--color-primary); }
-
-.toggle-pill-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.toggle-pill {
-  font-size: 0.76rem; font-weight: 600; padding: 0.4rem 0.7rem;
-  border: 1.5px solid var(--color-border); border-radius: var(--radius-lg);
-  background: var(--color-surface); color: var(--color-text-muted);
-  cursor: pointer; transition: background 0.12s, color 0.12s, border-color 0.12s;
-}
-.toggle-pill:hover { border-color: var(--color-secondary); color: var(--color-text); }
-.toggle-pill.active {
-  background: var(--color-secondary); border-color: var(--color-secondary); color: #fff;
-}
-
-.sidebar-tip {
+.form-section-toggle {
+  width: 100%;
+  padding: 0.75rem 1rem;
   background: var(--color-surface-alt);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 0.75rem;
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-  line-height: 1.5;
+  border: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+  cursor: pointer;
+  border-bottom: 2px solid var(--color-border);
 }
 
-/* ── Canvas ──────────────────────────────────────────────── */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.field-box.full-width {
+  grid-column: span 2;
+}
+
+.field-box label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.field-box input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 2px solid var(--color-border);
+  outline: none;
+  font-family: var(--font-sans);
+}
+
+/* ── Live Canvas Area ────────────────────────────────────── */
 .editor-canvas {
   flex: 1;
-  min-width: 0;
+  background: #f0f0f0;
   overflow-y: auto;
-  background: #e8e8e8;
-  padding: 2.5rem 2rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.editor-canvas.dark-canvas { background: #2a2a2a; }
-
-/* ── Right edit panel ────────────────────────────────────── */
-.editor-panel {
-  width: 300px;
-  flex-shrink: 0;
-  background: var(--color-surface);
-  border-left: 2px solid var(--color-border);
-  overflow-y: auto;
-  padding: 1.25rem 1rem;
-  display: flex;
-  flex-direction: column;
-}
-
-.panel-empty {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  color: var(--color-text-muted);
-  font-size: 0.8rem;
-  gap: 0.5rem;
-  padding: 2rem 1rem;
-  line-height: 1.5;
-}
-
-.panel-empty-icon {
-  font-size: 1.5rem;
-  opacity: 0.4;
-}
-
-.panel-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.pf-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.pf-type-label {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 0.85rem;
-}
-
-.pf-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.pf-label {
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-}
-
-.pf-input, .pf-textarea {
-  width: 100%;
-  font-family: var(--font-sans);
-  font-size: 0.85rem;
-  padding: 0.5rem 0.6rem;
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  color: var(--color-text);
-  outline: none;
-  resize: vertical;
-  box-sizing: border-box;
-}
-
-.pf-input:focus, .pf-textarea:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(255,51,102,0.15);
-}
-
-.pf-textarea-sm { font-size: 0.8rem; }
-
-.pf-bullet-list { display: flex; flex-direction: column; gap: 0.5rem; }
-
-.pf-bullet-row {
-  display: flex;
-  gap: 0.4rem;
-  align-items: flex-start;
-}
-
-.pf-bullet-row .pf-input,
-.pf-bullet-row .pf-textarea { flex: 1; }
-
-.pf-remove-btn {
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  border: 1.5px solid var(--color-border);
-  background: var(--color-surface);
-  border-radius: 4px;
-  cursor: pointer;
-  color: #999;
-  font-size: 11px;
-}
-
-.pf-remove-btn:hover { background: #fff0f0; color: #e00; border-color: #e00; }
-
-.pf-add-btn {
-  margin-top: 0.5rem;
-  font-size: 0.78rem;
-  background: none;
-  border: 1px dashed var(--color-border);
-  padding: 0.4rem 0.75rem;
-  cursor: pointer;
-  border-radius: var(--radius-lg);
-  color: var(--color-text-muted);
-  font-family: inherit;
-  width: 100%;
-}
-
-.pf-add-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
-
-.pf-hint { font-size: 0.8rem; color: var(--color-text-muted); line-height: 1.5; }
-
-.pf-col-toggle { display: flex; gap: 0.4rem; }
-
-.pf-col-btn {
-  flex: 1;
-  font-size: 0.78rem;
-  font-weight: 600;
-  padding: 0.45rem 0.5rem;
-  border: 1.5px solid var(--color-border);
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  color: var(--color-text-muted);
-}
-
-.pf-col-btn.active {
-  background: var(--color-primary);
-  color: var(--color-primary-contrast);
-  border-color: var(--color-primary);
-}
-
-/* Drop zone hint when canvas is empty */
-.canvas-hint {
-  width: 680px;
-  max-width: 100%;
-  border: 2px dashed var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 3rem;
-  text-align: center;
-  color: var(--color-text-muted);
-  font-size: 0.875rem;
-  background: var(--color-surface);
-  pointer-events: none;
-}
-
-/* Drop indicator line */
-.drop-indicator {
-  width: 680px;
-  max-width: 100%;
-  height: 3px;
-  background: var(--gradient);
-  border-radius: 2px;
-  display: none;
-  pointer-events: none;
-  margin: 0 auto;
-}
-
-.drop-indicator.visible { display: block; }
-
-/* ── Resume paper ────────────────────────────────────────── */
-.resume-paper {
-  width: 680px;
-  max-width: 100%;
-  min-height: 880px;
-  background: white;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-  padding: 52px 60px;
-  font-family: 'Times New Roman', Times, serif;
-  color: #111;
-  position: relative;
-}
-
-.resume-paper.show-guides .resume-block { outline: 1px dashed rgba(255,51,102,0.3); }
-
-/* Two-column layout: a flex row of two .col-track containers,
-   each holding its own ordered list of .resume-block elements. */
-.col-wrap {
-  display: flex;
-  gap: 28px;
-  align-items: flex-start;
-}
-
-.col-track {
-  display: flex;
-  flex-direction: column;
-  min-height: 60px;
-}
-
-.col-track.col-main { flex: 1; min-width: 0; }
-.col-track.col-side { flex: 0 0 var(--side-width, 32%); min-width: 0; }
-
-.resume-paper.is-two-col .col-track {
-  min-height: 120px;
-}
-
-.resume-paper.show-guides .col-track {
-  outline: 1px dotted rgba(124,77,255,0.35);
-  outline-offset: 4px;
-}
-
-/* ── Resume block wrapper ────────────────────────────────── */
-.resume-block {
-  position: relative;
-  transition: opacity 0.15s, transform 0.12s ease;
-  cursor: pointer;
-  border-radius: 4px;
-  padding-left: 22px;
-}
-
-.rb-drag-handle {
-  position: absolute;
-  left: -2px; top: 2px;
-  width: 18px; height: 18px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 13px; line-height: 1;
-  color: var(--color-text-muted);
-  cursor: grab;
-  opacity: 0;
-  transition: opacity 0.12s ease, color 0.12s ease;
-  touch-action: none;
-}
-.resume-block:hover .rb-drag-handle,
-.resume-block.block-selected .rb-drag-handle { opacity: 0.55; }
-.rb-drag-handle:hover { opacity: 1 !important; color: var(--color-primary); }
-.rb-drag-handle:active { cursor: grabbing; }
-
-.resume-block.rb-dragging { opacity: 0.35; }
-.rb-drop-placeholder {
-  border: 1.5px dashed var(--color-primary);
-  border-radius: 4px;
-  background: rgba(255,51,102,0.06);
-  margin-bottom: var(--resume-gap-block, 10px);
-}
-
-.resume-block * { user-select: none; -webkit-user-select: none; cursor: default; }
-.resume-block { cursor: pointer; }
-.resume-block .rb-drag-handle { user-select: none; cursor: grab; }
-.resume-block .rb-drag-handle:active { cursor: grabbing; }
-
-/* Restore text selection inside the sidebar where fields are edited */
-.editor-sidebar * { user-select: text; -webkit-user-select: text; }
-.editor-sidebar .section-row-grip,
-.editor-sidebar .bc-btn,
-.editor-sidebar button { user-select: none; -webkit-user-select: none; }
-
-.bc-btn {
-  width: 26px; height: 26px;
-  border: 1.5px solid var(--color-border);
-  background: white;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 11px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #666;
-  transition: background 0.1s, color 0.1s;
-}
-
-.bc-btn:hover { background: #fff0f3; color: var(--color-primary); border-color: var(--color-primary); }
-.bc-btn.del:hover { background: #fff0f0; color: #e00; border-color: #e00; }
-
-/* ── Block styles (résumé typography) ───────────────────── */
-
-
-/* Header */
-.rb-header { text-align: center; margin-bottom: 4px; }
-.rb-name {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  outline: none;
-  min-height: 28px;
-  display: block;
-}
-.rb-contact {
-  font-size: 11px;
-  color: #444;
-  margin-top: 4px;
-  outline: none;
-  min-height: 16px;
-  display: block;
-}
-
-/* Section title */
-.rb-section-title {
-  font-size: 11.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  border-bottom: 1.5px solid #111;
-  padding-bottom: 2px;
-  margin-top: 12px;
-  margin-bottom: 6px;
-  outline: none;
-  min-height: 18px;
-  display: block;
-}
-
-/* Experience */
-.rb-experience { margin-bottom: 8px; }
-.rb-exp-row { display: flex; justify-content: space-between; align-items: baseline; }
-.rb-company { font-weight: 700; font-size: 12px; min-width: 40px; }
-.rb-dates   { font-size: 11px; color: #444; min-width: 40px; text-align: right; }
-.rb-role    { font-size: 12px; font-style: italic; min-width: 40px; }
-.rb-loc     { font-size: 11px; color: #444; min-width: 40px; text-align: right; }
-.rb-bullets { margin-top: 3px; padding-left: 16px; font-size: 11.5px; line-height: 1.55; }
-.rb-bullet  { margin-bottom: 1px; }
-
-/* Education */
-.rb-education { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px; gap: 0.75rem; }
-.rb-edu-left  {}
-.rb-edu-school { font-weight: 700; display: block; }
-.rb-edu-degree { font-style: italic; display: block; }
-.rb-edu-right  { text-align: right; font-size: 11px; color: #444; flex-shrink: 0; }
-
-/* Skills */
-.rb-skills { font-size: 11.5px; line-height: 1.6; }
-.rb-skills-label { font-weight: 700; }
-.rb-skills-list { min-height: 16px; display: inline; }
-
-/* Text */
-.rb-text {
-  font-size: 11.5px;
-  line-height: 1.65;
-  min-height: 16px;
-  display: block;
-}
-
-/* Links */
-.rb-links { font-size: 11.5px; }
-.rb-links-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 2px; }
-.rb-link-item { color: #1a0dab; text-decoration: underline; }
-
-/* Spacer */
-.rb-spacer { height: 14px; }
-
-/* Empty-field placeholder text shown on the document preview */
-.rb-placeholder { color: #bbb; font-style: italic; }
-
-/* ── Publish modal ───────────────────────────────────────── */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.5);
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-box {
-  background: var(--color-surface);
-  border: 2px solid var(--color-border);
-  box-shadow: var(--shadow-lg);
   padding: 2rem;
-  width: 400px;
-  max-width: 90vw;
-}
-
-.modal-box h2 { font-size: 1.25rem; margin-bottom: 0.4rem; }
-.modal-sub { font-size: 0.8rem; color: var(--color-text-muted); margin-bottom: 1.25rem; }
-
-.modal-fields { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; }
-
-.modal-field {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-  cursor: pointer;
+  justify-content: center;
 }
 
-.modal-field input[type="checkbox"] { accent-color: var(--color-primary); }
-
-.modal-hint { font-size: 0.7rem; color: var(--color-text-muted); margin-left: 0.25rem; }
-
-.modal-category { margin-top: 0.5rem; }
-
-.modal-select {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  border: 1.5px solid var(--color-border);
-  background: var(--color-surface);
-  font-family: var(--font-sans);
-  font-size: 0.85rem;
-  outline: none;
-  border-radius: var(--radius-lg);
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%231A1A1A' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  cursor: pointer;
-}
-
-.modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
-
-/* ── Responsive ──────────────────────────────────────────── */
-@media (max-width: 1100px) {
-  .editor-sidebar { width: 280px; }
-}
-
-@media (max-width: 900px) {
-  .editor-sidebar { width: 240px !important; }
-  .resume-paper { padding: 32px 28px; }
-}
-
-@media (max-width: 640px) {
-  .editor-sidebar { display: none; }
-  .sidebar-resizer { display: none; }
-  .editor-canvas { padding: 1rem 0.5rem; }
-  .resume-paper { padding: 24px 18px; }
-}
-
-/* ── Portfolio modal ─────────────────────────────────────────── */
-.modal-box-wide {
-  width: 880px;
-  max-width: 95vw;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1.25rem;
-}
-
-.theme-picker {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.75rem;
-  margin-bottom: 1.25rem;
-}
-
-.theme-card {
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  cursor: pointer;
-  transition: box-shadow 0.15s, transform 0.1s;
-}
-
-.theme-card:hover { box-shadow: var(--shadow); transform: translateY(-2px); }
-.theme-card.theme-selected { border-color: var(--color-primary); box-shadow: 0 0 0 2px rgba(255,51,102,0.2); }
-
-.theme-swatch {
-  height: 72px;
-}
-.theme-swatch-minimal { background: #fff; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: center; }
-.theme-swatch-minimal::after { content: 'Aa'; font-family: Georgia, serif; font-size: 1.8rem; color: #111; }
-.theme-swatch-bold { background: #0a0a0a; display: flex; align-items: center; justify-content: center; }
-.theme-swatch-bold::after { content: 'Aa'; font-family: sans-serif; font-size: 1.8rem; font-weight: 900; background: linear-gradient(135deg,#FF3366,#7C4DFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-.theme-swatch-warm { background: #FDF6EE; display: flex; align-items: center; justify-content: center; }
-.theme-swatch-warm::after { content: 'Aa'; font-family: Georgia, serif; font-size: 1.8rem; color: #8B4513; }
-.theme-swatch-neon { background: #050510; display: flex; align-items: center; justify-content: center; }
-.theme-swatch-neon::after { content: 'Aa'; font-family: monospace; font-size: 1.8rem; color: #00E5B0; }
-
-.theme-info {
-  padding: 0.6rem 0.75rem;
-  background: var(--color-surface);
-}
-.theme-info strong { font-size: 0.8rem; font-weight: 700; display: block; }
-.theme-info span { font-size: 0.7rem; color: var(--color-text-muted); }
-
-.portfolio-preview-wrap {
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  background: #fff;
-}
-
-.portfolio-preview-frame {
-  width: 100%;
-  height: 420px;
-  border: none;
-  display: block;
-  transform-origin: top left;
-}
-
-@media print {
-  .editor-toolbar, .editor-sidebar, .editor-panel, .sidebar-resizer { display: none !important; }
-  .editor-layout { display: block; overflow: visible; }
-  .editor-canvas { padding: 0; background: none; overflow: visible; }
-  .resume-paper { box-shadow: none; width: 100%; max-width: 100%; }
-  .resume-block.block-selected { outline: none; }
-}
-
-/* ============================================================
-   REDESIGN ADD-ONS — Edit / Customize tabs, Personal Details,
-   Sections accordion, Customize panes, paginated preview.
-   ============================================================ */
-
-/* Mode tabs (Edit / Customize) in toolbar */
-.mode-tabs {
-  display: flex;
-  background: var(--color-surface-alt);
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 3px;
-  gap: 2px;
-}
-.mode-tab {
-  font-family: var(--font-sans);
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 0.35rem 1.1rem;
-  border: 0;
-  background: transparent;
-  color: var(--color-text-muted);
-  border-radius: calc(var(--radius-lg) - 2px);
-  cursor: pointer;
-}
-.mode-tab.active { background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow); }
-
-.mode-panel { display: flex; flex-direction: column; gap: 1.25rem; }
-
-/* Resizer handle between sidebar and canvas */
-.sidebar-resizer {
-  width: 6px;
-  flex-shrink: 0;
-  cursor: col-resize;
-  background: transparent;
-  position: relative;
-  z-index: 10;
-}
-.sidebar-resizer::after {
-  content: '';
-  position: absolute;
-  top: 0; bottom: 0; left: 2px;
-  width: 2px;
-  background: var(--color-border);
-  transition: background 0.15s;
-}
-.sidebar-resizer:hover::after { background: var(--color-primary); }
-body.resizing-sidebar { cursor: col-resize; user-select: none; }
-body.resizing-sidebar .editor-canvas { pointer-events: none; }
-
-.sidebar-label-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 0.4rem;
-  border-bottom: 1px solid var(--color-border);
-}
-
-/* Personal details */
-.pd-photo-row { display: flex; align-items: center; gap: 0.75rem; margin: 0.25rem 0; }
-.pd-photo-box {
-  width: 56px; height: 56px; border-radius: var(--radius-lg);
-  background: var(--color-surface-alt); border: 1.5px solid var(--color-border);
-  display: flex; align-items: center; justify-content: center; cursor: pointer;
-  overflow: hidden; flex-shrink: 0; font-size: 1.4rem;
-}
-.pd-photo-box img { width: 100%; height: 100%; object-fit: cover; }
-.link-btn { background: none; border: 0; color: var(--color-secondary); font-size: 0.8rem; font-weight: 600; cursor: pointer; padding: 0; }
-.link-btn:hover { text-decoration: underline; }
-.pd-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
-
-/* Sections accordion list */
-.sections-list { display: flex; flex-direction: column; gap: 0.4rem; }
-.section-row {
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  overflow: hidden;
-}
-.section-row-head {
-  display: flex; align-items: center; gap: 0.5rem;
-  padding: 0.5rem 0.6rem; cursor: pointer; user-select: none;
-}
-.section-row-head:hover { background: var(--color-surface-alt); }
-.section-row.expanded .section-row-head { background: var(--color-surface-alt); border-bottom: 1.5px solid var(--color-border); }
-.section-row-grip { cursor: grab; color: var(--color-text-muted); font-size: 0.95rem; touch-action: none; }
-.section-row-grip:active { cursor: grabbing; }
-.section-row-title { flex: 1; font-size: 0.82rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.section-row-icon { font-size: 0.85rem; }
-.section-row-actions { display: flex; gap: 0.2rem; }
-.section-row-body { padding: 0.75rem 0.6rem; display: flex; flex-direction: column; gap: 0.75rem; }
-.section-row.dragging { opacity: 0.35; }
-.section-row-placeholder { height: 38px; border: 1.5px dashed var(--color-primary); border-radius: var(--radius-lg); background: rgba(255,51,102,0.06); }
-
-/* Customize tabs */
-.customize-tabs { display: flex; border-bottom: 1.5px solid var(--color-border); margin-bottom: 1rem; }
-.customize-tab {
-  flex: 1; background: none; border: 0; padding: 0.6rem 0.3rem; font-size: 0.8rem; font-weight: 600;
-  color: var(--color-text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1.5px;
-}
-.customize-tab.active { color: var(--color-text); border-bottom-color: var(--color-primary); }
-.customize-pane { display: flex; flex-direction: column; gap: 0.4rem; }
-
-/* Color swatches */
-.color-swatches { display: flex; gap: 0.6rem; flex-wrap: wrap; margin: 0.5rem 0; }
-.swatch {
-  width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--color-border);
-  cursor: pointer; position: relative; transition: transform 0.12s ease, box-shadow 0.12s ease;
-}
-.swatch:hover { transform: translateY(-2px); }
-.swatch.active {
-  transform: translateY(-2px) scale(1.08);
-  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--swatch-color, var(--color-text));
-}
-
-/* Template grid */
-.template-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-top: 0.5rem; }
-.template-card { cursor: pointer; text-align: center; font-size: 0.72rem; color: var(--color-text-muted); }
-.template-card span { display: block; margin-top: 0.3rem; }
-.template-card.active span { color: var(--color-text); font-weight: 700; }
-.template-thumb {
-  height: 80px; border-radius: var(--radius-lg); border: 1.5px solid var(--color-border);
-  background: #fff; position: relative; overflow: hidden;
-}
-.template-card.active .template-thumb { box-shadow: 0 0 0 2px var(--color-primary); }
-.tpl-classic::before { content:''; position:absolute; top:8px; left:10px; right:10px; height:6px; background:#222; }
-.tpl-professional { background: #0f2f28; }
-.tpl-professional::before { content:''; position:absolute; top:10px; left:8px; width:30px; height:30px; border-radius:50%; background:#fff3; }
-.tpl-prime::before { content:''; position:absolute; top:8px; left:10px; right:40px; height:6px; background:#2F6FED; }
-.tpl-prime::after { content:''; position:absolute; top:8px; right:10px; width:22px; height:22px; border-radius:50%; background:#ddd; }
-.tpl-clean::before { content:''; position:absolute; top:10px; left:10px; right:10px; height:4px; background:#2F6FED; }
-
-/* Sliders */
-.slider-row { display: flex; align-items: center; gap: 0.6rem; margin: 0.4rem 0; }
-.slider-row input[type="range"] { flex: 1; accent-color: var(--color-primary); }
-.slider-val {
-  font-size: 0.75rem; font-weight: 700; background: var(--color-surface-alt);
-  padding: 0.2rem 0.5rem; border-radius: var(--radius-lg); min-width: 2.4rem; text-align: center;
-}
-.layout-slider { display: flex; flex-direction: column; gap: 0.3rem; margin: 0.5rem 0; }
-.layout-slider label { font-size: 0.75rem; color: var(--color-text-muted); display: flex; justify-content: space-between; }
-.layout-slider input[type="range"] { accent-color: var(--color-primary); width: 100%; }
-
-/* Alignment toggle buttons */
-.align-toggle { display: flex; gap: 0.4rem; margin-top: 0.4rem; }
-.align-btn {
-  flex: 1; font-size: 0.75rem; font-weight: 600; padding: 0.4rem 0.4rem;
-  border: 1.5px solid var(--color-border); background: var(--color-surface);
-  border-radius: var(--radius-lg); cursor: pointer; color: var(--color-text-muted);
-}
-.align-btn.active { background: var(--color-primary); color: var(--color-primary-contrast); border-color: var(--color-primary); }
-
-/* Canvas / page nav */
-.editor-canvas { position: relative; }
-.page-nav {
-  position: sticky; bottom: 1rem; margin-top: 1rem;
-  align-self: center; display: flex; align-items: center; gap: 0.75rem;
-  background: #1A1A1A; color: #fff; padding: 0.4rem 0.6rem; border-radius: 100px;
-  font-size: 0.8rem; font-weight: 600;
-}
-.page-nav-btn { background: none; border: 0; color: #fff; cursor: pointer; font-size: 1rem; width: 22px; }
-.page-nav-btn:disabled { opacity: 0.35; cursor: default; }
-
-/* Resume paper now driven by CSS custom properties set from Customize tab */
 .resume-paper {
-  font-family: var(--resume-font, var(--font-sans));
-  font-size: var(--resume-font-size, 12px);
-  line-height: var(--resume-line-height, 1.0);
-  padding: var(--resume-pad-tb, 48px) var(--resume-pad-lr, 48px) !important;
-}
-.resume-paper .rb-section-title,
-.resume-paper .rb-company,
-.resume-paper .rb-edu-school { color: var(--resume-accent, inherit); }
-.col-track { gap: var(--resume-gap-section, 18px) !important; }
-.resume-block { margin-bottom: var(--resume-gap-block, 10px); }
-.resume-paper[data-header-align="center"] .rb-header { text-align: center; }
-.resume-paper[data-header-align="right"] .rb-header { text-align: right; }
-.resume-paper[data-date-align="left"] .rb-dates,
-.resume-paper[data-date-align="left"] .rb-loc { text-align: left; }
-.resume-paper[data-skills-layout="columns"] .rb-skills-list { display: flex; flex-wrap: wrap; gap: 6px; }
-.resume-paper[data-skills-layout="columns"] .rb-skills-list .rb-skill-tag {
-  border: 1px solid var(--resume-accent, #ccc); border-radius: 100px; padding: 2px 9px; font-size: 10.5px;
+  background: #ffffff;
+  width: 210mm;
+  min-height: 297mm;
+  padding: 2.5rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  border: 3px solid var(--color-border);
 }
 
-@media print { .page-nav { display: none !important; } }
+.rb-header {
+  border-bottom: 2px solid var(--color-border);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
 
-/* Header extras: photo + job title (added with the Personal Details rework) */
-.rb-photo { display: block; width: 64px; height: 64px; border-radius: 50%; object-fit: cover; margin: 0 auto 6px; }
-.rb-job-title { display: block; font-size: 12px; color: #555; margin-top: 2px; }
-.rb-skill-tag { }
+.rb-name {
+  font-family: var(--font-display);
+  font-size: 2rem;
+}
+
+.rb-contact-line {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin-top: 0.25rem;
+}
+
+.resume-block {
+  padding: 0.5rem;
+  border: 2px dashed transparent;
+  cursor: pointer;
+  margin-bottom: 1rem;
+}
+
+.resume-block:hover {
+  border-color: var(--color-primary);
+  background: var(--color-background);
+}
+
+.resume-block.selected {
+  border-color: var(--color-secondary);
+  border-style: solid;
+}
