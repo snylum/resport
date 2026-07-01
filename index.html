@@ -15,13 +15,21 @@
       overflow: hidden; 
     }
 
+    /* ── SINGLE SOURCE OF TRUTH FOR HEADER HEIGHT ──
+       Change this ONE value if the header ever gets taller/shorter.
+       Every offset below (.panel padding, dot centering) reads from it,
+       so nothing can drift out of sync again. */
+    :root {
+      --header-height: 90px;
+    }
+
     /* ── WIDER, MORE SPACIOUS NAVIGATION ── */
     .site-nav {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
-      height: 90px;            /* Gives the menu plenty of vertical height and breathing room */
+      height: var(--header-height);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -30,11 +38,28 @@
       z-index: 1000;           /* Keeps it cleanly floating above slide contents */
     }
 
-    /* ── FLOATING DOTS: PERFECTLY BALANCED IN NON-HEADER VIEWPORT SPACE ── */
+    /* ── EVERY SLIDE RESERVES SPACE FOR THE HEADER ──
+       Previously only .panel-hero had padding-top for the header, so every
+       other slide's background rendered starting at top:0 and peeked out
+       behind/above the fixed nav. Applying this to the shared .panel class
+       fixes it for all slides at once, and stays correct if the header
+       height ever changes. */
+    .panel {
+      padding-top: var(--header-height);
+      box-sizing: border-box;
+    }
+
+    /* ── FLOATING DOTS: CENTERED WITHIN THE NON-HEADER VIEWPORT ──
+       Center point = header height + half of the remaining space
+       = header + (100vh - header) / 2
+       = 50% + header/2
+       Written with the variable so it always matches the real header,
+       instead of a hardcoded "+45px" that silently breaks if the
+       header grows. */
     .slide-dots {
       position: fixed;
       right: 2.5rem;
-      top: calc(50% + 45px);   /* Shifts center point down by exactly half of the 90px header */
+      top: calc(50% + (var(--header-height) / 2));
       transform: translateY(-50%);
       z-index: 1000;
       display: flex;
@@ -42,7 +67,13 @@
       gap: 0.75rem;
     }
 
-    /* ── PERFECT CENTERING FOR PANEL HERO (NON-HEADER BASIS) ── */
+    /* ── PERFECT CENTERING FOR PANEL HERO (NON-HEADER BASIS) ──
+       .panel already adds padding-top: var(--header-height) above.
+       Because that padding shrinks the flex container's content box,
+       justify-content: center here centers .hero-header (title AND
+       buttons, as one block) within the leftover (100vh - header)
+       space — not the full viewport. That's what keeps the buttons
+       from looking "off" relative to the header. */
     .panel-hero {
       display: flex !important;
       flex-direction: column !important;
@@ -50,11 +81,10 @@
       align-items: center !important;
       width: 100vw;
       height: 100vh;
-      box-sizing: border-box;
-      padding-top: 90px;       /* Safely allocates space for the header without shifting layout boundaries */
       padding-bottom: 0;
       padding-left: 0;
       padding-right: 0;
+      /* padding-top now inherited from .panel via var(--header-height) */
     }
 
     .hero-header {
