@@ -8,6 +8,11 @@
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="home.css" />
   <style>
+    /* ── LAYOUT VARIABLES ── */
+    :root {
+      --header-height: 90px; /* Clean tracking for our expanded header */
+    }
+
     /* ── RESET & LAYOUT FIXES FOR HORIZONTAL WRAPPER ── */
     body {
       margin: 0;
@@ -17,7 +22,6 @@
       height: 100vh;
     }
 
-    /* Ensures the horizontal tracking parent doesn't squish individual panels */
     #wrapper {
       display: flex;
       width: 600vw; 
@@ -29,6 +33,8 @@
       width: 100vw;
       height: 100vh;
       box-sizing: border-box;
+      /* Pushes internal content down cleanly on slides 2-6 so the header never overlaps */
+      padding-top: var(--header-height); 
     }
 
     /* ── TALLER, WIDER, MORE SPACIOUS NAVIGATION ── */
@@ -37,20 +43,21 @@
       top: 0;
       left: 0;
       width: 100%;
-      height: 90px;            /* Gives the menu plenty of vertical height and breathing room */
+      height: var(--header-height);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0 4rem;         /* Expands horizontal depth across wide viewports */
+      padding: 0 4rem;         
       box-sizing: border-box;
-      z-index: 1000;           /* Keeps it cleanly floating above slide contents */
+      z-index: 1000;           
     }
 
-    /* ── FLOATING DOTS (PERFECTLY CENTERED VIA FIXED COORDS) ── */
+    /* ── FLOATING DOTS: CENTERED ONLY IN NON-HEADER SPACE ── */
     .slide-dots {
       position: fixed;
       right: 2.5rem;
-      top: 50%;
+      /* Math: Find screen true 50%, then drop down by exactly half the header height */
+      top: calc(50% + (var(--header-height) / 2));
       transform: translateY(-50%);
       z-index: 1000;
       display: flex;
@@ -58,20 +65,23 @@
       gap: 0.75rem;
     }
 
-    /* ── ABSOLUTE VIEWPORT CENTERING FOR HERO CONTENT ── */
+    /* ── HERO SLIDE: SPECIFIC POSITIONING OVERRIDE ── */
     .panel-hero {
-      position: relative;       /* Serves as the precise bounding box anchor */
+      position: relative;       
       width: 100vw;
       height: 100vh;
       box-sizing: border-box;
       overflow: hidden;
+      padding-top: 0; /* Reset for absolute calculation below */
     }
 
+    /* ── HERO CONTENT: CENTERED ONLY IN NON-HEADER SPACE ── */
     .hero-header {
       position: absolute;
-      top: 50%;
+      /* Uses the exact same visual math balance as your navigation dots */
+      top: calc(50% + (var(--header-height) / 2));
       left: 50%;
-      transform: translate(-50%, -50%); /* Uses the dots' exact structural alignment strategy */
+      transform: translate(-50%, -50%); 
       width: 100%;
       max-width: 100%;
       height: auto;
@@ -367,14 +377,12 @@
   <script type="module">
     document.addEventListener('DOMContentLoaded', () => {
       const tickerTarget = document.getElementById('tickerTarget');
-      const taglineTarget = document.getElementById('taglineTarget');
       const actionsTarget = document.getElementById('actionsTarget');
 
       const urlParams = new URLSearchParams(window.location.search);
       const customName = urlParams.get('name');
       const storedName = localStorage.getItem('user_first_name');
       
-      // The final prefix target is set dynamically, defaulting to "everyone"
       const finalTargetPrefix = customName || storedName || "everyone";
 
       const basePrefixes = [
@@ -386,21 +394,17 @@
 
       const prefixes = [...basePrefixes, finalTargetPrefix];
       let currentIndex = 0;
-      const stepSpeedTime = 110; // Rapid succession speed
+      const stepSpeedTime = 110; 
 
       function cyclePrefix() {
         if (currentIndex < prefixes.length) {
           const currentPrefix = prefixes[currentIndex];
           
           if (currentPrefix === finalTargetPrefix) {
-            // Render the final string with 'everyone' or the custom name italicized
             tickerTarget.innerHTML = `<em>${currentPrefix}</em><span class="tld-accent">.proves.work</span>`;
             currentIndex++;
-            
-            // Lock on this final state for 3 seconds before displaying tags and CTAs
             setTimeout(revealSubElements, 1000);
           } else {
-            // Rapid swap without any visual fade adjustments
             tickerTarget.innerHTML = `${currentPrefix}<span class="tld-accent">.proves.work</span>`;
             currentIndex++;
             setTimeout(cyclePrefix, stepSpeedTime);
@@ -408,11 +412,9 @@
         }
       }
 
-      // Start looping elements immediately
       cyclePrefix();
 
       function revealSubElements() {
-        // Removed taglineTarget code to prevent null reference errors
         actionsTarget.classList.add('visible');
       }
     });
