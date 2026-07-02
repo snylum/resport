@@ -92,13 +92,16 @@
     /* Give the lifted-button hover trick (defined in styles.css for
        .nav-links .btn-primary.btn-sm) to the secondary button too,
        so Publish behaves like the nav's CTA instead of a plain ghost. */
-    .nav-links .btn-secondary.btn-sm {
+    .nav-links .btn-secondary.btn-sm,
+    .nav-links .btn-ghost.btn-sm {
       transform: translate(0px, -3px);
     }
-    .nav-links .btn-secondary.btn-sm:hover {
+    .nav-links .btn-secondary.btn-sm:hover,
+    .nav-links .btn-ghost.btn-sm:hover {
       transform: translate(-6px, -6px);
     }
-    .nav-links .btn-secondary.btn-sm:active {
+    .nav-links .btn-secondary.btn-sm:active,
+    .nav-links .btn-ghost.btn-sm:active {
       transform: translate(0px, 0px) !important;
     }
 
@@ -127,9 +130,6 @@
       <span class="logo-dot"></span>proves.work
     </a>
     <ul class="nav-links">
-      <li><a href="showcase.html">Showcase</a></li>
-      <li><a href="#" onclick="scrollToSlide(4);return false;">Pricing</a></li>
-      <li><a href="editor.html" class="btn btn-primary btn-sm">Open Editor →</a></li>
       <li>
         <div class="mode-tabs" role="tablist">
           <button class="mode-tab active" id="tabEditBtn">Edit</button>
