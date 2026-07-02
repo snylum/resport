@@ -61,7 +61,7 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
   list-style: none;
 }
 
-/*
+
 .nav-links .btn-primary.btn-sm {
   transform: translateY(-3px);
 }
@@ -74,23 +74,6 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
   transform: translate(3px, 3px);
   box-shadow: none !important;
 }
-*/
-
-.nav-links .btn-primary.btn-sm {
-  margin-top: -3px; /* compensates 6px shadow at rest */
-}
-
-.nav-links .btn-primary.btn-sm:hover {
-  /* shadow-lg is 12px, needs -6px total; plus the original -2px,-2px lift */
-  transform: translate(-2px, -5px);
-}
-
-.nav-links .btn-primary.btn-sm:active {
-  /* shadow removed entirely, so cancel the -3px margin (+3px) then apply the original 3px,3px press */
-  transform: translate(3px, 6px);
-  box-shadow: none !important;
-}
-
 
 .nav-links a:not(.btn) {
   font-size: 0.875rem;
