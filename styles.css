@@ -62,57 +62,18 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
 }
 
 
-
-
-
-
-
-
-.btn {
-    position: relative;
-    display: inline-flex;
-    z-index: 1;
+.nav-links .btn-primary.btn-sm {
+  transform: translateY(-3px);
 }
 
-.btn::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: #1A1A1A;
-    z-index: -1;
-
-    /* initial shadow position */
-    transform: translate(6px, 6px);
-    transition: transform .12s ease;
+.nav-links .btn-primary.btn-sm:hover {
+  transform: translate(-5px, -5px);
 }
 
-.btn-primary {
-    transition: transform .12s ease;
+.nav-links .btn-primary.btn-sm:active {
+  transform: translate(3px, 3px);
+  box-shadow: none !important;
 }
-
-/* hover */
-.btn-primary:hover {
-    transform: translate(-2px, -2px);     /* pink goes up-left */
-}
-
-.btn-primary:hover::before {
-    transform: translate(12px, 12px);     /* black goes down-right */
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 .nav-links a:not(.btn) {
   font-size: 0.875rem;
