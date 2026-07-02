@@ -20,7 +20,10 @@ const el = {
   canvasPhotoImg: document.getElementById('canvasPhotoImg'),
   mainTrack: document.getElementById('mainTrack'),
   sideTrack: document.getElementById('sideTrack'),
-  sidebarSectionsList: document.getElementById('sidebarSectionsList')
+  sidebarSectionsList: document.getElementById('sidebarSectionsList'),
+  editorSidebar: document.getElementById('editorSidebar'),
+  sidebarResizer: document.getElementById('sidebarResizer'),
+  editorWorkspace: document.querySelector('.editor-workspace')
 };
 
 // ── 1. Dual-Binding Inputs Sync ──────────────────────────────
@@ -177,10 +180,42 @@ function initToolbar() {
   document.getElementById('btnOpenPortfolio').addEventListener('click', () => alert('Serving instance onto john.proves.work'));
 }
 
+// ── 6. Sidebar Resizer (25% – 50% of workspace width) ────────
+function initSidebarResizer() {
+  const MIN_PCT = 25;
+  const MAX_PCT = 50;
+  let dragging = false;
+
+  el.sidebarResizer.addEventListener('mousedown', (e) => {
+    dragging = true;
+    el.sidebarResizer.classList.add('is-dragging');
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const workspaceRect = el.editorWorkspace.getBoundingClientRect();
+    let pct = ((e.clientX - workspaceRect.left) / workspaceRect.width) * 100;
+    pct = Math.min(MAX_PCT, Math.max(MIN_PCT, pct));
+    el.editorSidebar.style.width = `${pct}%`;
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    el.sidebarResizer.classList.remove('is-dragging');
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+  });
+}
+
 // Application bootstrapping
 function init() {
   initInputListeners();
   initToolbar();
+  initSidebarResizer();
   
   // Set initial trigger events
   Store.emit('profile_changed', Store.state.profile);
