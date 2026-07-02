@@ -28,12 +28,12 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
   top: 0;
   z-index: 100;
   background: var(--color-surface);
-  border-bottom: 2px solid var(--color-border);
+  border-bottom: 3px solid var(--color-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 2rem;
-  height: 56px;
+  padding: 0 1.5rem;
+  height: 68px;
 }
 
 .nav-logo {
@@ -61,15 +61,15 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
   list-style: none;
 }
 
-.nav-links .btn-primary.btn-sm {
+.nav-links .btn.btn-sm {
   transform: translate(0px, -3px);
 }
 
-.nav-links .btn-primary.btn-sm:hover {
+.nav-links .btn.btn-sm:hover {
   transform: translate(-6px, -6px);  /* only X changes, matches shadow's 6px growth */
 }
 
-.nav-links .btn-primary.btn-sm:active {
+.nav-links .btn.btn-sm:active {
   transform: translate(0px, 0px) !important;
 }
 

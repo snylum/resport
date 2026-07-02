@@ -1,238 +1,228 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dazed">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Resport Creator — Admin Panel</title>
-  
-  <!-- UI Core Engine Utility Styles -->
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="editor.css">
-  
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Résumé Editor — Premium Engine</title>
+  <link rel="stylesheet" href="dazed.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="editor.css" />
   <style>
-    /* Gumroad Stark Minimalist Aesthetic Rules */
-    .brutalist-border {
-      border: 2px solid #000000;
+    /* ── EDITOR HEADER, REBUILT ON THE SITE-NAV PATTERN ────────
+       index.html's original header is <nav class="site-nav">:
+       .nav-logo on the left, a single <ul class="nav-links"> on
+       the right, both already styled by styles.css. This reuses
+       those exact classes here instead of a bespoke toolbar
+       layout — same skeleton, same spacing rules (nav-links'
+       1.5rem gap), same .btn/.btn-ghost/.btn-primary components —
+       so the two headers are genuinely built from the same parts.
+
+       The outer element keeps the .editor-toolbar class so
+       editor.css's real sizing still applies (68px height, 3px
+       border, var(--color-surface) background) — only what's
+       inside it changes shape.
+
+       Color: the marketing nav's CTA (Open Editor) uses
+       --color-primary (hot pink). Publish reuses the same button
+       component but in --color-secondary (violet) instead, so the
+       editor's primary action reads as distinct from the
+       marketing page's, while still belonging to the same theme. */
+
+    .mode-tabs {
+      display: flex;
+      gap: 0.25rem;
+      border: 2px solid var(--color-border);
+      background: var(--color-surface-alt);
+      padding: 0.2rem;
     }
-    .brutalist-shadow {
-      box-shadow: 4px 4px 0px #000000;
+
+    .mode-tab {
+      font-family: var(--font-sans);
+      font-weight: 600;
+      font-size: 0.8rem;
+      border: none;
+      background: transparent;
+      color: var(--color-text-muted);
+      padding: 0.4rem 0.85rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
     }
-    .brutalist-shadow-sm {
-      box-shadow: 2px 2px 0px #000000;
+
+    .mode-tab:hover {
+      color: var(--color-text);
     }
-    .preview-window {
-      min-height: 460px;
+
+    .mode-tab.active {
+      background: var(--color-accent);
+      color: var(--color-text);
+    }
+
+    .toolbar-filename {
+      font-family: var(--font-sans);
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--color-text);
+      padding: 0.4rem 0.6rem;
+      border: 2px solid transparent;
+      outline: none;
+      max-width: 20ch;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .toolbar-filename:focus {
+      border-color: var(--color-border);
+      background: var(--color-surface-alt);
+    }
+
+    /* Publish button: same .btn component, violet instead of the
+       marketing page's pink, so it's visibly a different action
+       family even though it's built the same way. */
+    .btn-secondary {
+      background: var(--color-secondary);
+      color: #fff;
+      box-shadow: var(--shadow);
+    }
+    .btn-secondary:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translate(-2px, -2px);
+    }
+
+    /* The lifted-button hover trick now lives in styles.css as a generic
+       .nav-links .btn.btn-sm rule (not just btn-primary), so it applies
+       automatically to every button in this toolbar's nav-links — PDF,
+       Portfolio, and Publish all sit on the exact same baseline as the
+       marketing nav's CTA, no per-button override needed here anymore. */
+
+    /* editor.html has more items than the marketing nav (mode tabs +
+       filename + three buttons vs three links), so a divider marks
+       the boundary between "file identity" and "actions" instead of
+       relying on gap alone to communicate grouping. */
+    .toolbar-divider {
+      width: 2px;
+      align-self: stretch;
+      background: var(--color-border);
+      margin: 0.5rem 0;
+    }
+
+    @media (max-width: 780px) {
+      .toolbar-filename {
+        display: none;
+      }
     }
   </style>
 </head>
-<body class="bg-[#f4f4f0] text-black font-sans min-h-screen flex flex-col">
+<body>
 
-  <!-- PERFECT REPLICA HEADER (Matching index.html structural layout) -->
-  <header class="bg-white border-b-2 border-black px-8 py-6 flex justify-between items-center z-50">
-    <div>
-      <h1 class="text-3xl font-bold tracking-tight">Profile settings</h1>
-      <nav class="flex gap-6 mt-4 text-sm font-medium">
-        <a href="#" class="text-gray-500 hover:text-black transition-colors">About</a>
-        <a href="#" class="border-b-2 border-black pb-1 px-1 font-semibold text-black">Pages</a>
-        <a href="#" class="text-gray-500 hover:text-black transition-colors">Share</a>
-      </nav>
-    </div>
-    <div class="flex items-center gap-4">
-      <span class="text-xs text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full font-mono">Status: Connected</span>
-      <button class="bg-[#ff5c00] text-white font-bold px-6 py-2.5 brutalist-border brutalist-shadow transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0">
-        Update profile
-      </button>
-    </div>
+  <header class="editor-toolbar">
+    <a href="index.html" class="nav-logo"><span class="logo-dot"></span>proves.work</a>
+    <ul class="nav-links">
+      <li>
+        <div class="mode-tabs" role="tablist">
+          <button class="mode-tab active" id="tabEditBtn">Edit</button>
+          <button class="mode-tab" id="tabCustomizeBtn">Customize</button>
+        </div>
+      </li>
+      <li>
+        <span class="toolbar-filename" id="resumeTitle" contenteditable="true" spellcheck="false">Untitled résumé</span>
+      </li>
+      <li class="toolbar-divider" aria-hidden="true"></li>
+      <li><button class="btn btn-ghost btn-sm" id="btnDownloadPDF">⬇ PDF</button></li>
+      <li><button class="btn btn-ghost btn-sm" id="btnOpenPortfolio">🌐 Portfolio</button></li>
+      <li><button class="btn btn-secondary btn-sm" id="btnPublishShowcase">✦ Publish</button></li>
+    </ul>
   </header>
 
-  <!-- WORKSPACE INTERFACE SPLIT -->
-  <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
+  <main class="editor-workspace">
     
-    <!-- LEFT PANEL: Dynamic Section Component Block Controls -->
-    <section class="lg:col-span-7 p-8 overflow-y-auto border-r-2 border-black bg-white">
-      <div class="max-w-2xl mx-auto">
-        <h2 class="text-xl font-bold mb-1">Pages</h2>
-        <p class="text-gray-600 text-sm mb-6">Each item represents an active content category tab running live on your public site page profile.</p>
-
-        <!-- Parent Insertion Node for Script Initialization Engine -->
-        <div id="sections-container" class="space-y-4">
-          <!-- Populated programmatically by local application state array mapping loops -->
-        </div>
-
-        <!-- Section Append Button Element Trigger -->
-        <button onclick="addSection()" class="mt-6 w-full bg-white text-black font-bold py-3.5 brutalist-border brutalist-shadow-sm hover:bg-gray-50 flex items-center justify-center gap-2 transition-all">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-          Add new section
-        </button>
-      </div>
-    </section>
-
-    <!-- RIGHT PANEL: Live Updating Document Mockup Sandbox -->
-    <section class="lg:col-span-5 p-8 bg-[#f4f4f0] overflow-y-auto flex flex-col justify-start">
-      <div class="sticky top-8 w-full max-w-md mx-auto">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-sm font-bold uppercase tracking-wider text-gray-500">Live Preview</h3>
-          <button class="bg-white p-2 brutalist-border brutalist-shadow-sm hover:bg-gray-50 transition-all">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-          </button>
-        </div>
-
-        <!-- Render View Frame Window Container -->
-        <div class="bg-white w-full brutalist-border brutalist-shadow preview-window flex flex-col p-6 justify-between">
-          <div>
-            <!-- Simulated Nav Header Bar -->
-            <div class="flex justify-between items-center border-b-2 border-black pb-3 mb-4">
-              <span class="font-extrabold text-sm tracking-tight" id="preview-brand">alexrivera.dev</span>
-              <span class="text-[10px] uppercase font-mono font-bold text-white bg-black px-2 py-0.5 tracking-wider">Proof of Work</span>
+    <section class="editor-sidebar" id="editorSidebar">
+      
+      <div class="sidebar-panel active" id="panelEdit">
+        <div class="panel-scroll-container">
+          
+          <div class="form-section active">
+            <button class="form-section-toggle" type="button">
+              <span class="fs-title">Personal Details</span>
+              <span class="fs-chevron">▼</span>
+            </button>
+            <div class="form-section-content">
+              <div class="form-grid">
+                <div class="field-box full-width">
+                  <label>Wanted Job Title</label>
+                  <input type="text" id="inJobTitle" placeholder="e.g. Software Engineer" />
+                </div>
+                <div class="field-box">
+                  <label>First Name</label>
+                  <input type="text" id="inFirstName" />
+                </div>
+                <div class="field-box">
+                  <label>Last Name</label>
+                  <input type="text" id="inLastName" />
+                </div>
+                <div class="field-box">
+                  <label>Email</label>
+                  <input type="email" id="inEmail" />
+                </div>
+                <div class="field-box">
+                  <label>Phone</label>
+                  <input type="tel" id="inPhone" />
+                </div>
+                <div class="field-box">
+                  <label>Address</label>
+                  <input type="text" id="inAddress" />
+                </div>
+                <div class="field-box" id="photoUploadBox">
+                  <label>Photo</label>
+                  <div class="photo-input-row">
+                    <div class="photo-preview-placeholder" id="photoSidebarPreview"></div>
+                    <label class="btn btn-ghost btn-sm btn-file">
+                      Upload Image <input type="file" id="inPhoto" accept="image/*" style="display:none;" />
+                    </label>
+                  </div>
+                </div>
+              </div>
             </div>
+          </div>
+
+          <div class="sections-manager-wrap">
+            <h3 class="sm-title">Résumé Sections</h3>
+            <p class="sm-subtitle">Drag to reorder sections. Click to modify block parameters.</p>
+            <div class="sections-drag-list" id="sidebarSectionsList">
+              </div>
+          </div>
+          
+        </div>
+      </section>
+
+      <div class="sidebar-resizer" id="sidebarResizer"></div>
+
+      <section class="editor-canvas" id="canvasWrap">
+        <div class="canvas-container">
+          <div class="resume-paper" id="resumePaper" data-layout="1" data-header-align="left" data-date-align="right" data-skills-layout="pills">
             
-            <!-- Dynamically Generated Tab Navigation Elements -->
-            <div id="preview-tabs" class="flex gap-4 text-xs font-bold border-b border-gray-200 pb-2 mb-4 overflow-x-auto whitespace-nowrap">
-              <!-- Rendered via state synchronization cycle -->
+            <header class="rb-header" id="canvasHeader">
+              <div class="rb-header-photo-wrap hidden" id="canvasPhotoWrap">
+                <img src="" alt="Profile" id="canvasPhotoImg" />
+              </div>
+              <div class="rb-header-text">
+                <h1 class="rb-name" id="canvasName">Juan Lala</h1>
+                <div class="rb-title" id="canvasJobTitle"></div>
+                <div class="rb-contact-line" id="canvasContactLine"></div>
+              </div>
+            </header>
+
+            <div id="canvasTracks" class="tracks-layout-1">
+              <div class="col-track main-track" id="mainTrack"></div>
+              <div class="col-track side-track hidden" id="sideTrack"></div>
             </div>
 
-            <!-- Dynamic Section Markdown/Text Node Output Surface Area -->
-            <div id="preview-body">
-              <!-- Rendered via state synchronization cycle -->
-            </div>
-          </div>
-
-          <!-- Sandbox Profile Stamp Footer Layout component -->
-          <div class="pt-6 border-t border-gray-200 flex justify-center">
-            <span class="text-[10px] text-gray-400 tracking-tight flex items-center gap-1 font-mono">
-              Powered by <span class="font-black text-black tracking-normal">resport</span>
-            </span>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
   </main>
 
-  <!-- External Script Binding hooks logic integration path -->
-  <script src="editor.js"></script>
-  <script>
-    // State machine layout configuration backup structure fallback logic 
-    let profileState = {
-      sections: [
-        { id: "s1", name: "Featured Projects", content: "⚡ Built edge microservices on Cloudflare Workers\n📦 Maintained pixel-art graphic engine asset pipelines\n🔥 Shipped open-source configurations via GitHub Actions" },
-        { id: "s2", name: "Core Stack", content: "Languages: JS, HTML, CSS, Bash\nPlatforms: Cloudflare, GitHub, Pages Devs" }
-      ]
-    };
-
-    function init() {
-      renderEditor();
-      renderPreview();
-    }
-
-    function renderEditor() {
-      const container = document.getElementById('sections-container');
-      container.innerHTML = '';
-
-      profileState.sections.forEach((section, index) => {
-        const block = `
-          <div class="bg-white brutalist-border p-5 relative space-y-4">
-            <div class="flex justify-between items-center border-b pb-2">
-              <div class="flex items-center gap-2">
-                <span class="text-gray-400 font-mono select-none">::</span>
-                <span class="font-bold text-xs text-gray-500 uppercase tracking-wider">Tab Section Module</span>
-              </div>
-              <div class="flex gap-1">
-                <button onclick="moveSection(${index}, -1)" class="p-1 px-2 border border-black hover:bg-gray-100 rounded text-xs font-bold disabled:opacity-30" ${index === 0 ? 'disabled' : ''}>▲</button>
-                <button onclick="moveSection(${index}, 1)" class="p-1 px-2 border border-black hover:bg-gray-100 rounded text-xs font-bold disabled:opacity-30" ${index === profileState.sections.length - 1 ? 'disabled' : ''}>▼</button>
-                <button onclick="deleteSection('${section.id}')" class="p-1 px-2 border border-black hover:bg-red-50 text-red-600 rounded text-xs font-bold ml-2">🗑️</button>
-              </div>
-            </div>
-
-            <div>
-              <label class="block text-xs font-bold uppercase mb-1 text-gray-700">Section name</label>
-              <input type="text" value="${escapeHtml(section.name)}" 
-                     oninput="updateSectionContent('${section.id}', 'name', this.value)"
-                     class="w-full p-2.5 brutalist-border focus:outline-none focus:bg-gray-50 font-medium" 
-                     placeholder="e.g. Open Source, Experience, About">
-            </div>
-
-            <div>
-              <label class="block text-xs font-bold uppercase mb-1 text-gray-700">Achievements / Proof of work description text</label>
-              <textarea rows="3" 
-                        oninput="updateSectionContent('${section.id}', 'content', this.value)"
-                        class="w-full p-2.5 brutalist-border focus:outline-none focus:bg-gray-50 text-xs font-mono leading-relaxed" 
-                        placeholder="Write clean accomplishments...">${escapeHtml(section.content)}</textarea>
-            </div>
-          </div>
-        `;
-        container.insertAdjacentHTML('beforeend', block);
-      });
-    }
-
-    function renderPreview() {
-      const tabsContainer = document.getElementById('preview-tabs');
-      const bodyContainer = document.getElementById('preview-body');
-      
-      tabsContainer.innerHTML = '';
-      bodyContainer.innerHTML = '';
-
-      if (profileState.sections.length === 0) {
-        bodyContainer.innerHTML = '<p class="text-xs text-gray-400 italic font-mono">No pages published yet.</p>';
-        return;
-      }
-
-      profileState.sections.forEach((section, index) => {
-        const tab = document.createElement('span');
-        tab.className = index === 0 ? "text-black border-b-2 border-black pb-1 cursor-pointer" : "text-gray-400 cursor-pointer hover:text-black";
-        tab.textContent = section.name || "Untitled Page";
-        tabsContainer.appendChild(tab);
-
-        if (index === 0) {
-          const content = document.createElement('div');
-          content.className = "text-xs text-gray-800 whitespace-pre-line leading-relaxed font-mono bg-gray-50 p-4 brutalist-border";
-          content.textContent = section.content || "No information detailed within this tab segment module yet.";
-          bodyContainer.appendChild(content);
-        }
-      });
-    }
-
-    function updateSectionContent(id, key, value) {
-      const sec = profileState.sections.find(s => s.id === id);
-      if (sec) {
-        sec[key] = value;
-        renderPreview();
-      }
-    }
-
-    function addSection() {
-      profileState.sections.push({
-        id: Date.now().toString(),
-        name: "New Project Showcase",
-        content: "• Highlight an achievement, metric, or live link connection here."
-      });
-      renderEditor();
-      renderPreview();
-    }
-
-    function deleteSection(id) {
-      profileState.sections = profileState.sections.filter(s => s.id !== id);
-      renderEditor();
-      renderPreview();
-    }
-
-    function moveSection(index, direction) {
-      const target = index + direction;
-      if (target >= 0 && target < profileState.sections.length) {
-        const hold = profileState.sections[index];
-        profileState.sections[index] = profileState.sections[target];
-        profileState.sections[target] = hold;
-        renderEditor();
-        renderPreview();
-      }
-    }
-
-    function escapeHtml(str) {
-      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-    }
-
-    window.onload = init;
-  </script>
+  <script type="module" src="editor.js"></script>
 </body>
 </html>
