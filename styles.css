@@ -61,8 +61,17 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
   list-style: none;
 }
 
-.nav-links .btn:hover {
-  transform: translate(-3px, -3px);
+.nav-links .btn-primary.btn-sm {
+  transform: translateY(-1.5px);
+}
+
+.nav-links .btn-primary.btn-sm:hover {
+  transform: translate(-2px, -3.5px); /* -2px hover lift + the -1.5px base offset */
+}
+
+.nav-links .btn-primary.btn-sm:active {
+  transform: translate(1.5px, 1.5px); /* 3px active press - 1.5px base offset */
+  box-shadow: none !important;
 }
 
 .nav-links a:not(.btn) {
