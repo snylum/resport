@@ -7,23 +7,174 @@
   <link rel="stylesheet" href="dazed.css" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="editor.css" />
+  <style>
+    /* ── EDITOR TOOLBAR, RESHAPED AS A NAV-LIST ────────────────
+       index.html's original header was a <nav class="site-nav">:
+       logo on the left, everything else living inside a single
+       <ul class="nav-links"> pushed to the right with flex. This
+       reproduces that exact skeleton for editor.html — logo left,
+       one <ul> right — instead of the old three-region toolbar
+       layout (logo / center tabs / right actions). The editor's
+       own controls (mode tabs, filename, PDF/Portfolio/Publish)
+       all move inside as <li> items so nothing functional changes,
+       only the container shape.
+
+       Colors are deliberately different from the marketing nav:
+       this is a working surface, not a storefront, so it gets a
+       dark slate bar with light text instead of a white bar with
+       an indigo accent — same skeleton, different register. */
+    .editor-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      padding: 0 1.75rem;
+      background: #17181c;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .editor-toolbar .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 800;
+      font-size: 1.05rem;
+      color: #f4f4f5;
+      text-decoration: none;
+      letter-spacing: -0.02em;
+      flex-shrink: 0;
+    }
+
+    .editor-toolbar .nav-logo .logo-dot {
+      background: #22d3ee; /* teal accent — distinct from the marketing page's indigo */
+    }
+
+    .toolbar-links {
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 1.75rem; /* enough room that mode tabs, filename, and action buttons don't crowd each other */
+      margin: 0;
+      padding: 0;
+    }
+
+    .toolbar-links > li {
+      display: flex;
+      align-items: center;
+    }
+
+    .mode-tabs {
+      display: flex;
+      gap: 0.25rem;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      padding: 0.25rem;
+    }
+
+    .mode-tab {
+      border: none;
+      background: transparent;
+      color: rgba(244, 244, 245, 0.65);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.4rem 0.9rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .mode-tab:hover {
+      color: #f4f4f5;
+    }
+
+    .mode-tab.active {
+      background: #2a2c33;
+      color: #f4f4f5;
+    }
+
+    .toolbar-filename {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: rgba(244, 244, 245, 0.85);
+      padding: 0.35rem 0.6rem;
+      border-radius: 6px;
+      outline: none;
+      min-width: 8ch;
+      max-width: 22ch;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .toolbar-filename:focus {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .editor-toolbar .btn-ghost {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: rgba(244, 244, 245, 0.85);
+      padding: 0.45rem 0.9rem;
+      border-radius: 7px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .editor-toolbar .btn-ghost:hover {
+      border-color: rgba(255, 255, 255, 0.4);
+      color: #ffffff;
+    }
+
+    .editor-toolbar .btn-primary {
+      background: #f59e0b; /* amber — distinct call-to-action color from the marketing page's indigo primary */
+      color: #17181c;
+      border: none;
+      padding: 0.5rem 1.1rem;
+      border-radius: 7px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: filter 0.2s ease, transform 0.2s ease;
+    }
+
+    .editor-toolbar .btn-primary:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+    }
+
+    @media (max-width: 780px) {
+      .editor-toolbar {
+        padding: 0 1rem;
+      }
+      .toolbar-links {
+        gap: 0.9rem;
+      }
+      .toolbar-filename {
+        display: none; /* keep tabs + action buttons, drop the editable title on narrow screens */
+      }
+    }
+  </style>
 </head>
 <body>
 
   <header class="editor-toolbar">
     <a href="index.html" class="nav-logo"><span class="logo-dot"></span>résumé</a>
-    <div class="toolbar-center">
-      <div class="mode-tabs" role="tablist">
-        <button class="mode-tab active" id="tabEditBtn">Edit</button>
-        <button class="mode-tab" id="tabCustomizeBtn">Customize</button>
-      </div>
-    </div>
-    <div class="toolbar-actions">
-      <span class="toolbar-filename" id="resumeTitle" contenteditable="true" spellcheck="false">Untitled résumé</span>
-      <button class="btn btn-ghost btn-sm" id="btnDownloadPDF">⬇ PDF</button>
-      <button class="btn btn-ghost btn-sm" id="btnOpenPortfolio">🌐 Portfolio</button>
-      <button class="btn btn-primary btn-sm" id="btnPublishShowcase">✦ Publish</button>
-    </div>
+    <ul class="toolbar-links">
+      <li>
+        <div class="mode-tabs" role="tablist">
+          <button class="mode-tab active" id="tabEditBtn">Edit</button>
+          <button class="mode-tab" id="tabCustomizeBtn">Customize</button>
+        </div>
+      </li>
+      <li>
+        <span class="toolbar-filename" id="resumeTitle" contenteditable="true" spellcheck="false">Untitled résumé</span>
+      </li>
+      <li><button class="btn btn-ghost btn-sm" id="btnDownloadPDF">⬇ PDF</button></li>
+      <li><button class="btn btn-ghost btn-sm" id="btnOpenPortfolio">🌐 Portfolio</button></li>
+      <li><button class="btn btn-primary btn-sm" id="btnPublishShowcase">✦ Publish</button></li>
+    </ul>
   </header>
 
   <main class="editor-workspace">
