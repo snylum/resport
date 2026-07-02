@@ -45,17 +45,30 @@ body {
 }
 
 .sidebar-resizer {
-  width: 6px;
+  width: 2px;
   flex-shrink: 0;
   cursor: col-resize;
   background: var(--color-border);
+  opacity: 0.35;
   position: relative;
   z-index: 40;
 }
 
+/* Wider invisible hit-area so the thin line stays easy to grab
+   without visually widening the bar itself. */
+.sidebar-resizer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -5px;
+  right: -5px;
+}
+
 .sidebar-resizer:hover,
 .sidebar-resizer.is-dragging {
-  background: var(--color-primary);
+  background: var(--color-secondary);
+  opacity: 1;
 }
 
 .panel-scroll-container {
@@ -235,6 +248,7 @@ body {
 /* ── Live Canvas Area ────────────────────────────────────── */
 .editor-canvas {
   flex: 1 1 auto;
+  min-width: 360px;
   background: #f0f0f0;
   overflow: auto;
   padding: 2rem;
@@ -455,11 +469,6 @@ body {
   border: 2px dashed transparent;
   cursor: pointer;
   margin-bottom: 1rem;
-}
-
-.resume-block:hover {
-  border-color: var(--color-primary);
-  background: var(--color-background);
 }
 
 .resume-block.selected {

@@ -24,6 +24,7 @@ const el = {
   editorSidebar: document.getElementById('editorSidebar'),
   sidebarResizer: document.getElementById('sidebarResizer'),
   editorWorkspace: document.querySelector('.editor-workspace'),
+  canvasWrap: document.getElementById('canvasWrap'),
   panelEdit: document.getElementById('panelEdit'),
   panelCustomize: document.getElementById('panelCustomize'),
   resumePaper: document.getElementById('resumePaper'),
@@ -297,6 +298,17 @@ function initZoomControls() {
     applyZoom();
   });
 
+  // Ctrl (or Cmd, on trackpad pinch) + scroll over the preview zooms
+  // it in/out instead of scrolling the page.
+  el.canvasWrap.addEventListener('wheel', (e) => {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    zoom = e.deltaY < 0
+      ? Math.min(MAX_ZOOM, zoom + STEP)
+      : Math.max(MIN_ZOOM, zoom - STEP);
+    applyZoom();
+  }, { passive: false });
+
   applyZoom();
 }
 
@@ -304,6 +316,7 @@ function initZoomControls() {
 function initSidebarResizer() {
   const MIN_PCT = 25;
   const MAX_PCT = 50;
+  const CANVAS_MIN_PX = 360; // keep the canvas wide enough that the preview never crowds the resizer
   let dragging = false;
 
   el.sidebarResizer.addEventListener('mousedown', (e) => {
@@ -318,7 +331,8 @@ function initSidebarResizer() {
     if (!dragging) return;
     const workspaceRect = el.editorWorkspace.getBoundingClientRect();
     let pct = ((e.clientX - workspaceRect.left) / workspaceRect.width) * 100;
-    pct = Math.min(MAX_PCT, Math.max(MIN_PCT, pct));
+    const maxPctForCanvasRoom = ((workspaceRect.width - CANVAS_MIN_PX) / workspaceRect.width) * 100;
+    pct = Math.min(MAX_PCT, maxPctForCanvasRoom, Math.max(MIN_PCT, pct));
     el.editorSidebar.style.width = `${pct}%`;
   });
 
