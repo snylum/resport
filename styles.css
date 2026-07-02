@@ -63,15 +63,24 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
 
 
 .nav-links .btn-primary.btn-sm {
-  transform: translateY(-3px);
+  /* Keeps the element centered at rest */
+  margin-top: -3px; 
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 
 .nav-links .btn-primary.btn-sm:hover {
-  transform: translate(-2px, -5px);
+  /* A smaller translation paired with an increased shadow 
+     keeps the center of gravity stable in the navbar */
+  transform: translate(-2px, -2px);
+  
+  /* Update the shadow to expand outward to match the lift, 
+     adjust the pixels below to match your theme's custom shadow size */
+  box-shadow: 6px 6px 0px 0px #1a1a1a !important; 
 }
 
 .nav-links .btn-primary.btn-sm:active {
-  transform: translate(3px, 3px);
+  /* Slams flat against the background */
+  transform: translate(4px, 4px);
   box-shadow: none !important;
 }
 
