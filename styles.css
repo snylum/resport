@@ -63,16 +63,13 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
 
 
 .nav-links .btn-primary.btn-sm {
-  transform: translateY(-3px);
+  transform: translate(0px, -3px);
+  box-shadow: 6px 6px 0 0 #1A1A1A;
 }
 
 .nav-links .btn-primary.btn-sm:hover {
-  transform: translate(-5px, -5px);
-}
-
-.nav-links .btn-primary.btn-sm:active {
-  transform: translate(3px, 3px);
-  box-shadow: none !important;
+  transform: translate(-6px, -3px);
+  box-shadow: 12px 6px 0 0 #1A1A1A;  /* only X grows, Y stays 6px to match locked button Y */
 }
 
 .nav-links a:not(.btn) {
