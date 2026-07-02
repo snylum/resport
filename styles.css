@@ -66,7 +66,7 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
 }
 
 .nav-links .btn-primary.btn-sm:hover {
-  transform: translate(-6px, -3px);  /* only X changes, matches shadow's 6px growth */
+  transform: translate(-6px, -6px);  /* only X changes, matches shadow's 6px growth */
 }
 
 .nav-links a:not(.btn) {
