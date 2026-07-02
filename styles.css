@@ -61,6 +61,10 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
   list-style: none;
 }
 
+.nav-links .btn:hover {
+  transform: translate(-6px, -6px);
+}
+
 .nav-links a:not(.btn) {
   font-size: 0.875rem;
   font-weight: 500;
@@ -87,6 +91,8 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
   transition: transform 0.1s, box-shadow 0.1s;
   white-space: nowrap;
 }
+
+
 
 .btn:active { transform: translate(3px,3px); box-shadow: none !important; }
 
