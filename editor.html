@@ -89,18 +89,11 @@
       transform: translate(-2px, -2px);
     }
 
-    /* Give the lifted-button hover trick (defined in styles.css for
-       .nav-links .btn-primary.btn-sm) to the secondary button too,
-       so Publish behaves like the nav's CTA instead of a plain ghost. */
-    .nav-links .btn-secondary.btn-sm {
-      transform: translate(0px, -3px);
-    }
-    .nav-links .btn-secondary.btn-sm:hover {
-      transform: translate(-6px, -6px);
-    }
-    .nav-links .btn-secondary.btn-sm:active {
-      transform: translate(0px, 0px) !important;
-    }
+    /* The lifted-button hover trick now lives in styles.css as a generic
+       .nav-links .btn.btn-sm rule (not just btn-primary), so it applies
+       automatically to every button in this toolbar's nav-links — PDF,
+       Portfolio, and Publish all sit on the exact same baseline as the
+       marketing nav's CTA, no per-button override needed here anymore. */
 
     /* editor.html has more items than the marketing nav (mode tabs +
        filename + three buttons vs three links), so a divider marks
