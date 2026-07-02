@@ -8,151 +8,114 @@
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="editor.css" />
   <style>
-    /* ── EDITOR TOOLBAR, RESHAPED AS A NAV-LIST ────────────────
-       index.html's original header was a <nav class="site-nav">:
-       logo on the left, everything else living inside a single
-       <ul class="nav-links"> pushed to the right with flex. This
-       reproduces that exact skeleton for editor.html — logo left,
-       one <ul> right — instead of the old three-region toolbar
-       layout (logo / center tabs / right actions). The editor's
-       own controls (mode tabs, filename, PDF/Portfolio/Publish)
-       all move inside as <li> items so nothing functional changes,
-       only the container shape.
+    /* ── EDITOR HEADER, REBUILT ON THE SITE-NAV PATTERN ────────
+       index.html's original header is <nav class="site-nav">:
+       .nav-logo on the left, a single <ul class="nav-links"> on
+       the right, both already styled by styles.css. This reuses
+       those exact classes here instead of a bespoke toolbar
+       layout — same skeleton, same spacing rules (nav-links'
+       1.5rem gap), same .btn/.btn-ghost/.btn-primary components —
+       so the two headers are genuinely built from the same parts.
 
-       Colors are deliberately different from the marketing nav:
-       this is a working surface, not a storefront, so it gets a
-       dark slate bar with light text instead of a white bar with
-       an indigo accent — same skeleton, different register. */
-    .editor-toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      height: 64px;
-      padding: 0 1.75rem;
-      background: #17181c;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    }
+       The outer element keeps the .editor-toolbar class so
+       editor.css's real sizing still applies (68px height, 3px
+       border, var(--color-surface) background) — only what's
+       inside it changes shape.
 
-    .editor-toolbar .nav-logo {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-weight: 800;
-      font-size: 1.05rem;
-      color: #f4f4f5;
-      text-decoration: none;
-      letter-spacing: -0.02em;
-      flex-shrink: 0;
-    }
-
-    .editor-toolbar .nav-logo .logo-dot {
-      background: #22d3ee; /* teal accent — distinct from the marketing page's indigo */
-    }
-
-    .toolbar-links {
-      list-style: none;
-      display: flex;
-      align-items: center;
-      gap: 1.75rem; /* enough room that mode tabs, filename, and action buttons don't crowd each other */
-      margin: 0;
-      padding: 0;
-    }
-
-    .toolbar-links > li {
-      display: flex;
-      align-items: center;
-    }
+       Color: the marketing nav's CTA (Open Editor) uses
+       --color-primary (hot pink). Publish reuses the same button
+       component but in --color-secondary (violet) instead, so the
+       editor's primary action reads as distinct from the
+       marketing page's, while still belonging to the same theme. */
 
     .mode-tabs {
       display: flex;
       gap: 0.25rem;
-      background: rgba(255, 255, 255, 0.06);
-      border-radius: 8px;
-      padding: 0.25rem;
+      border: 2px solid var(--color-border);
+      background: var(--color-surface-alt);
+      padding: 0.2rem;
     }
 
     .mode-tab {
+      font-family: var(--font-sans);
+      font-weight: 600;
+      font-size: 0.8rem;
       border: none;
       background: transparent;
-      color: rgba(244, 244, 245, 0.65);
-      font-size: 0.85rem;
-      font-weight: 600;
-      padding: 0.4rem 0.9rem;
-      border-radius: 6px;
+      color: var(--color-text-muted);
+      padding: 0.4rem 0.85rem;
       cursor: pointer;
-      transition: background 0.2s ease, color 0.2s ease;
+      transition: background 0.15s, color 0.15s;
     }
 
     .mode-tab:hover {
-      color: #f4f4f5;
+      color: var(--color-text);
     }
 
     .mode-tab.active {
-      background: #2a2c33;
-      color: #f4f4f5;
+      background: var(--color-accent);
+      color: var(--color-text);
     }
 
     .toolbar-filename {
-      font-size: 0.9rem;
+      font-family: var(--font-sans);
       font-weight: 600;
-      color: rgba(244, 244, 245, 0.85);
-      padding: 0.35rem 0.6rem;
-      border-radius: 6px;
+      font-size: 0.9rem;
+      color: var(--color-text);
+      padding: 0.4rem 0.6rem;
+      border: 2px solid transparent;
       outline: none;
-      min-width: 8ch;
-      max-width: 22ch;
+      max-width: 20ch;
+      white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      white-space: nowrap;
     }
 
     .toolbar-filename:focus {
-      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--color-border);
+      background: var(--color-surface-alt);
     }
 
-    .editor-toolbar .btn-ghost {
-      background: transparent;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      color: rgba(244, 244, 245, 0.85);
-      padding: 0.45rem 0.9rem;
-      border-radius: 7px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: border-color 0.2s ease, color 0.2s ease;
+    /* Publish button: same .btn component, violet instead of the
+       marketing page's pink, so it's visibly a different action
+       family even though it's built the same way. */
+    .btn-secondary {
+      background: var(--color-secondary);
+      color: #fff;
+      box-shadow: var(--shadow);
+    }
+    .btn-secondary:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translate(-2px, -2px);
     }
 
-    .editor-toolbar .btn-ghost:hover {
-      border-color: rgba(255, 255, 255, 0.4);
-      color: #ffffff;
+    /* Give the lifted-button hover trick (defined in styles.css for
+       .nav-links .btn-primary.btn-sm) to the secondary button too,
+       so Publish behaves like the nav's CTA instead of a plain ghost. */
+    .nav-links .btn-secondary.btn-sm {
+      transform: translate(0px, -3px);
+    }
+    .nav-links .btn-secondary.btn-sm:hover {
+      transform: translate(-6px, -6px);
+    }
+    .nav-links .btn-secondary.btn-sm:active {
+      transform: translate(0px, 0px) !important;
     }
 
-    .editor-toolbar .btn-primary {
-      background: #f59e0b; /* amber — distinct call-to-action color from the marketing page's indigo primary */
-      color: #17181c;
-      border: none;
-      padding: 0.5rem 1.1rem;
-      border-radius: 7px;
-      font-size: 0.85rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: filter 0.2s ease, transform 0.2s ease;
-    }
-
-    .editor-toolbar .btn-primary:hover {
-      filter: brightness(1.08);
-      transform: translateY(-1px);
+    /* editor.html has more items than the marketing nav (mode tabs +
+       filename + three buttons vs three links), so a divider marks
+       the boundary between "file identity" and "actions" instead of
+       relying on gap alone to communicate grouping. */
+    .toolbar-divider {
+      width: 2px;
+      align-self: stretch;
+      background: var(--color-border);
+      margin: 0.5rem 0;
     }
 
     @media (max-width: 780px) {
-      .editor-toolbar {
-        padding: 0 1rem;
-      }
-      .toolbar-links {
-        gap: 0.9rem;
-      }
       .toolbar-filename {
-        display: none; /* keep tabs + action buttons, drop the editable title on narrow screens */
+        display: none;
       }
     }
   </style>
@@ -161,7 +124,7 @@
 
   <header class="editor-toolbar">
     <a href="index.html" class="nav-logo"><span class="logo-dot"></span>résumé</a>
-    <ul class="toolbar-links">
+    <ul class="nav-links">
       <li>
         <div class="mode-tabs" role="tablist">
           <button class="mode-tab active" id="tabEditBtn">Edit</button>
@@ -171,9 +134,10 @@
       <li>
         <span class="toolbar-filename" id="resumeTitle" contenteditable="true" spellcheck="false">Untitled résumé</span>
       </li>
+      <li class="toolbar-divider" aria-hidden="true"></li>
       <li><button class="btn btn-ghost btn-sm" id="btnDownloadPDF">⬇ PDF</button></li>
       <li><button class="btn btn-ghost btn-sm" id="btnOpenPortfolio">🌐 Portfolio</button></li>
-      <li><button class="btn btn-primary btn-sm" id="btnPublishShowcase">✦ Publish</button></li>
+      <li><button class="btn btn-secondary btn-sm" id="btnPublishShowcase">✦ Publish</button></li>
     </ul>
   </header>
 
