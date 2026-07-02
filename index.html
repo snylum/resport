@@ -8,124 +8,54 @@
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="home.css" />
   <style>
-    /* ── RESET & LAYOUT FIXES FOR HORIZONTAL WRAPPER ── */
-    body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden; 
-    }
-
-    /* ── SINGLE SOURCE OF TRUTH FOR HEADER HEIGHT ──
-       Change this ONE value if the header ever gets taller/shorter.
-       Every offset below (.panel padding, dot centering) reads from it,
-       so nothing can drift out of sync again. */
-    :root {
-      --header-height: 90px;
-    }
-
-    /* ── WIDER, MORE SPACIOUS NAVIGATION ── */
-    .site-nav {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: var(--header-height);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0 4rem;         /* Expands horizontal depth across wide viewports */
-      box-sizing: border-box;
-      z-index: 1000;           /* Keeps it cleanly floating above slide contents */
-    }
-
-    /* ── EVERY SLIDE RESERVES SPACE FOR THE HEADER ──
-       Previously only .panel-hero had padding-top for the header, so every
-       other slide's background rendered starting at top:0 and peeked out
-       behind/above the fixed nav. Applying this to the shared .panel class
-       fixes it for all slides at once, and stays correct if the header
-       height ever changes. */
-    .panel {
-      padding-top: var(--header-height);
-      box-sizing: border-box;
-    }
-
-    /* ── FLOATING DOTS: CENTERED WITHIN THE NON-HEADER VIEWPORT ──
-       Center point = header height + half of the remaining space
-       = header + (100vh - header) / 2
-       = 50% + header/2
-       Written with the variable so it always matches the real header,
-       instead of a hardcoded "+45px" that silently breaks if the
-       header grows.
-
-       THIS IS THE SINGLE ANCHOR POINT. The hero-header below uses the
-       exact same formula so both are always vertically aligned. */
-    .slide-dots {
-      position: fixed;
-      right: 2.5rem;
-      top: calc(50% + (var(--header-height) / 2));
-      transform: translateY(-50%);
-      z-index: 1000;
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-
-    /* ── PANEL HERO: NO LONGER CENTERS VIA FLEX+PADDING ──
-       Flex-centering inside a padded box *should* land on the same point
-       as the dots' calc(50% + header/2), but it relies on padding and
-       box-sizing math staying untouched by every other stylesheet in the
-       cascade — and it visibly didn't. So instead .hero-header is
-       positioned directly, using the identical formula the dots use.
-       Same formula in both places = guaranteed to line up, always. */
+    /* ── HERO SLIDE OVERRIDE ──────────────────────────────────
+       home.css's .panel-hero is built for the two-column layout
+       (.panel-content + .panel-visual) and sets align-items: stretch
+       on the shared .panel flex row. We're using a single centered
+       column instead, so .hero-header just needs to fill that row
+       (flex: 1 makes it stretch to the panel's full real height,
+       which home.css already sizes correctly below the fixed nav)
+       and center its own children — the exact same justify-content:
+       center pattern every other slide's intro column already uses.
+       No header-height math, no position:absolute, no JS measuring —
+       this automatically lines up with the dots because it's centered
+       within the same box the rest of the page's layout already
+       agrees on. */
     .panel-hero {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-      padding: 0 !important;   /* centering no longer depends on padding */
+      justify-content: center;
     }
 
-    /* ── HERO-HEADER: CENTERS AS A GROUP, GROWS SYMMETRICALLY ──
-       top + transform(-50%) anchors the *vertical midpoint* of this box
-       to the dot-center line, no matter how tall the box is. That means
-       as .hero-actions expands from collapsed -> full height below, the
-       whole box grows equally in both directions around that fixed
-       midpoint — the title drifts upward, the buttons/count grow in
-       below it, and the *combined group* ends up centered on the dots. */
     .hero-header {
-      position: absolute;
-      left: 50%;
-      top: calc(50% + (var(--header-height) / 2)); /* fallback until JS measures the real dots position */
-      transform: translate(-50%, -50%);
-      width: 100%;
+      flex: 1;
       max-width: 900px;
+      margin: 0 auto;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       text-align: center;
       gap: 1.5rem;
-      transition: gap 0.6s ease;
     }
 
     .brand-container {
-      margin-bottom: 0;        /* removed, gap above handles it now */
-      height: auto; 
+      height: auto;
       display: flex;
       align-items: center;
       justify-content: center;
       width: 100%;
       max-width: 100%;
-      overflow: visible; 
+      overflow: visible;
     }
 
     /* ── HERO-ACTIONS: COLLAPSED UNTIL THE TICKER SETTLES ──
        max-height starts at 0 so this block takes (almost) no vertical
-       space while the ticker is cycling — the title sits centered on
-       the dots by itself. When .visible is added, max-height opens up,
-       the box's real height comes back, and because the parent
-       (.hero-header) is centered via transform on ITS midpoint, the
-       whole group re-centers: title moves up, buttons + count grow in
-       underneath, everything settles centered together. */
+       space while the ticker is cycling — the title sits centered by
+       itself. When .visible is added, max-height opens up and the
+       box's real height comes back. Because .hero-header centers its
+       children with justify-content: center inside a fixed-height flex
+       column (flex: 1 filling the real panel height), the whole group
+       re-centers automatically as this grows: title drifts up, buttons
+       + count grow in underneath, everything settles centered together. */
     .hero-actions {
       margin-top: 0;
       display: flex;
@@ -413,30 +343,6 @@
     document.addEventListener('DOMContentLoaded', () => {
       const tickerTarget = document.getElementById('tickerTarget');
       const actionsTarget = document.getElementById('actionsTarget');
-
-      // ── PIN HERO CONTENT TO THE DOTS' ACTUAL CENTER ──
-      // The dots and the hero-header both used the same calc(50% + header/2)
-      // formula, but other layout (home.css, the .is-loading intro state,
-      // scrollbar/viewport quirks, etc.) can still make them land in
-      // different places in practice. Rather than trust two formulas to
-      // agree, we measure the dots' real on-screen center and pin the
-      // hero-header there directly — this is exact no matter what else
-      // is happening on the page.
-      const heroHeader = document.querySelector('.hero-header');
-      const dotsNav = document.querySelector('.slide-dots');
-
-      function alignHeroToDots() {
-        if (!heroHeader || !dotsNav) return;
-        const dotsRect = dotsNav.getBoundingClientRect();
-        const centerY = dotsRect.top + dotsRect.height / 2;
-        heroHeader.style.top = `${centerY}px`;
-      }
-
-      // Run once now, once after everything (fonts/images) has settled,
-      // and again on resize since the dots' position can shift.
-      alignHeroToDots();
-      window.addEventListener('load', alignHeroToDots);
-      window.addEventListener('resize', alignHeroToDots);
 
       const urlParams = new URLSearchParams(window.location.search);
       const customName = urlParams.get('name');
