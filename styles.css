@@ -97,8 +97,10 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
 }
 
 
-
-.btn:active { transform: translate(3px,3px); box-shadow: none !important; }
+.btn:active {
+  transform: translate(3px, 3px) !important;
+  box-shadow: none !important;
+}
 
 .btn-primary {
   background: var(--color-primary);
