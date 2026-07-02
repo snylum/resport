@@ -206,11 +206,70 @@
           
         </div>
       </div>
+
+      <div class="sidebar-panel" id="panelCustomize">
+        <div class="panel-scroll-container">
+
+          <div class="form-section active">
+            <button class="form-section-toggle" type="button">
+              <span class="fs-title">Layout</span>
+              <span class="fs-chevron">▼</span>
+            </button>
+            <div class="form-section-content">
+              <div class="customize-group">
+                <p class="customize-label">Columns</p>
+                <div class="option-pill-row" id="optLayout" data-target="layout">
+                  <button class="option-pill active" data-value="1">Single</button>
+                  <button class="option-pill" data-value="2">Two Column</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section active">
+            <button class="form-section-toggle" type="button">
+              <span class="fs-title">Header</span>
+              <span class="fs-chevron">▼</span>
+            </button>
+            <div class="form-section-content">
+              <div class="customize-group">
+                <p class="customize-label">Header Alignment</p>
+                <div class="option-pill-row" id="optHeaderAlign" data-target="headerAlign">
+                  <button class="option-pill active" data-value="left">Left</button>
+                  <button class="option-pill" data-value="center">Center</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section active">
+            <button class="form-section-toggle" type="button">
+              <span class="fs-title">Dates</span>
+              <span class="fs-chevron">▼</span>
+            </button>
+            <div class="form-section-content">
+              <div class="customize-group">
+                <p class="customize-label">Date Alignment</p>
+                <div class="option-pill-row" id="optDateAlign" data-target="dateAlign">
+                  <button class="option-pill" data-value="left">Left</button>
+                  <button class="option-pill active" data-value="right">Right</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
     </section>
 
       <div class="sidebar-resizer" id="sidebarResizer"></div>
 
       <section class="editor-canvas" id="canvasWrap">
+        <div class="zoom-controls">
+          <button class="zoom-btn" id="btnZoomOut" type="button" aria-label="Zoom out">−</button>
+          <span class="zoom-level" id="zoomLevelDisplay" title="Click to reset to 100%">100%</span>
+          <button class="zoom-btn" id="btnZoomIn" type="button" aria-label="Zoom in">+</button>
+        </div>
         <div class="canvas-container">
           <div class="resume-paper" id="resumePaper" data-layout="1" data-header-align="left" data-date-align="right" data-skills-layout="pills">
             
@@ -227,7 +286,7 @@
 
             <div id="canvasTracks" class="tracks-layout-1">
               <div class="col-track main-track" id="mainTrack"></div>
-              <div class="col-track side-track hidden" id="sideTrack"></div>
+              <div class="col-track side-track" id="sideTrack"></div>
             </div>
 
           </div>

@@ -23,7 +23,13 @@ const el = {
   sidebarSectionsList: document.getElementById('sidebarSectionsList'),
   editorSidebar: document.getElementById('editorSidebar'),
   sidebarResizer: document.getElementById('sidebarResizer'),
-  editorWorkspace: document.querySelector('.editor-workspace')
+  editorWorkspace: document.querySelector('.editor-workspace'),
+  panelEdit: document.getElementById('panelEdit'),
+  panelCustomize: document.getElementById('panelCustomize'),
+  resumePaper: document.getElementById('resumePaper'),
+  btnZoomIn: document.getElementById('btnZoomIn'),
+  btnZoomOut: document.getElementById('btnZoomOut'),
+  zoomLevelDisplay: document.getElementById('zoomLevelDisplay')
 };
 
 // ── 1. Dual-Binding Inputs Sync ──────────────────────────────
@@ -155,6 +161,7 @@ function renderSidebarList(blocks) {
     const item = document.createElement('div');
     item.className = 'sd-section-item';
     item.dataset.id = block.id;
+    item.draggable = true;
     
     let titleText = block.type.toUpperCase();
     if (block.type === 'section') titleText = `Heading: ${block.data.title}`;
@@ -169,6 +176,53 @@ function renderSidebarList(blocks) {
     `;
     el.sidebarSectionsList.appendChild(item);
   });
+
+  initSectionDragReorder();
+}
+
+// ── 4b. Drag-to-reorder for the sections list ─────────────────
+function initSectionDragReorder() {
+  const items = Array.from(el.sidebarSectionsList.querySelectorAll('.sd-section-item'));
+  let draggedId = null;
+
+  items.forEach(item => {
+    item.addEventListener('dragstart', (e) => {
+      draggedId = item.dataset.id;
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      items.forEach(i => i.classList.remove('drag-over'));
+    });
+
+    item.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (item.dataset.id === draggedId) return;
+      item.classList.add('drag-over');
+    });
+
+    item.addEventListener('dragleave', () => {
+      item.classList.remove('drag-over');
+    });
+
+    item.addEventListener('drop', (e) => {
+      e.preventDefault();
+      item.classList.remove('drag-over');
+      const targetId = item.dataset.id;
+      if (!draggedId || draggedId === targetId) return;
+
+      const blocks = [...Store.state.blocks];
+      const fromIndex = blocks.findIndex(b => b.id === draggedId);
+      const toIndex = blocks.findIndex(b => b.id === targetId);
+      if (fromIndex === -1 || toIndex === -1) return;
+
+      const [moved] = blocks.splice(fromIndex, 1);
+      blocks.splice(toIndex, 0, moved);
+      Store.setBlocks(blocks);
+    });
+  });
 }
 
 // ── 5. Toolbar Actions Initialization ────────────────────────
@@ -178,6 +232,72 @@ function initToolbar() {
   
   document.getElementById('btnDownloadPDF').addEventListener('click', () => alert('Generating dynamic vector PDF...'));
   document.getElementById('btnOpenPortfolio').addEventListener('click', () => alert('Serving instance onto john.proves.work'));
+}
+
+// ── 5b. Edit / Customize panel switching ──────────────────────
+Store.on('mode_changed', (mode) => {
+  el.tabEditBtn.classList.toggle('active', mode === 'edit');
+  el.tabCustomizeBtn.classList.toggle('active', mode === 'customize');
+  el.panelEdit.classList.toggle('active', mode === 'edit');
+  el.panelCustomize.classList.toggle('active', mode === 'customize');
+});
+
+// ── 6. Collapsible form sections (e.g. "Personal Details") ────
+function initFormSectionToggles() {
+  document.querySelectorAll('.form-section-toggle').forEach(toggle => {
+    toggle.addEventListener('click', () => {
+      toggle.closest('.form-section').classList.toggle('active');
+    });
+  });
+}
+
+// ── 7. Customize panel: layout / alignment option pills ───────
+function initCustomizePanel() {
+  document.querySelectorAll('.option-pill-row').forEach(row => {
+    const attr = row.dataset.target === 'layout' ? 'data-layout'
+      : row.dataset.target === 'headerAlign' ? 'data-header-align'
+      : 'data-date-align';
+
+    row.querySelectorAll('.option-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        row.querySelectorAll('.option-pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        el.resumePaper.setAttribute(attr, pill.dataset.value);
+      });
+    });
+  });
+}
+
+// ── 8. Zoom controls ────────────────────────────────────────
+function initZoomControls() {
+  const MIN_ZOOM = 50;
+  const MAX_ZOOM = 150;
+  const STEP = 10;
+  let zoom = 100;
+
+  const applyZoom = () => {
+    el.resumePaper.style.transform = `scale(${zoom / 100})`;
+    el.zoomLevelDisplay.textContent = `${zoom}%`;
+    el.btnZoomOut.disabled = zoom <= MIN_ZOOM;
+    el.btnZoomIn.disabled = zoom >= MAX_ZOOM;
+  };
+
+  el.btnZoomIn.addEventListener('click', () => {
+    zoom = Math.min(MAX_ZOOM, zoom + STEP);
+    applyZoom();
+  });
+
+  el.btnZoomOut.addEventListener('click', () => {
+    zoom = Math.max(MIN_ZOOM, zoom - STEP);
+    applyZoom();
+  });
+
+  el.zoomLevelDisplay.addEventListener('click', () => {
+    zoom = 100;
+    applyZoom();
+  });
+
+  applyZoom();
 }
 
 // ── 6. Sidebar Resizer (25% – 50% of workspace width) ────────
@@ -216,10 +336,14 @@ function init() {
   initInputListeners();
   initToolbar();
   initSidebarResizer();
+  initFormSectionToggles();
+  initCustomizePanel();
+  initZoomControls();
   
   // Set initial trigger events
   Store.emit('profile_changed', Store.state.profile);
   Store.emit('blocks_changed', Store.state.blocks);
+  Store.emit('mode_changed', Store.state.mode);
 }
 
 document.addEventListener('DOMContentLoaded', init);
