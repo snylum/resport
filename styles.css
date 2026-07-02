@@ -64,10 +64,12 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
 
 .nav-links .btn-primary.btn-sm {
   transform: translate(0px, -3px);
+  box-shadow: 6px 6px 0 0 #1A1A1A;   /* base shadow offset */
 }
 
 .nav-links .btn-primary.btn-sm:hover {
-  transform: translate(-6px, -9px);   /* base (0,-3) shifted by (-6,-6) */
+  transform: translate(-6px, -9px);
+  box-shadow: 12px 12px 0 0 #1A1A1A; /* base + 6px in both directions */
 }
 
 .nav-links .btn-primary.btn-sm:active {
