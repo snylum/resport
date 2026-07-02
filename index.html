@@ -94,7 +94,7 @@
     .hero-header {
       position: absolute;
       left: 50%;
-      top: calc(50% + (var(--header-height) / 2));
+      top: calc(50% + (var(--header-height) / 2)); /* fallback until JS measures the real dots position */
       transform: translate(-50%, -50%);
       width: 100%;
       max-width: 900px;
@@ -413,6 +413,30 @@
     document.addEventListener('DOMContentLoaded', () => {
       const tickerTarget = document.getElementById('tickerTarget');
       const actionsTarget = document.getElementById('actionsTarget');
+
+      // ── PIN HERO CONTENT TO THE DOTS' ACTUAL CENTER ──
+      // The dots and the hero-header both used the same calc(50% + header/2)
+      // formula, but other layout (home.css, the .is-loading intro state,
+      // scrollbar/viewport quirks, etc.) can still make them land in
+      // different places in practice. Rather than trust two formulas to
+      // agree, we measure the dots' real on-screen center and pin the
+      // hero-header there directly — this is exact no matter what else
+      // is happening on the page.
+      const heroHeader = document.querySelector('.hero-header');
+      const dotsNav = document.querySelector('.slide-dots');
+
+      function alignHeroToDots() {
+        if (!heroHeader || !dotsNav) return;
+        const dotsRect = dotsNav.getBoundingClientRect();
+        const centerY = dotsRect.top + dotsRect.height / 2;
+        heroHeader.style.top = `${centerY}px`;
+      }
+
+      // Run once now, once after everything (fonts/images) has settled,
+      // and again on resize since the dots' position can shift.
+      alignHeroToDots();
+      window.addEventListener('load', alignHeroToDots);
+      window.addEventListener('resize', alignHeroToDots);
 
       const urlParams = new URLSearchParams(window.location.search);
       const customName = urlParams.get('name');
