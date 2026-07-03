@@ -147,12 +147,12 @@
   </nav>
 
   <main class="editor-workspace">
-    
+
     <section class="editor-sidebar" id="editorSidebar">
-      
+
       <div class="sidebar-panel active" id="panelEdit">
         <div class="panel-scroll-container">
-          
+
           <div class="form-section active">
             <button class="form-section-toggle" type="button">
               <span class="fs-title">Personal Details</span>
@@ -198,17 +198,105 @@
           </div>
 
           <div class="sections-manager-wrap">
-            <h3 class="sm-title">Résumé Sections</h3>
-            <p class="sm-subtitle">Drag to reorder sections. Click to modify block parameters.</p>
+            <div class="sm-header-row">
+              <h3 class="sm-title">Résumé Sections</h3>
+              <div class="add-section-wrap">
+                <button class="btn btn-ghost btn-sm" id="btnAddSection" type="button">+ Add Section</button>
+                <div class="add-section-menu hidden" id="addSectionMenu"></div>
+              </div>
+            </div>
+            <p class="sm-subtitle">Drag to reorder. Click a section to edit its text on the canvas.</p>
             <div class="sections-drag-list" id="sidebarSectionsList">
               </div>
           </div>
-          
+
         </div>
       </div>
 
       <div class="sidebar-panel" id="panelCustomize">
         <div class="panel-scroll-container">
+
+          <div class="form-section active">
+            <button class="form-section-toggle" type="button">
+              <span class="fs-title">Template</span>
+              <span class="fs-chevron">▼</span>
+            </button>
+            <div class="form-section-content">
+              <div class="template-gallery" id="templateGallery">
+
+                <button class="template-card" data-template="ats" type="button">
+                  <div class="tpl-preview">
+                    <div class="tpl-line" style="width:55%;height:8px;background:#1A1A1A;"></div>
+                    <div class="tpl-line short" style="background:#999;"></div>
+                    <div class="tpl-line" style="margin-top:4px;"></div>
+                    <div class="tpl-line"></div>
+                    <div class="tpl-line short"></div>
+                  </div>
+                  <div class="tpl-card-name">ATS Simple</div>
+                  <div class="tpl-card-tag">Plain &amp; parser-friendly</div>
+                </button>
+
+                <button class="template-card" data-template="harvard" type="button">
+                  <div class="tpl-preview" style="align-items:center;">
+                    <div class="tpl-line" style="width:45%;height:8px;background:#1E3A5F;"></div>
+                    <div class="tpl-line short" style="background:#999;width:30%;"></div>
+                    <div class="tpl-line" style="width:80%;margin-top:4px;border-top:1px solid #1E3A5F;height:0;background:none;"></div>
+                    <div class="tpl-line" style="width:70%;"></div>
+                    <div class="tpl-line short" style="width:50%;"></div>
+                  </div>
+                  <div class="tpl-card-name">Harvard Classic</div>
+                  <div class="tpl-card-tag">Centered, academic, serif</div>
+                </button>
+
+                <button class="template-card" data-template="lasalle" type="button">
+                  <div class="tpl-preview tpl-two-col">
+                    <div class="tpl-col">
+                      <div class="tpl-line" style="width:60%;height:8px;background:#00693E;"></div>
+                      <div class="tpl-line short"></div>
+                      <div class="tpl-line" style="margin-top:4px;"></div>
+                      <div class="tpl-line"></div>
+                    </div>
+                    <div class="tpl-col tpl-side" style="background:#e6f2ec;padding:4px;">
+                      <div class="tpl-line" style="background:#00693E;"></div>
+                      <div class="tpl-line short"></div>
+                    </div>
+                  </div>
+                  <div class="tpl-card-name">La Salle</div>
+                  <div class="tpl-card-tag">Sidebar, campus colors</div>
+                </button>
+
+                <button class="template-card" data-template="compact" type="button">
+                  <div class="tpl-preview" style="gap:2px;">
+                    <div class="tpl-line" style="width:50%;height:6px;background:#33475B;"></div>
+                    <div class="tpl-line short" style="height:2px;"></div>
+                    <div class="tpl-line" style="height:2px;margin-top:3px;"></div>
+                    <div class="tpl-line" style="height:2px;"></div>
+                    <div class="tpl-line" style="height:2px;"></div>
+                    <div class="tpl-line short" style="height:2px;"></div>
+                  </div>
+                  <div class="tpl-card-name">Executive Compact</div>
+                  <div class="tpl-card-tag">Dense — fits more per page</div>
+                </button>
+
+                <button class="template-card" data-template="creative" type="button">
+                  <div class="tpl-preview tpl-two-col">
+                    <div class="tpl-col">
+                      <div class="tpl-line" style="width:60%;height:8px;background:#7C4DFF;border-bottom:3px solid #7C4DFF;"></div>
+                      <div class="tpl-line short"></div>
+                      <div class="tpl-line" style="margin-top:4px;"></div>
+                    </div>
+                    <div class="tpl-col tpl-side" style="background:#f1ecff;padding:4px;">
+                      <div class="tpl-line" style="background:#7C4DFF;"></div>
+                      <div class="tpl-line short"></div>
+                    </div>
+                  </div>
+                  <div class="tpl-card-name">Creative Accent</div>
+                  <div class="tpl-card-tag">Bold color, modern type</div>
+                </button>
+
+              </div>
+            </div>
+          </div>
 
           <div class="form-section active">
             <button class="form-section-toggle" type="button">
@@ -218,41 +306,99 @@
             <div class="form-section-content">
               <div class="customize-group">
                 <p class="customize-label">Columns</p>
-                <div class="option-pill-row" id="optLayout" data-target="layout">
-                  <button class="option-pill active" data-value="1">Single</button>
+                <div class="option-pill-row" data-target="layout">
+                  <button class="option-pill" data-value="1">Single</button>
                   <button class="option-pill" data-value="2">Two Column</button>
                 </div>
+                <p class="customize-hint">In two-column layouts, use the ⇥ icon next to a section (under "Résumé Sections") to move it into the sidebar.</p>
               </div>
-            </div>
-          </div>
-
-          <div class="form-section active">
-            <button class="form-section-toggle" type="button">
-              <span class="fs-title">Header</span>
-              <span class="fs-chevron">▼</span>
-            </button>
-            <div class="form-section-content">
               <div class="customize-group">
                 <p class="customize-label">Header Alignment</p>
-                <div class="option-pill-row" id="optHeaderAlign" data-target="headerAlign">
-                  <button class="option-pill active" data-value="left">Left</button>
+                <div class="option-pill-row" data-target="headerAlign">
+                  <button class="option-pill" data-value="left">Left</button>
                   <button class="option-pill" data-value="center">Center</button>
                 </div>
               </div>
+              <div class="customize-group">
+                <p class="customize-label">Date Alignment</p>
+                <div class="option-pill-row" data-target="dateAlign">
+                  <button class="option-pill" data-value="left">Left</button>
+                  <button class="option-pill" data-value="right">Right</button>
+                </div>
+              </div>
             </div>
           </div>
 
           <div class="form-section active">
             <button class="form-section-toggle" type="button">
-              <span class="fs-title">Dates</span>
+              <span class="fs-title">Color</span>
               <span class="fs-chevron">▼</span>
             </button>
             <div class="form-section-content">
               <div class="customize-group">
-                <p class="customize-label">Date Alignment</p>
-                <div class="option-pill-row" id="optDateAlign" data-target="dateAlign">
-                  <button class="option-pill" data-value="left">Left</button>
-                  <button class="option-pill active" data-value="right">Right</button>
+                <p class="customize-label">Accent Color</p>
+                <div class="color-swatch-row" id="optAccentColor">
+                  <button class="color-swatch" data-value="#1A1A1A" style="background:#1A1A1A" title="Ink"></button>
+                  <button class="color-swatch" data-value="#1E3A5F" style="background:#1E3A5F" title="Navy"></button>
+                  <button class="color-swatch" data-value="#00693E" style="background:#00693E" title="Forest"></button>
+                  <button class="color-swatch" data-value="#33475B" style="background:#33475B" title="Slate"></button>
+                  <button class="color-swatch" data-value="#7C4DFF" style="background:#7C4DFF" title="Violet"></button>
+                  <button class="color-swatch" data-value="#B8860B" style="background:#B8860B" title="Gold"></button>
+                  <button class="color-swatch" data-value="#C0392B" style="background:#C0392B" title="Crimson"></button>
+                  <label class="color-swatch color-swatch-custom" id="accentSwatchCustom" title="Custom color">
+                    <input type="color" id="inAccentCustom" value="#1A1A1A" />
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section active">
+            <button class="form-section-toggle" type="button">
+              <span class="fs-title">Font</span>
+              <span class="fs-chevron">▼</span>
+            </button>
+            <div class="form-section-content">
+              <div class="customize-group">
+                <p class="customize-label">Heading Font</p>
+                <select class="customize-select" id="selHeadingFont"></select>
+              </div>
+              <div class="customize-group">
+                <p class="customize-label">Body Font</p>
+                <select class="customize-select" id="selBodyFont"></select>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section active">
+            <button class="form-section-toggle" type="button">
+              <span class="fs-title">Text Details</span>
+              <span class="fs-chevron">▼</span>
+            </button>
+            <div class="form-section-content">
+              <div class="customize-group">
+                <p class="customize-label">Text Size</p>
+                <div class="option-pill-row" data-target="fontSize">
+                  <button class="option-pill" data-value="90">Small</button>
+                  <button class="option-pill" data-value="100">Medium</button>
+                  <button class="option-pill" data-value="115">Large</button>
+                </div>
+              </div>
+              <div class="customize-group">
+                <p class="customize-label">Line Spacing</p>
+                <div class="option-pill-row" data-target="lineHeight">
+                  <button class="option-pill" data-value="compact">Compact</button>
+                  <button class="option-pill" data-value="normal">Normal</button>
+                  <button class="option-pill" data-value="relaxed">Relaxed</button>
+                </div>
+              </div>
+              <div class="customize-group">
+                <p class="customize-label">Section Title Style</p>
+                <div class="option-pill-row" data-target="titleStyle">
+                  <button class="option-pill" data-value="plain">Plain</button>
+                  <button class="option-pill" data-value="underline">Underline</button>
+                  <button class="option-pill" data-value="bar">Bar</button>
+                  <button class="option-pill" data-value="boxed">Boxed</button>
                 </div>
               </div>
             </div>
@@ -271,8 +417,8 @@
           <button class="zoom-btn" id="btnZoomIn" type="button" aria-label="Zoom in">+</button>
         </div>
         <div class="canvas-container">
-          <div class="resume-paper" id="resumePaper" data-layout="1" data-header-align="left" data-date-align="right" data-skills-layout="pills">
-            
+          <div class="resume-paper" id="resumePaper" data-template="ats" data-layout="1" data-header-align="left" data-date-align="right" data-title-style="plain">
+
             <header class="rb-header" id="canvasHeader">
               <div class="rb-header-photo-wrap hidden" id="canvasPhotoWrap">
                 <img src="" alt="Profile" id="canvasPhotoImg" />

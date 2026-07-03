@@ -218,6 +218,13 @@ body {
   margin: 0 0 0.5rem;
 }
 
+.customize-hint {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  margin: 0.6rem 0 0;
+  line-height: 1.4;
+}
+
 .option-pill-row {
   display: flex;
   gap: 0.5rem;
@@ -245,6 +252,236 @@ body {
   color: #fff;
 }
 
+.customize-select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+/* ── Accent color swatches ───────────────────────────────────── */
+.color-swatch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.color-swatch {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--color-border);
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+}
+
+.color-swatch.active::after {
+  content: "✓";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-shadow: 0 0 2px rgba(0,0,0,0.6);
+}
+
+.color-swatch-custom {
+  background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.color-swatch-custom input[type="color"] {
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+/* ── Template gallery (Customize > Template) ─────────────────── */
+.template-gallery {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.template-card {
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+  padding: 0.6rem;
+  text-align: left;
+  font-family: var(--font-sans);
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.template-card:hover {
+  background: var(--color-surface-alt);
+}
+
+.template-card.active {
+  box-shadow: 0 0 0 2px var(--color-secondary) inset;
+}
+
+.tpl-preview {
+  height: 60px;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  margin-bottom: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px;
+}
+
+.tpl-preview .tpl-line {
+  height: 4px;
+  background: #ccc;
+  flex-shrink: 0;
+}
+
+.tpl-preview .tpl-line.short {
+  width: 40%;
+}
+
+.tpl-preview.tpl-two-col {
+  flex-direction: row;
+  gap: 4px;
+}
+
+.tpl-preview.tpl-two-col .tpl-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.tpl-preview.tpl-two-col .tpl-side {
+  flex: 0 0 34%;
+}
+
+.tpl-card-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.tpl-card-tag {
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+}
+
+/* ── Sections manager header row + add-section popover ───────── */
+.sm-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.sm-header-row .sm-title {
+  margin: 0;
+}
+
+.add-section-wrap {
+  position: relative;
+}
+
+.add-section-menu {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 60;
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.add-section-item {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: left;
+  padding: 0.55rem 0.8rem;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.add-section-item:last-child {
+  border-bottom: none;
+}
+
+.add-section-item:hover {
+  background: var(--color-surface-alt);
+}
+
+/* ── Sidebar section item actions (swap column / delete) ──────── */
+.sd-item-header {
+  gap: 0.5rem;
+}
+
+.sd-title-text {
+  flex: 1;
+}
+
+.sd-item-actions {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.sd-icon-btn {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.sd-icon-btn:hover {
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+}
+
+.sd-delete-btn:hover {
+  background: var(--color-danger);
+  color: #fff;
+  border-color: var(--color-danger);
+}
+
+.sd-section-item.selected {
+  border-color: var(--color-secondary);
+  box-shadow: 0 3px 0 0 var(--color-secondary);
+}
+
 /* ── Live Canvas Area ────────────────────────────────────── */
 .editor-canvas {
   flex: 1 1 auto;
@@ -267,7 +504,11 @@ body {
   border: 3px solid var(--color-border);
   flex-shrink: 0;
   transform-origin: top center;
-  transition: transform 0.12s ease-out;
+  transition: transform 0.12s ease-out, background 0.15s;
+  font-family: var(--rp-body-font, var(--font-sans));
+  font-size: calc(10.5pt * var(--rp-font-scale, 1));
+  line-height: var(--rp-line-height, 1.45);
+  color: var(--color-text);
 }
 
 /* ── Zoom controls, floating over the canvas ───────────────── */
@@ -359,18 +600,18 @@ body {
 }
 
 .rb-name {
-  font-family: var(--font-display);
-  font-size: 2rem;
+  font-family: var(--rp-heading-font, var(--font-display));
+  font-size: calc(2rem * var(--rp-font-scale, 1));
   margin: 0;
 }
 
 .rb-title {
   font-weight: 600;
-  color: var(--color-secondary);
+  color: var(--rp-accent, var(--color-secondary));
 }
 
 .rb-contact-line {
-  font-size: 0.8rem;
+  font-size: 0.8em;
   color: var(--color-text-muted);
   margin-top: 0.25rem;
 }
@@ -412,12 +653,43 @@ body {
   padding-left: 1.5rem;
 }
 
-.rb-section-title {
-  font-family: var(--font-display);
-  font-size: 1.1rem;
+.rb-section-title,
+.rb-custom-title {
+  font-family: var(--rp-heading-font, var(--font-display));
+  font-size: 1.1em;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin: 0 0 0.5rem;
+  display: inline-block;
+  min-width: 2ch;
+}
+
+/* Section-title style variants, driven by [data-title-style] */
+.resume-paper[data-title-style="plain"] .rb-section-title,
+.resume-paper[data-title-style="plain"] .rb-custom-title {
+  border: none;
+  background: none;
+  padding: 0;
+}
+
+.resume-paper[data-title-style="underline"] .rb-section-title,
+.resume-paper[data-title-style="underline"] .rb-custom-title {
+  border-bottom: 2px solid var(--rp-accent, var(--color-border));
+  padding-bottom: 0.25rem;
+  display: block;
+}
+
+.resume-paper[data-title-style="bar"] .rb-section-title,
+.resume-paper[data-title-style="bar"] .rb-custom-title {
+  background: var(--rp-accent, var(--color-border));
+  color: #fff;
+  padding: 0.25rem 0.6rem;
+}
+
+.resume-paper[data-title-style="boxed"] .rb-section-title,
+.resume-paper[data-title-style="boxed"] .rb-custom-title {
+  border: 2px solid var(--rp-accent, var(--color-border));
+  padding: 0.2rem 0.6rem;
 }
 
 .rb-exp-row,
@@ -425,7 +697,7 @@ body {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
-  font-size: 0.9rem;
+  font-size: 0.9em;
 }
 
 .rb-company,
@@ -455,11 +727,11 @@ body {
 .rb-bullets {
   margin: 0.4rem 0 0;
   padding-left: 1.1rem;
-  font-size: 0.85rem;
+  font-size: 0.85em;
 }
 
 .rb-edu-gpa {
-  font-size: 0.8rem;
+  font-size: 0.8em;
   color: var(--color-text-muted);
   margin-top: 0.15rem;
 }
@@ -472,6 +744,199 @@ body {
 }
 
 .resume-block.selected {
-  border-color: var(--color-secondary);
+  border-color: var(--rp-accent, var(--color-secondary));
   border-style: solid;
+}
+
+/* ── Editable text affordances ──────────────────────────────── */
+.ce-field {
+  outline: none;
+  border-radius: 2px;
+  transition: background 0.1s;
+}
+
+.ce-field:hover {
+  background: rgba(124, 77, 255, 0.08);
+}
+
+.ce-field:focus {
+  background: rgba(124, 77, 255, 0.14);
+  box-shadow: 0 0 0 1px var(--rp-accent, var(--color-secondary));
+}
+
+.ce-field.ce-block {
+  display: block;
+}
+
+.ce-muted {
+  color: var(--color-text-muted);
+}
+
+.ce-strong {
+  font-weight: 700;
+}
+
+/* ── Summary / custom text blocks ───────────────────────────── */
+.rb-summary-text {
+  font-size: 0.9em;
+  margin: 0;
+}
+
+.rb-custom-title {
+  margin-bottom: 0.35rem;
+}
+
+/* ── Skills (tag pills) ─────────────────────────────────────── */
+.rb-skills-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.rb-skill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8em;
+  font-weight: 600;
+  padding: 0.25rem 0.55rem;
+  border: 1.5px solid var(--rp-accent, var(--color-border));
+  color: var(--rp-accent, var(--color-text));
+}
+
+.tag-remove-btn {
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.7em;
+  opacity: 0.6;
+  line-height: 1;
+  padding: 0;
+}
+
+.tag-remove-btn:hover {
+  opacity: 1;
+}
+
+/* ── Generic entry list (certifications / languages) ──────────── */
+.rb-entry-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.rb-entry-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-size: 0.9em;
+}
+
+.rb-entry-row .li-remove-btn {
+  margin-left: auto;
+}
+
+/* ── Add-item / remove-item controls (shown per block) ────────── */
+.add-item-btn {
+  display: inline-block;
+  margin-top: 0.4rem;
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  background: none;
+  border: 1.5px dashed var(--color-border);
+  padding: 0.2rem 0.55rem;
+  cursor: pointer;
+}
+
+.add-item-btn:hover {
+  color: var(--color-text);
+  background: var(--color-surface-alt);
+}
+
+.li-remove-btn {
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.7rem;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.li-remove-btn:hover {
+  opacity: 1;
+  color: var(--color-danger);
+}
+
+.rb-bullets li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.rb-bullets li .ce-field {
+  flex: 1;
+}
+
+/* ── Template-specific structural touches ─────────────────────
+   Each template preset already drives layout/header/date/color/
+   font through shared attributes; these add the few flourishes
+   that make each one feel distinct. */
+
+/* Harvard Classic: centered header with a rule beneath it */
+.resume-paper[data-template="harvard"] .rb-header {
+  border-bottom: 1px solid var(--rp-accent, var(--color-border));
+  padding-bottom: 0.85rem;
+}
+
+.resume-paper[data-template="harvard"] .rb-name {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-weight: 400;
+}
+
+.resume-paper[data-template="harvard"][data-title-style="underline"] .rb-section-title {
+  text-align: center;
+  display: block;
+}
+
+/* La Salle: tinted sidebar with a colored rule */
+.resume-paper[data-template="lasalle"] .side-track {
+  background: var(--color-surface-alt);
+  padding: 1.1rem;
+  border-left: 4px solid var(--rp-accent, var(--color-border));
+}
+
+.resume-paper[data-template="lasalle"] .rb-header-photo-wrap,
+.resume-paper[data-template="creative"] .rb-header-photo-wrap {
+  border-radius: 50%;
+}
+
+/* Executive Compact: tighter rhythm throughout */
+.resume-paper[data-template="compact"] .resume-block {
+  margin-bottom: 0.55rem;
+}
+
+.resume-paper[data-template="compact"] .rb-header {
+  margin-bottom: 0.9rem;
+  padding-bottom: 0.6rem;
+}
+
+.resume-paper[data-template="compact"] .rb-bullets {
+  margin-top: 0.2rem;
+}
+
+/* Creative Accent: bold header rule + tinted sidebar */
+.resume-paper[data-template="creative"] .rb-header {
+  border-bottom-width: 4px;
+  border-bottom-color: var(--rp-accent, var(--color-border));
+}
+
+.resume-paper[data-template="creative"] .side-track {
+  background: var(--color-surface-alt);
+  padding: 1.1rem;
+  border-left: none;
 }

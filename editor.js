@@ -1,4 +1,4 @@
-import { Store, esc, uid } from './store.js';
+import { Store, esc, uid, TEMPLATES, FONT_STACKS, FONT_OPTIONS, BLOCK_LIBRARY } from './store.js';
 
 // DOM Elements Cache
 const el = {
@@ -30,7 +30,14 @@ const el = {
   resumePaper: document.getElementById('resumePaper'),
   btnZoomIn: document.getElementById('btnZoomIn'),
   btnZoomOut: document.getElementById('btnZoomOut'),
-  zoomLevelDisplay: document.getElementById('zoomLevelDisplay')
+  zoomLevelDisplay: document.getElementById('zoomLevelDisplay'),
+  btnAddSection: document.getElementById('btnAddSection'),
+  addSectionMenu: document.getElementById('addSectionMenu'),
+  inAccentCustom: document.getElementById('inAccentCustom'),
+  accentSwatchCustom: document.getElementById('accentSwatchCustom'),
+  selHeadingFont: document.getElementById('selHeadingFont'),
+  selBodyFont: document.getElementById('selBodyFont'),
+  templateGallery: document.getElementById('templateGallery')
 };
 
 // ── 1. Dual-Binding Inputs Sync ──────────────────────────────
@@ -68,7 +75,7 @@ function initInputListeners() {
 Store.on('profile_changed', (profile) => {
   el.canvasName.textContent = `${profile.firstName} ${profile.lastName}`.trim() || 'Untitled Profile';
   el.canvasJobTitle.textContent = profile.jobTitle;
-  
+
   // Format dynamic line safely
   const parts = [profile.email, profile.phone, profile.address].filter(Boolean);
   el.canvasContactLine.textContent = parts.join('   •   ');
@@ -84,51 +91,115 @@ Store.on('profile_changed', (profile) => {
 });
 
 // ── 3. Component Rendering via DOM Nodes ────────────────────
+// Small helper: a contenteditable text span bound back to the store.
+function ceField(value, field, blockId, opts = {}) {
+  const { index = null, subfield = null, cls = '' } = opts;
+  const idxAttr = index !== null ? ` data-index="${index}"` : '';
+  const subAttr = subfield ? ` data-subfield="${subfield}"` : '';
+  return `<span class="ce-field ${cls}" contenteditable="true" spellcheck="false" data-field="${field}"${idxAttr}${subAttr} data-block="${blockId}">${esc(value)}</span>`;
+}
+
+function renderBulletList(bullets, blockId, field) {
+  const items = (bullets || []).map((b, i) => `
+    <li>
+      ${ceField(b, field, blockId, { index: i })}
+      <button class="li-remove-btn" data-action="remove-item" data-block="${blockId}" data-field="${field}" data-index="${i}" title="Remove bullet" type="button">✕</button>
+    </li>`).join('');
+  return `<ul class="rb-bullets editable-list">${items}</ul>
+    <button class="add-item-btn" data-action="add-item" data-block="${blockId}" data-field="${field}" type="button">+ Add bullet</button>`;
+}
+
+function renderSkillTags(items, blockId, field) {
+  const tags = (items || []).map((s, i) => `
+    <span class="rb-skill-tag">
+      ${ceField(s, field, blockId, { index: i })}
+      <button class="tag-remove-btn" data-action="remove-item" data-block="${blockId}" data-field="${field}" data-index="${i}" title="Remove" type="button">✕</button>
+    </span>`).join('');
+  return `<div class="rb-skills-wrap">${tags}</div>
+    <button class="add-item-btn" data-action="add-item" data-block="${blockId}" data-field="${field}" type="button">+ Add skill</button>`;
+}
+
+function renderEntryList(items, blockId, field, cols) {
+  // cols: array of {key, cls} describing each editable column of the row
+  const rows = (items || []).map((it, i) => `
+    <div class="rb-entry-row">
+      ${cols.map(c => ceField(it[c.key] || '', field, blockId, { index: i, subfield: c.key, cls: c.cls })).join('')}
+      <button class="li-remove-btn" data-action="remove-item" data-block="${blockId}" data-field="${field}" data-index="${i}" title="Remove" type="button">✕</button>
+    </div>`).join('');
+  return `<div class="rb-entry-list">${rows}</div>
+    <button class="add-item-btn" data-action="add-item" data-block="${blockId}" data-field="${field}" data-item-type="object" type="button">+ Add</button>`;
+}
+
 function createDOMBlock(block) {
   const wrapper = document.createElement('div');
   wrapper.className = `resume-block block-${block.type}`;
   wrapper.dataset.id = block.id;
   if (Store.state.selectedBlockId === block.id) wrapper.classList.add('selected');
 
-  wrapper.addEventListener('click', (e) => {
-    e.stopPropagation();
-    Store.setSelectedBlock(block.id);
-  });
-
   let innerHTML = '';
   switch (block.type) {
     case 'section':
-      innerHTML = `<h2 class="rb-section-title">${esc(block.data.title)}</h2>`;
+      innerHTML = `<h2 class="rb-section-title">${ceField(block.data.title, 'title', block.id)}</h2>`;
+      break;
+    case 'summary':
+      innerHTML = `<p class="rb-summary-text">${ceField(block.data.text, 'text', block.id, { cls: 'ce-block' })}</p>`;
+      break;
+    case 'custom':
+      innerHTML = `
+        <h3 class="rb-custom-title">${ceField(block.data.title, 'title', block.id)}</h3>
+        <p class="rb-summary-text">${ceField(block.data.text, 'text', block.id, { cls: 'ce-block' })}</p>`;
       break;
     case 'experience':
       innerHTML = `
         <div class="rb-experience">
           <div class="rb-exp-row">
-            <span class="rb-company">${esc(block.data.company)}</span>
-            <span class="rb-dates">${esc(block.data.dates)}</span>
+            <span class="rb-company">${ceField(block.data.company, 'company', block.id)}</span>
+            <span class="rb-dates">${ceField(block.data.dates, 'dates', block.id)}</span>
           </div>
           <div class="rb-exp-row">
-            <span class="rb-role">${esc(block.data.role)}</span>
-            <span class="rb-loc">${esc(block.data.location)}</span>
+            <span class="rb-role">${ceField(block.data.role, 'role', block.id)}</span>
+            <span class="rb-loc">${ceField(block.data.location, 'location', block.id)}</span>
           </div>
-          <ul class="rb-bullets">
-            ${(block.data.bullets || []).map(b => `<li>${esc(b)}</li>`).join('')}
-          </ul>
+          ${renderBulletList(block.data.bullets, block.id, 'bullets')}
         </div>`;
       break;
     case 'education':
       innerHTML = `
         <div class="rb-education">
           <div class="rb-edu-row">
-            <span class="rb-edu-school">${esc(block.data.school)}</span>
-            <span class="rb-dates">${esc(block.data.year)}</span>
+            <span class="rb-edu-school">${ceField(block.data.school, 'school', block.id)}</span>
+            <span class="rb-dates">${ceField(block.data.year, 'year', block.id)}</span>
           </div>
           <div class="rb-edu-row">
-            <span class="rb-edu-degree">${esc(block.data.degree)}</span>
-            <span class="rb-loc">${esc(block.data.location)}</span>
+            <span class="rb-edu-degree">${ceField(block.data.degree, 'degree', block.id)}</span>
+            <span class="rb-loc">${ceField(block.data.location, 'location', block.id)}</span>
           </div>
-          <div class="rb-edu-gpa">${esc(block.data.gpa)}</div>
+          <div class="rb-edu-gpa">${ceField(block.data.gpa, 'gpa', block.id)}</div>
         </div>`;
+      break;
+    case 'projects':
+      innerHTML = `
+        <div class="rb-experience">
+          <div class="rb-exp-row">
+            <span class="rb-company">${ceField(block.data.name, 'name', block.id)}</span>
+            <span class="rb-dates">${ceField(block.data.dates, 'dates', block.id)}</span>
+          </div>
+          <div class="rb-exp-row"><span class="rb-role">${ceField(block.data.description, 'description', block.id)}</span></div>
+          ${renderBulletList(block.data.bullets, block.id, 'bullets')}
+        </div>`;
+      break;
+    case 'skills':
+      innerHTML = renderSkillTags(block.data.items, block.id, 'items');
+      break;
+    case 'certifications':
+      innerHTML = renderEntryList(block.data.items, block.id, 'items', [
+        { key: 'name', cls: 'ce-strong' }, { key: 'issuer', cls: 'ce-muted' }, { key: 'date', cls: 'ce-muted' }
+      ]);
+      break;
+    case 'languages':
+      innerHTML = renderEntryList(block.data.items, block.id, 'items', [
+        { key: 'name', cls: 'ce-strong' }, { key: 'level', cls: 'ce-muted' }
+      ]);
       break;
     default:
       break;
@@ -154,25 +225,84 @@ Store.on('blocks_changed', (blocks) => {
   renderSidebarList(blocks);
 });
 
+// Reflect block selection with a lightweight class toggle (no re-render,
+// so it never disturbs a field mid-edit).
+Store.on('selection_changed', (id) => {
+  document.querySelectorAll('.resume-block.selected, .sd-section-item.selected').forEach(n => n.classList.remove('selected'));
+  if (id) {
+    document.querySelectorAll(`[data-id="${id}"]`).forEach(n => n.classList.add('selected'));
+  }
+});
+
+// ── 3b. Canvas-level delegated events: field sync + list actions ─
+function handleFieldSync(e) {
+  const target = e.target;
+  if (!target.matches('[data-field]')) return;
+  const blockId = target.dataset.block;
+  const field = target.dataset.field;
+  const index = target.dataset.index !== undefined ? Number(target.dataset.index) : null;
+  const subfield = target.dataset.subfield || null;
+  Store.updateBlockData(blockId, field, target.textContent, index, subfield);
+}
+
+function handleTrackClick(e) {
+  const actionBtn = e.target.closest('[data-action]');
+  if (actionBtn) {
+    const blockId = actionBtn.dataset.block;
+    const field = actionBtn.dataset.field;
+    if (actionBtn.dataset.action === 'add-item') {
+      Store.addListItem(blockId, field, actionBtn.dataset.itemType === 'object' ? {} : '');
+    } else if (actionBtn.dataset.action === 'remove-item') {
+      Store.removeListItem(blockId, field, Number(actionBtn.dataset.index));
+    }
+    return;
+  }
+  const blockEl = e.target.closest('.resume-block');
+  if (blockEl) Store.setSelectedBlock(blockEl.dataset.id);
+}
+
+function initCanvasDelegation() {
+  [el.mainTrack, el.sideTrack].forEach(track => {
+    track.addEventListener('focusout', handleFieldSync);
+    track.addEventListener('click', handleTrackClick);
+  });
+}
+
 // ── 4. Sidebar Controller Component ──────────────────────────
 function renderSidebarList(blocks) {
   el.sidebarSectionsList.innerHTML = '';
-  
+  const twoCol = Store.state.design.layout === '2';
+
   blocks.forEach(block => {
     const item = document.createElement('div');
     item.className = 'sd-section-item';
     item.dataset.id = block.id;
+    if (Store.state.selectedBlockId === block.id) item.classList.add('selected');
     item.draggable = true;
-    
+
     let titleText = block.type.toUpperCase();
     if (block.type === 'section') titleText = `Heading: ${block.data.title}`;
-    if (block.type === 'experience') titleText = block.data.company || 'Job Position';
-    if (block.type === 'education') titleText = block.data.school || 'Academic Degree';
+    else if (block.type === 'experience') titleText = block.data.company || 'Experience';
+    else if (block.type === 'education') titleText = block.data.school || 'Education';
+    else if (block.type === 'projects') titleText = block.data.name || 'Project';
+    else if (block.type === 'summary') titleText = 'Summary';
+    else if (block.type === 'skills') titleText = 'Skills';
+    else if (block.type === 'certifications') titleText = 'Certifications';
+    else if (block.type === 'languages') titleText = 'Languages';
+    else if (block.type === 'custom') titleText = block.data.title || 'Custom Block';
+
+    const swapBtn = twoCol
+      ? `<button class="sd-icon-btn sd-swap-btn" data-action="swap" data-id="${block.id}" title="Move to ${block.col === 'side' ? 'main column' : 'sidebar'}" type="button">${block.col === 'side' ? '⇤' : '⇥'}</button>`
+      : '';
 
     item.innerHTML = `
       <div class="sd-item-header">
         <span class="sd-drag-handle">☰</span>
         <span class="sd-title-text">${esc(titleText)}</span>
+        <span class="sd-item-actions">
+          ${swapBtn}
+          <button class="sd-icon-btn sd-delete-btn" data-action="delete" data-id="${block.id}" title="Delete section" type="button">✕</button>
+        </span>
       </div>
     `;
     el.sidebarSectionsList.appendChild(item);
@@ -181,7 +311,51 @@ function renderSidebarList(blocks) {
   initSectionDragReorder();
 }
 
-// ── 4b. Drag-to-reorder for the sections list ─────────────────
+// ── 4b. Sidebar item selection + actions (delegated once) ─────
+function initSidebarActions() {
+  el.sidebarSectionsList.addEventListener('click', (e) => {
+    const actionBtn = e.target.closest('[data-action]');
+    if (actionBtn) {
+      const id = actionBtn.dataset.id;
+      if (actionBtn.dataset.action === 'delete') {
+        if (confirm('Remove this section from your résumé?')) Store.removeBlock(id);
+      } else if (actionBtn.dataset.action === 'swap') {
+        const block = Store.state.blocks.find(b => b.id === id);
+        if (block) Store.setBlockColumn(id, block.col === 'side' ? 'main' : 'side');
+      }
+      return;
+    }
+    const item = e.target.closest('.sd-section-item');
+    if (item) Store.setSelectedBlock(item.dataset.id);
+  });
+}
+
+// ── 4c. Add-section popover ────────────────────────────────────
+function initAddSectionMenu() {
+  el.addSectionMenu.innerHTML = BLOCK_LIBRARY.map(item =>
+    `<button class="add-section-item" data-type="${item.type}" type="button">${esc(item.label)}</button>`
+  ).join('');
+
+  el.btnAddSection.addEventListener('click', (e) => {
+    e.stopPropagation();
+    el.addSectionMenu.classList.toggle('hidden');
+  });
+
+  el.addSectionMenu.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-type]');
+    if (!btn) return;
+    Store.addBlock(btn.dataset.type, 'main');
+    el.addSectionMenu.classList.add('hidden');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!el.addSectionMenu.classList.contains('hidden') && !e.target.closest('.add-section-wrap')) {
+      el.addSectionMenu.classList.add('hidden');
+    }
+  });
+}
+
+// ── 4d. Drag-to-reorder for the sections list ─────────────────
 function initSectionDragReorder() {
   const items = Array.from(el.sidebarSectionsList.querySelectorAll('.sd-section-item'));
   let draggedId = null;
@@ -230,7 +404,7 @@ function initSectionDragReorder() {
 function initToolbar() {
   el.tabEditBtn.addEventListener('click', () => Store.setMode('edit'));
   el.tabCustomizeBtn.addEventListener('click', () => Store.setMode('customize'));
-  
+
   document.getElementById('btnDownloadPDF').addEventListener('click', () => alert('Generating dynamic vector PDF...'));
   document.getElementById('btnOpenPortfolio').addEventListener('click', () => alert('Serving instance onto john.proves.work'));
 }
@@ -252,21 +426,78 @@ function initFormSectionToggles() {
   });
 }
 
-// ── 7. Customize panel: layout / alignment option pills ───────
-function initCustomizePanel() {
-  document.querySelectorAll('.option-pill-row').forEach(row => {
-    const attr = row.dataset.target === 'layout' ? 'data-layout'
-      : row.dataset.target === 'headerAlign' ? 'data-header-align'
-      : 'data-date-align';
+// ── 7. Customize panel: templates, layout, color, font, text ──
+function populateFontSelects() {
+  const opts = FONT_OPTIONS.map(f => `<option value="${f.id}">${esc(f.label)}</option>`).join('');
+  el.selHeadingFont.innerHTML = opts;
+  el.selBodyFont.innerHTML = opts;
+}
 
-    row.querySelectorAll('.option-pill').forEach(pill => {
-      pill.addEventListener('click', () => {
-        row.querySelectorAll('.option-pill').forEach(p => p.classList.remove('active'));
-        pill.classList.add('active');
-        el.resumePaper.setAttribute(attr, pill.dataset.value);
-      });
+function applyDesign(design) {
+  el.resumePaper.setAttribute('data-template', Store.state.template);
+  el.resumePaper.setAttribute('data-layout', design.layout);
+  el.resumePaper.setAttribute('data-header-align', design.headerAlign);
+  el.resumePaper.setAttribute('data-date-align', design.dateAlign);
+  el.resumePaper.setAttribute('data-title-style', design.titleStyle);
+  el.resumePaper.style.setProperty('--rp-accent', design.accent);
+  el.resumePaper.style.setProperty('--rp-heading-font', FONT_STACKS[design.headingFont] || FONT_STACKS.sans);
+  el.resumePaper.style.setProperty('--rp-body-font', FONT_STACKS[design.bodyFont] || FONT_STACKS.sans);
+  el.resumePaper.style.setProperty('--rp-font-scale', Number(design.fontSize) / 100);
+  el.resumePaper.style.setProperty('--rp-line-height', design.lineHeight === 'compact' ? '1.25' : design.lineHeight === 'relaxed' ? '1.7' : '1.45');
+  syncCustomizeControls(design);
+  // A layout switch changes whether the sidebar swap icon is shown.
+  renderSidebarList(Store.state.blocks);
+}
+
+function syncCustomizeControls(design) {
+  document.querySelectorAll('.option-pill-row[data-target]').forEach(row => {
+    const key = row.dataset.target;
+    row.querySelectorAll('.option-pill').forEach(p => {
+      p.classList.toggle('active', String(p.dataset.value) === String(design[key]));
     });
   });
+
+  const knownSwatches = Array.from(document.querySelectorAll('#optAccentColor .color-swatch[data-value]'));
+  let matched = false;
+  knownSwatches.forEach(sw => {
+    const isMatch = sw.dataset.value.toLowerCase() === design.accent.toLowerCase();
+    sw.classList.toggle('active', isMatch);
+    if (isMatch) matched = true;
+  });
+  el.accentSwatchCustom.classList.toggle('active', !matched);
+  el.inAccentCustom.value = design.accent;
+
+  el.selHeadingFont.value = design.headingFont;
+  el.selBodyFont.value = design.bodyFont;
+
+  document.querySelectorAll('.template-card[data-template]').forEach(card => {
+    card.classList.toggle('active', card.dataset.template === Store.state.template);
+  });
+}
+
+function initCustomizePanel() {
+  populateFontSelects();
+
+  document.querySelectorAll('.option-pill-row[data-target]').forEach(row => {
+    const key = row.dataset.target;
+    row.querySelectorAll('.option-pill').forEach(pill => {
+      pill.addEventListener('click', () => Store.setDesign(key, pill.dataset.value));
+    });
+  });
+
+  document.querySelectorAll('#optAccentColor .color-swatch[data-value]').forEach(sw => {
+    sw.addEventListener('click', () => Store.setDesign('accent', sw.dataset.value));
+  });
+  el.inAccentCustom.addEventListener('input', (e) => Store.setDesign('accent', e.target.value));
+
+  el.selHeadingFont.addEventListener('change', (e) => Store.setDesign('headingFont', e.target.value));
+  el.selBodyFont.addEventListener('change', (e) => Store.setDesign('bodyFont', e.target.value));
+
+  document.querySelectorAll('.template-card[data-template]').forEach(card => {
+    card.addEventListener('click', () => Store.setTemplate(card.dataset.template));
+  });
+
+  Store.on('design_changed', applyDesign);
 }
 
 // ── 8. Zoom controls ────────────────────────────────────────
@@ -312,7 +543,7 @@ function initZoomControls() {
   applyZoom();
 }
 
-// ── 6. Sidebar Resizer (25% – 50% of workspace width) ────────
+// ── 9. Sidebar Resizer (25% – 50% of workspace width) ────────
 function initSidebarResizer() {
   const MIN_PCT = 25;
   const MAX_PCT = 50;
@@ -353,11 +584,15 @@ function init() {
   initFormSectionToggles();
   initCustomizePanel();
   initZoomControls();
-  
+  initCanvasDelegation();
+  initSidebarActions();
+  initAddSectionMenu();
+
   // Set initial trigger events
   Store.emit('profile_changed', Store.state.profile);
   Store.emit('blocks_changed', Store.state.blocks);
   Store.emit('mode_changed', Store.state.mode);
+  Store.emit('design_changed', Store.state.design);
 }
 
 document.addEventListener('DOMContentLoaded', init);
