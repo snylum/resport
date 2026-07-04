@@ -1,33 +1,53 @@
 import { Store, esc, uid, TEMPLATES, FONT_STACKS, FONT_OPTIONS, BLOCK_LIBRARY } from './store.js';
 
-// DOM Elements Cache
+// ── DOM Elements Cache ───────────────────────────────────────
 const el = {
+  tabPortfolioBtn: document.getElementById('tabPortfolioBtn'),
+  tabResumeBtn: document.getElementById('tabResumeBtn'),
   tabEditBtn: document.getElementById('tabEditBtn'),
   tabCustomizeBtn: document.getElementById('tabCustomizeBtn'),
-  resumeTitle: document.getElementById('resumeTitle'),
+  docTitle: document.getElementById('docTitle'),
+  btnResetResume: document.getElementById('btnResetResume'),
+
   inJobTitle: document.getElementById('inJobTitle'),
   inFirstName: document.getElementById('inFirstName'),
   inLastName: document.getElementById('inLastName'),
   inEmail: document.getElementById('inEmail'),
   inPhone: document.getElementById('inPhone'),
   inAddress: document.getElementById('inAddress'),
+  inTagline: document.getElementById('inTagline'),
   inPhoto: document.getElementById('inPhoto'),
+  photoSidebarPreview: document.getElementById('photoSidebarPreview'),
+
+  // Resume/PDF canvas
+  resumePaper: document.getElementById('resumePaper'),
   canvasName: document.getElementById('canvasName'),
   canvasJobTitle: document.getElementById('canvasJobTitle'),
   canvasContactLine: document.getElementById('canvasContactLine'),
-  photoSidebarPreview: document.getElementById('photoSidebarPreview'),
   canvasPhotoWrap: document.getElementById('canvasPhotoWrap'),
   canvasPhotoImg: document.getElementById('canvasPhotoImg'),
   mainTrack: document.getElementById('mainTrack'),
   sideTrack: document.getElementById('sideTrack'),
+
+  // Portfolio canvas
+  portfolioSite: document.getElementById('portfolioSite'),
+  pfName: document.getElementById('pfName'),
+  pfJobTitle: document.getElementById('pfJobTitle'),
+  pfTagline: document.getElementById('pfTagline'),
+  pfContactLine: document.getElementById('pfContactLine'),
+  pfPhotoWrap: document.getElementById('pfPhotoWrap'),
+  pfPhotoImg: document.getElementById('pfPhotoImg'),
+  pfSections: document.getElementById('pfSections'),
+  pfFooterName: document.getElementById('pfFooterName'),
+
   sidebarSectionsList: document.getElementById('sidebarSectionsList'),
   editorSidebar: document.getElementById('editorSidebar'),
   sidebarResizer: document.getElementById('sidebarResizer'),
   editorWorkspace: document.querySelector('.editor-workspace'),
   canvasWrap: document.getElementById('canvasWrap'),
+  canvasZoomTarget: document.getElementById('canvasZoomTarget'),
   panelEdit: document.getElementById('panelEdit'),
   panelCustomize: document.getElementById('panelCustomize'),
-  resumePaper: document.getElementById('resumePaper'),
   btnZoomIn: document.getElementById('btnZoomIn'),
   btnZoomOut: document.getElementById('btnZoomOut'),
   zoomLevelDisplay: document.getElementById('zoomLevelDisplay'),
@@ -37,13 +57,21 @@ const el = {
   accentSwatchCustom: document.getElementById('accentSwatchCustom'),
   selHeadingFont: document.getElementById('selHeadingFont'),
   selBodyFont: document.getElementById('selBodyFont'),
-  templateGallery: document.getElementById('templateGallery')
+  templateGallery: document.getElementById('templateGallery'),
+
+  // Modal
+  modalOverlay: document.getElementById('modalOverlay'),
+  modalContent: document.getElementById('modalContent'),
+  modalCloseBtn: document.getElementById('modalCloseBtn')
 };
 
-// ── 1. Dual-Binding Inputs Sync ──────────────────────────────
+// ── 1. Sidebar input <-> active-document profile sync ─────────
+// These listeners never change: they always write into whichever
+// document (portfolio or resume) is currently active. Displaying
+// the *right* values when the active document switches is handled
+// separately by refreshInputsFromActive().
 function initInputListeners() {
   const syncField = (inputEl, fieldName) => {
-    inputEl.value = Store.state.profile[fieldName] || '';
     inputEl.addEventListener('input', (e) => {
       Store.updateProfile(fieldName, e.target.value);
     });
@@ -55,43 +83,65 @@ function initInputListeners() {
   syncField(el.inEmail, 'email');
   syncField(el.inPhone, 'phone');
   syncField(el.inAddress, 'address');
-
-  el.resumeTitle.addEventListener('input', (e) => {
-    Store.updateTitle(e.target.textContent);
-  });
+  syncField(el.inTagline, 'tagline');
 
   el.inPhoto.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      Store.updateProfile('photo', ev.target.result);
-    };
+    reader.onload = (ev) => Store.updateProfile('photo', ev.target.result);
     reader.readAsDataURL(file);
   });
 }
 
-// ── 2. Targeted Repaint Listeners (No innerHTML destruction) ──
-Store.on('profile_changed', (profile) => {
-  el.canvasName.textContent = `${profile.firstName} ${profile.lastName}`.trim() || 'Untitled Profile';
-  el.canvasJobTitle.textContent = profile.jobTitle;
+function refreshInputsFromActive() {
+  const p = Store.active().profile;
+  el.inJobTitle.value = p.jobTitle || '';
+  el.inFirstName.value = p.firstName || '';
+  el.inLastName.value = p.lastName || '';
+  el.inEmail.value = p.email || '';
+  el.inPhone.value = p.phone || '';
+  el.inAddress.value = p.address || '';
+  el.inTagline.value = p.tagline || '';
+  el.photoSidebarPreview.style.backgroundImage = p.photo ? `url(${p.photo})` : '';
+}
 
-  // Format dynamic line safely
-  const parts = [profile.email, profile.phone, profile.address].filter(Boolean);
-  el.canvasContactLine.textContent = parts.join('   •   ');
+// ── 2. Header / hero repaint (targeted, no innerHTML destruction) ─
+function refreshHeader() {
+  const profile = Store.active().profile;
+  const fullName = `${profile.firstName} ${profile.lastName}`.trim() || 'Untitled Profile';
+  const contactLine = [profile.email, profile.phone, profile.address].filter(Boolean).join('   •   ');
 
-  if (profile.photo) {
-    el.photoSidebarPreview.style.backgroundImage = `url(${profile.photo})`;
-    el.canvasPhotoImg.src = profile.photo;
-    el.canvasPhotoWrap.classList.remove('hidden');
+  if (Store.state.viewMode === 'resume') {
+    el.canvasName.textContent = fullName;
+    el.canvasJobTitle.textContent = profile.jobTitle;
+    el.canvasContactLine.textContent = contactLine;
+    if (profile.photo) {
+      el.canvasPhotoImg.src = profile.photo;
+      el.canvasPhotoWrap.classList.remove('hidden');
+    } else {
+      el.canvasPhotoWrap.classList.add('hidden');
+    }
   } else {
-    el.photoSidebarPreview.style.backgroundImage = '';
-    el.canvasPhotoWrap.classList.add('hidden');
+    el.pfName.textContent = fullName;
+    el.pfJobTitle.textContent = profile.jobTitle;
+    el.pfTagline.textContent = profile.tagline || '';
+    el.pfTagline.style.display = profile.tagline ? '' : 'none';
+    el.pfContactLine.textContent = contactLine;
+    el.pfFooterName.textContent = fullName;
+    if (profile.photo) {
+      el.pfPhotoImg.src = profile.photo;
+      el.pfPhotoWrap.classList.remove('hidden');
+    } else {
+      el.pfPhotoWrap.classList.add('hidden');
+    }
   }
-});
+  el.photoSidebarPreview.style.backgroundImage = profile.photo ? `url(${profile.photo})` : '';
+}
 
-// ── 3. Component Rendering via DOM Nodes ────────────────────
-// Small helper: a contenteditable text span bound back to the store.
+Store.on('profile_changed', refreshHeader);
+
+// ── 3. Shared field-rendering helpers (used by BOTH canvases) ──
 function ceField(value, field, blockId, opts = {}) {
   const { index = null, subfield = null, cls = '' } = opts;
   const idxAttr = index !== null ? ` data-index="${index}"` : '';
@@ -120,7 +170,6 @@ function renderSkillTags(items, blockId, field) {
 }
 
 function renderEntryList(items, blockId, field, cols) {
-  // cols: array of {key, cls} describing each editable column of the row
   const rows = (items || []).map((it, i) => `
     <div class="rb-entry-row">
       ${cols.map(c => ceField(it[c.key] || '', field, blockId, { index: i, subfield: c.key, cls: c.cls })).join('')}
@@ -130,7 +179,19 @@ function renderEntryList(items, blockId, field, cols) {
     <button class="add-item-btn" data-action="add-item" data-block="${blockId}" data-field="${field}" data-item-type="object" type="button">+ Add</button>`;
 }
 
-function createDOMBlock(block) {
+function verifyControlHTML(block) {
+  const v = block.data.verify || { type: 'none' };
+  if (v.type !== 'none') {
+    const labelText = v.label || (v.type === 'photo' ? 'View proof' : 'View link');
+    return `
+      <button class="pf-verify-badge" data-action="view-verify" data-block="${block.id}" type="button">✓ Verified <span class="pf-verify-label">${esc(labelText)}</span></button>
+      <button class="pf-verify-edit" data-action="edit-verify" data-block="${block.id}" title="Edit verification" type="button">✎</button>`;
+  }
+  return `<button class="pf-verify-add" data-action="edit-verify" data-block="${block.id}" type="button">+ Add proof</button>`;
+}
+
+// ── 3a. RESUME / PDF block renderer (paper-style, unchanged look) ─
+function createResumeBlock(block) {
   const wrapper = document.createElement('div');
   wrapper.className = `resume-block block-${block.type}`;
   wrapper.dataset.id = block.id;
@@ -209,32 +270,118 @@ function createDOMBlock(block) {
   return wrapper;
 }
 
-// Render loop handles appending node elements directly
-Store.on('blocks_changed', (blocks) => {
-  el.mainTrack.innerHTML = '';
-  el.sideTrack.innerHTML = '';
+// ── 3b. PORTFOLIO SITE block renderer (cards + verification) ─────
+function createPortfolioBlock(block) {
+  const wrapper = document.createElement('div');
+  wrapper.dataset.id = block.id;
+  if (Store.state.selectedBlockId === block.id) wrapper.classList.add('selected');
 
-  blocks.forEach(block => {
-    const blockEl = createDOMBlock(block);
-    if (block.col === 'side') {
-      el.sideTrack.appendChild(blockEl);
-    } else {
-      el.mainTrack.appendChild(blockEl);
-    }
-  });
+  switch (block.type) {
+    case 'section':
+      wrapper.className = 'pf-block-section-title';
+      wrapper.innerHTML = ceField(block.data.title, 'title', block.id);
+      break;
+    case 'summary':
+      wrapper.className = 'pf-card pf-summary-card';
+      wrapper.innerHTML = ceField(block.data.text, 'text', block.id, { cls: 'ce-block' });
+      break;
+    case 'custom':
+      wrapper.className = 'pf-card';
+      wrapper.innerHTML = `
+        <h3 class="pf-exp-company">${ceField(block.data.title, 'title', block.id)}</h3>
+        <p>${ceField(block.data.text, 'text', block.id, { cls: 'ce-block' })}</p>`;
+      break;
+    case 'experience':
+      wrapper.className = 'pf-card';
+      wrapper.innerHTML = `
+        <div class="pf-exp-top-row">
+          <span class="pf-exp-company">${ceField(block.data.company, 'company', block.id)}</span>
+          <span class="pf-exp-dates">${ceField(block.data.dates, 'dates', block.id)}</span>
+        </div>
+        <div class="pf-exp-sub-row">
+          <span>${ceField(block.data.role, 'role', block.id)}</span>
+          <span>${ceField(block.data.location, 'location', block.id)}</span>
+        </div>
+        ${renderBulletList(block.data.bullets, block.id, 'bullets')}
+        <div class="pf-verify">${verifyControlHTML(block)}</div>`;
+      break;
+    case 'education':
+      wrapper.className = 'pf-card pf-edu-card';
+      wrapper.innerHTML = `
+        <div class="pf-exp-top-row">
+          <span class="pf-exp-company">${ceField(block.data.school, 'school', block.id)}</span>
+          <span class="pf-exp-dates">${ceField(block.data.year, 'year', block.id)}</span>
+        </div>
+        <div class="pf-exp-sub-row">
+          <span>${ceField(block.data.degree, 'degree', block.id)}</span>
+          <span>${ceField(block.data.location, 'location', block.id)}</span>
+        </div>
+        <div class="pf-edu-gpa">${ceField(block.data.gpa, 'gpa', block.id)}</div>`;
+      break;
+    case 'projects':
+      wrapper.className = 'pf-card';
+      wrapper.innerHTML = `
+        <div class="pf-exp-top-row">
+          <span class="pf-exp-company">${ceField(block.data.name, 'name', block.id)}</span>
+          <span class="pf-exp-dates">${ceField(block.data.dates, 'dates', block.id)}</span>
+        </div>
+        <div class="pf-exp-sub-row"><span>${ceField(block.data.description, 'description', block.id)}</span></div>
+        ${renderBulletList(block.data.bullets, block.id, 'bullets')}`;
+      break;
+    case 'skills':
+      wrapper.className = 'pf-card';
+      wrapper.innerHTML = renderSkillTags(block.data.items, block.id, 'items');
+      break;
+    case 'certifications':
+      wrapper.className = 'pf-card';
+      wrapper.innerHTML = renderEntryList(block.data.items, block.id, 'items', [
+        { key: 'name', cls: 'ce-strong' }, { key: 'issuer', cls: 'ce-muted' }, { key: 'date', cls: 'ce-muted' }
+      ]);
+      break;
+    case 'languages':
+      wrapper.className = 'pf-card';
+      wrapper.innerHTML = renderEntryList(block.data.items, block.id, 'items', [
+        { key: 'name', cls: 'ce-strong' }, { key: 'level', cls: 'ce-muted' }
+      ]);
+      break;
+    default:
+      break;
+  }
+  return wrapper;
+}
+
+// ── 3c. Render whichever canvas matches the active document ───
+function renderActiveCanvas() {
+  const blocks = Store.active().blocks;
+
+  if (Store.state.viewMode === 'resume') {
+    el.mainTrack.innerHTML = '';
+    el.sideTrack.innerHTML = '';
+    blocks.forEach(block => {
+      const blockEl = createResumeBlock(block);
+      (block.col === 'side' ? el.sideTrack : el.mainTrack).appendChild(blockEl);
+    });
+  } else {
+    el.pfSections.innerHTML = '';
+    blocks.forEach(block => el.pfSections.appendChild(createPortfolioBlock(block)));
+  }
+
   renderSidebarList(blocks);
-});
+}
+
+Store.on('blocks_changed', renderActiveCanvas);
 
 // Reflect block selection with a lightweight class toggle (no re-render,
 // so it never disturbs a field mid-edit).
 Store.on('selection_changed', (id) => {
-  document.querySelectorAll('.resume-block.selected, .sd-section-item.selected').forEach(n => n.classList.remove('selected'));
+  document.querySelectorAll('.resume-block.selected, .pf-card.selected, .pf-block-section-title.selected, .sd-section-item.selected')
+    .forEach(n => n.classList.remove('selected'));
   if (id) {
     document.querySelectorAll(`[data-id="${id}"]`).forEach(n => n.classList.add('selected'));
   }
 });
 
-// ── 3b. Canvas-level delegated events: field sync + list actions ─
+// ── 3d. Canvas-level delegated events: field sync + list + verify ─
 function handleFieldSync(e) {
   const target = e.target;
   if (!target.matches('[data-field]')) return;
@@ -250,28 +397,192 @@ function handleTrackClick(e) {
   if (actionBtn) {
     const blockId = actionBtn.dataset.block;
     const field = actionBtn.dataset.field;
-    if (actionBtn.dataset.action === 'add-item') {
+    const action = actionBtn.dataset.action;
+    if (action === 'add-item') {
       Store.addListItem(blockId, field, actionBtn.dataset.itemType === 'object' ? {} : '');
-    } else if (actionBtn.dataset.action === 'remove-item') {
+    } else if (action === 'remove-item') {
       Store.removeListItem(blockId, field, Number(actionBtn.dataset.index));
+    } else if (action === 'view-verify') {
+      openVerifyViewModal(blockId);
+    } else if (action === 'edit-verify') {
+      openVerifyEditModal(blockId);
     }
     return;
   }
-  const blockEl = e.target.closest('.resume-block');
+  const blockEl = e.target.closest('.resume-block, .pf-card, .pf-block-section-title');
   if (blockEl) Store.setSelectedBlock(blockEl.dataset.id);
 }
 
 function initCanvasDelegation() {
-  [el.mainTrack, el.sideTrack].forEach(track => {
+  [el.mainTrack, el.sideTrack, el.pfSections].forEach(track => {
     track.addEventListener('focusout', handleFieldSync);
     track.addEventListener('click', handleTrackClick);
   });
 }
 
-// ── 4. Sidebar Controller Component ──────────────────────────
+// ── 4. Generic modal system (verification popups + toasts) ────
+// A real, custom-styled centered lightbox — never a native
+// alert()/confirm()/prompt() — used for viewing & editing proof.
+function openModal(html, onOpen) {
+  el.modalContent.innerHTML = html;
+  el.modalOverlay.classList.remove('hidden');
+  document.addEventListener('keydown', handleModalEscape);
+  if (typeof onOpen === 'function') onOpen(el.modalContent);
+}
+
+function closeModal() {
+  el.modalOverlay.classList.add('hidden');
+  el.modalContent.innerHTML = '';
+  document.removeEventListener('keydown', handleModalEscape);
+}
+
+function handleModalEscape(e) {
+  if (e.key === 'Escape') closeModal();
+}
+
+function initModal() {
+  el.modalCloseBtn.addEventListener('click', closeModal);
+  el.modalOverlay.addEventListener('click', (e) => {
+    if (e.target === el.modalOverlay) closeModal();
+  });
+}
+
+function openInfoModal(title, message) {
+  openModal(`
+    <h3 class="modal-title" id="modalTitle">${esc(title)}</h3>
+    <p class="modal-sub">${esc(message)}</p>
+    <div class="modal-actions"><button class="btn btn-secondary btn-sm" id="infoOkBtn" type="button">Got it</button></div>
+  `, (root) => root.querySelector('#infoOkBtn').addEventListener('click', closeModal));
+}
+
+// ── 4a. Verification: view proof ──────────────────────────────
+function openVerifyViewModal(blockId) {
+  const block = Store.active().blocks.find(b => b.id === blockId);
+  if (!block) return;
+  const v = block.data.verify || { type: 'none' };
+
+  let body;
+  if (v.type === 'photo' && v.photo) {
+    body = `<div class="verify-modal-body">
+      <img src="${v.photo}" alt="Verification proof" class="verify-modal-img" />
+      ${v.label ? `<p class="verify-modal-caption">${esc(v.label)}</p>` : ''}
+    </div>`;
+  } else if (v.type === 'link' && v.link) {
+    const safeHref = /^https?:\/\//i.test(v.link) ? v.link : `https://${v.link}`;
+    body = `<div class="verify-modal-body verify-modal-link">
+      <div class="verify-link-icon">🔗</div>
+      <p class="verify-modal-caption">${esc(v.label || 'Verification link')}</p>
+      <a class="btn btn-secondary btn-sm" href="${esc(safeHref)}" target="_blank" rel="noopener noreferrer">Visit link ↗</a>
+    </div>`;
+  } else {
+    body = `<p class="verify-empty">No proof attached yet.</p>`;
+  }
+
+  openModal(`<h3 class="modal-title" id="modalTitle">✓ Verified experience</h3>${body}`);
+}
+
+// ── 4b. Verification: add / edit / remove proof ────────────────
+function openVerifyEditModal(blockId) {
+  const block = Store.active().blocks.find(b => b.id === blockId);
+  if (!block) return;
+  const v = block.data.verify || { type: 'none', photo: null, link: '', label: '' };
+
+  let currentType = v.type === 'none' ? 'photo' : v.type;
+  let pendingPhoto = v.photo || null;
+
+  const html = `
+    <h3 class="modal-title" id="modalTitle">Verify this experience</h3>
+    <p class="modal-sub">Attach a photo (certificate, badge, ID) or a link (LinkedIn post, reference, article) so visitors can confirm this role really happened.</p>
+    <div class="verify-type-row">
+      <button class="option-pill ${currentType === 'photo' ? 'active' : ''}" data-verify-type="photo" type="button">📷 Photo</button>
+      <button class="option-pill ${currentType === 'link' ? 'active' : ''}" data-verify-type="link" type="button">🔗 Link</button>
+    </div>
+    <div class="verify-edit-fields">
+      <div class="verify-field-photo field-box ${currentType === 'photo' ? '' : 'hidden'}">
+        <span>Photo</span>
+        <div class="photo-input-row">
+          <div class="photo-preview-placeholder" id="verifyPhotoPreview" style="${pendingPhoto ? `background-image:url(${pendingPhoto})` : ''}"></div>
+          <label class="btn btn-ghost btn-sm btn-file">Upload Image <input type="file" id="verifyPhotoInput" accept="image/*" style="display:none;" /></label>
+        </div>
+      </div>
+      <div class="verify-field-link field-box ${currentType === 'link' ? '' : 'hidden'}">
+        <span>Link URL</span>
+        <input type="url" id="verifyLinkInput" placeholder="https://..." value="${esc(v.link || '')}" />
+      </div>
+      <div class="field-box">
+        <span>Caption / label</span>
+        <input type="text" id="verifyLabelInput" placeholder="e.g. Certificate of Employment" value="${esc(v.label || '')}" />
+      </div>
+      <p class="verify-warn hidden" id="verifyWarn"></p>
+    </div>
+    <div class="modal-actions">
+      ${v.type !== 'none' ? `<button class="btn btn-ghost btn-sm" id="verifyRemoveBtn" type="button">Remove proof</button>` : ''}
+      <button class="btn btn-secondary btn-sm" id="verifySaveBtn" type="button">Save</button>
+    </div>
+  `;
+
+  openModal(html, (root) => {
+    const photoField = root.querySelector('.verify-field-photo');
+    const linkField = root.querySelector('.verify-field-link');
+    const warn = root.querySelector('#verifyWarn');
+
+    root.querySelectorAll('[data-verify-type]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentType = btn.dataset.verifyType;
+        root.querySelectorAll('[data-verify-type]').forEach(b => b.classList.toggle('active', b === btn));
+        photoField.classList.toggle('hidden', currentType !== 'photo');
+        linkField.classList.toggle('hidden', currentType !== 'link');
+        warn.classList.add('hidden');
+      });
+    });
+
+    root.querySelector('#verifyPhotoInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        pendingPhoto = ev.target.result;
+        root.querySelector('#verifyPhotoPreview').style.backgroundImage = `url(${pendingPhoto})`;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    const removeBtn = root.querySelector('#verifyRemoveBtn');
+    if (removeBtn) {
+      removeBtn.addEventListener('click', () => {
+        Store.clearVerify(blockId);
+        closeModal();
+      });
+    }
+
+    root.querySelector('#verifySaveBtn').addEventListener('click', () => {
+      const link = root.querySelector('#verifyLinkInput').value.trim();
+      const label = root.querySelector('#verifyLabelInput').value.trim();
+
+      if (currentType === 'photo' && !pendingPhoto) {
+        warn.textContent = 'Upload a photo first, or switch to Link.';
+        warn.classList.remove('hidden');
+        return;
+      }
+      if (currentType === 'link' && !link) {
+        warn.textContent = 'Enter a link first, or switch to Photo.';
+        warn.classList.remove('hidden');
+        return;
+      }
+
+      Store.updateVerify(blockId, 'type', currentType);
+      if (currentType === 'photo') Store.updateVerify(blockId, 'photo', pendingPhoto);
+      else Store.updateVerify(blockId, 'link', link);
+      Store.updateVerify(blockId, 'label', label);
+      closeModal();
+    });
+  });
+}
+
+// ── 5. Sections list (sidebar) ─────────────────────────────────
 function renderSidebarList(blocks) {
   el.sidebarSectionsList.innerHTML = '';
-  const twoCol = Store.state.design.layout === '2';
+  const twoCol = Store.state.viewMode === 'resume' && Store.active().design.layout === '2';
 
   blocks.forEach(block => {
     const item = document.createElement('div');
@@ -291,6 +602,9 @@ function renderSidebarList(blocks) {
     else if (block.type === 'languages') titleText = 'Languages';
     else if (block.type === 'custom') titleText = block.data.title || 'Custom Block';
 
+    const verifyBadge = (block.type === 'experience' && block.data.verify && block.data.verify.type !== 'none')
+      ? `<span class="sd-verify-dot" title="Has verification proof">✓</span>` : '';
+
     const swapBtn = twoCol
       ? `<button class="sd-icon-btn sd-swap-btn" data-action="swap" data-id="${block.id}" title="Move to ${block.col === 'side' ? 'main column' : 'sidebar'}" type="button">${block.col === 'side' ? '⇤' : '⇥'}</button>`
       : '';
@@ -298,7 +612,7 @@ function renderSidebarList(blocks) {
     item.innerHTML = `
       <div class="sd-item-header">
         <span class="sd-drag-handle">☰</span>
-        <span class="sd-title-text">${esc(titleText)}</span>
+        <span class="sd-title-text">${esc(titleText)} ${verifyBadge}</span>
         <span class="sd-item-actions">
           ${swapBtn}
           <button class="sd-icon-btn sd-delete-btn" data-action="delete" data-id="${block.id}" title="Delete section" type="button">✕</button>
@@ -311,16 +625,15 @@ function renderSidebarList(blocks) {
   initSectionDragReorder();
 }
 
-// ── 4b. Sidebar item selection + actions (delegated once) ─────
 function initSidebarActions() {
   el.sidebarSectionsList.addEventListener('click', (e) => {
     const actionBtn = e.target.closest('[data-action]');
     if (actionBtn) {
       const id = actionBtn.dataset.id;
       if (actionBtn.dataset.action === 'delete') {
-        if (confirm('Remove this section from your résumé?')) Store.removeBlock(id);
+        if (confirm('Remove this section?')) Store.removeBlock(id);
       } else if (actionBtn.dataset.action === 'swap') {
-        const block = Store.state.blocks.find(b => b.id === id);
+        const block = Store.active().blocks.find(b => b.id === id);
         if (block) Store.setBlockColumn(id, block.col === 'side' ? 'main' : 'side');
       }
       return;
@@ -330,7 +643,6 @@ function initSidebarActions() {
   });
 }
 
-// ── 4c. Add-section popover ────────────────────────────────────
 function initAddSectionMenu() {
   el.addSectionMenu.innerHTML = BLOCK_LIBRARY.map(item =>
     `<button class="add-section-item" data-type="${item.type}" type="button">${esc(item.label)}</button>`
@@ -355,7 +667,6 @@ function initAddSectionMenu() {
   });
 }
 
-// ── 4d. Drag-to-reorder for the sections list ─────────────────
 function initSectionDragReorder() {
   const items = Array.from(el.sidebarSectionsList.querySelectorAll('.sd-section-item'));
   let draggedId = null;
@@ -388,7 +699,7 @@ function initSectionDragReorder() {
       const targetId = item.dataset.id;
       if (!draggedId || draggedId === targetId) return;
 
-      const blocks = [...Store.state.blocks];
+      const blocks = [...Store.active().blocks];
       const fromIndex = blocks.findIndex(b => b.id === draggedId);
       const toIndex = blocks.findIndex(b => b.id === targetId);
       if (fromIndex === -1 || toIndex === -1) return;
@@ -400,16 +711,66 @@ function initSectionDragReorder() {
   });
 }
 
-// ── 5. Toolbar Actions Initialization ────────────────────────
+// ── 6. Toolbar: view-mode switch, panel switch, doc title, actions ─
+function refreshDocTitle() {
+  el.docTitle.textContent = Store.state.viewMode === 'resume'
+    ? Store.state.resume.resumeTitle
+    : Store.state.portfolio.siteTitle;
+}
+
+function refreshToolbarActiveStates() {
+  el.tabPortfolioBtn.classList.toggle('active', Store.state.viewMode === 'portfolio');
+  el.tabResumeBtn.classList.toggle('active', Store.state.viewMode === 'resume');
+}
+
 function initToolbar() {
+  el.tabPortfolioBtn.addEventListener('click', () => Store.setViewMode('portfolio'));
+  el.tabResumeBtn.addEventListener('click', () => Store.setViewMode('resume'));
   el.tabEditBtn.addEventListener('click', () => Store.setMode('edit'));
   el.tabCustomizeBtn.addEventListener('click', () => Store.setMode('customize'));
 
-  document.getElementById('btnDownloadPDF').addEventListener('click', () => alert('Generating dynamic vector PDF...'));
-  document.getElementById('btnOpenPortfolio').addEventListener('click', () => alert('Serving instance onto john.proves.work'));
+  el.docTitle.addEventListener('input', (e) => Store.updateTitle(e.target.textContent));
+
+  document.getElementById('btnDownloadPDF').addEventListener('click', () => {
+    openInfoModal('Generating your PDF', 'Rendering this résumé as a print-ready, ATS-safe PDF. This only affects this résumé copy — your live portfolio is untouched.');
+  });
+
+  document.getElementById('btnPublishShowcase').addEventListener('click', () => {
+    openInfoModal('Publishing your portfolio', 'Your portfolio is going live at your proves.work URL, verification badges and all.');
+  });
+
+  el.btnResetResume.addEventListener('click', () => {
+    if (confirm('Reset this résumé to match your current portfolio content? Any résumé-only edits (wording, template, styling made here) will be lost. Your portfolio is never affected.')) {
+      Store.resetResumeToPortfolio();
+      openInfoModal('Résumé reset', 'This résumé now matches your portfolio content again. Feel free to re-apply a template and tweak it for a specific job.');
+    }
+  });
 }
 
-// ── 5b. Edit / Customize panel switching ──────────────────────
+// View/document switch: swap canvases, re-hydrate every panel from
+// whichever document just became active.
+Store.on('viewmode_changed', (vm) => {
+  document.body.dataset.viewmode = vm;
+  refreshToolbarActiveStates();
+  refreshDocTitle();
+  refreshInputsFromActive();
+  refreshHeader();
+  renderActiveCanvas();
+  applyActiveDesign();
+});
+
+Store.on('resume_reset', () => {
+  if (Store.state.viewMode !== 'resume') return;
+  refreshDocTitle();
+  refreshInputsFromActive();
+  refreshHeader();
+  renderActiveCanvas();
+  applyActiveDesign();
+});
+
+Store.on('title_changed', refreshDocTitle);
+
+// ── 6b. Edit / Customize panel switching ──────────────────────
 Store.on('mode_changed', (mode) => {
   el.tabEditBtn.classList.toggle('active', mode === 'edit');
   el.tabCustomizeBtn.classList.toggle('active', mode === 'customize');
@@ -417,7 +778,7 @@ Store.on('mode_changed', (mode) => {
   el.panelCustomize.classList.toggle('active', mode === 'customize');
 });
 
-// ── 6. Collapsible form sections (e.g. "Personal Details") ────
+// ── 7. Collapsible form sections (e.g. "Personal Details") ────
 function initFormSectionToggles() {
   document.querySelectorAll('.form-section-toggle').forEach(toggle => {
     toggle.addEventListener('click', () => {
@@ -426,15 +787,15 @@ function initFormSectionToggles() {
   });
 }
 
-// ── 7. Customize panel: templates, layout, color, font, text ──
+// ── 8. Customize panel: templates, layout, color, font, text ──
 function populateFontSelects() {
   const opts = FONT_OPTIONS.map(f => `<option value="${f.id}">${esc(f.label)}</option>`).join('');
   el.selHeadingFont.innerHTML = opts;
   el.selBodyFont.innerHTML = opts;
 }
 
-function applyDesign(design) {
-  el.resumePaper.setAttribute('data-template', Store.state.template);
+function applyResumeDesign(design) {
+  el.resumePaper.setAttribute('data-template', Store.state.resume.template);
   el.resumePaper.setAttribute('data-layout', design.layout);
   el.resumePaper.setAttribute('data-header-align', design.headerAlign);
   el.resumePaper.setAttribute('data-date-align', design.dateAlign);
@@ -444,9 +805,20 @@ function applyDesign(design) {
   el.resumePaper.style.setProperty('--rp-body-font', FONT_STACKS[design.bodyFont] || FONT_STACKS.sans);
   el.resumePaper.style.setProperty('--rp-font-scale', Number(design.fontSize) / 100);
   el.resumePaper.style.setProperty('--rp-line-height', design.lineHeight === 'compact' ? '1.25' : design.lineHeight === 'relaxed' ? '1.7' : '1.45');
+}
+
+function applyPortfolioDesign(design) {
+  el.portfolioSite.style.setProperty('--pf-accent', design.accent);
+  el.portfolioSite.style.setProperty('--pf-heading-font', FONT_STACKS[design.headingFont] || FONT_STACKS.modern);
+  el.portfolioSite.style.setProperty('--pf-body-font', FONT_STACKS[design.bodyFont] || FONT_STACKS.sans);
+}
+
+function applyActiveDesign() {
+  const design = Store.active().design;
+  if (Store.state.viewMode === 'resume') applyResumeDesign(design);
+  else applyPortfolioDesign(design);
   syncCustomizeControls(design);
-  // A layout switch changes whether the sidebar swap icon is shown.
-  renderSidebarList(Store.state.blocks);
+  renderSidebarList(Store.active().blocks);
 }
 
 function syncCustomizeControls(design) {
@@ -460,18 +832,18 @@ function syncCustomizeControls(design) {
   const knownSwatches = Array.from(document.querySelectorAll('#optAccentColor .color-swatch[data-value]'));
   let matched = false;
   knownSwatches.forEach(sw => {
-    const isMatch = sw.dataset.value.toLowerCase() === design.accent.toLowerCase();
+    const isMatch = sw.dataset.value.toLowerCase() === (design.accent || '').toLowerCase();
     sw.classList.toggle('active', isMatch);
     if (isMatch) matched = true;
   });
   el.accentSwatchCustom.classList.toggle('active', !matched);
-  el.inAccentCustom.value = design.accent;
+  el.inAccentCustom.value = design.accent || '#1A1A1A';
 
   el.selHeadingFont.value = design.headingFont;
   el.selBodyFont.value = design.bodyFont;
 
   document.querySelectorAll('.template-card[data-template]').forEach(card => {
-    card.classList.toggle('active', card.dataset.template === Store.state.template);
+    card.classList.toggle('active', Store.state.viewMode === 'resume' && card.dataset.template === Store.state.resume.template);
   });
 }
 
@@ -497,10 +869,10 @@ function initCustomizePanel() {
     card.addEventListener('click', () => Store.setTemplate(card.dataset.template));
   });
 
-  Store.on('design_changed', applyDesign);
+  Store.on('design_changed', applyActiveDesign);
 }
 
-// ── 8. Zoom controls ────────────────────────────────────────
+// ── 9. Zoom controls (applies to whichever canvas is showing) ──
 function initZoomControls() {
   const MIN_ZOOM = 50;
   const MAX_ZOOM = 150;
@@ -508,7 +880,7 @@ function initZoomControls() {
   let zoom = 100;
 
   const applyZoom = () => {
-    el.resumePaper.style.transform = `scale(${zoom / 100})`;
+    el.canvasZoomTarget.style.transform = `scale(${zoom / 100})`;
     el.zoomLevelDisplay.textContent = `${zoom}%`;
     el.btnZoomOut.disabled = zoom <= MIN_ZOOM;
     el.btnZoomIn.disabled = zoom >= MAX_ZOOM;
@@ -529,8 +901,6 @@ function initZoomControls() {
     applyZoom();
   });
 
-  // Ctrl (or Cmd, on trackpad pinch) + scroll over the preview zooms
-  // it in/out instead of scrolling the page.
   el.canvasWrap.addEventListener('wheel', (e) => {
     if (!e.ctrlKey) return;
     e.preventDefault();
@@ -543,11 +913,11 @@ function initZoomControls() {
   applyZoom();
 }
 
-// ── 9. Sidebar Resizer (25% – 50% of workspace width) ────────
+// ── 10. Sidebar Resizer (25% – 50% of workspace width) ────────
 function initSidebarResizer() {
   const MIN_PCT = 25;
   const MAX_PCT = 50;
-  const CANVAS_MIN_PX = 360; // keep the canvas wide enough that the preview never crowds the resizer
+  const CANVAS_MIN_PX = 360;
   let dragging = false;
 
   el.sidebarResizer.addEventListener('mousedown', (e) => {
@@ -576,8 +946,11 @@ function initSidebarResizer() {
   });
 }
 
-// Application bootstrapping
+// ── Application bootstrapping ──────────────────────────────────
 function init() {
+  document.body.dataset.viewmode = Store.state.viewMode;
+
+  initModal();
   initInputListeners();
   initToolbar();
   initSidebarResizer();
@@ -588,11 +961,15 @@ function init() {
   initSidebarActions();
   initAddSectionMenu();
 
-  // Set initial trigger events
-  Store.emit('profile_changed', Store.state.profile);
-  Store.emit('blocks_changed', Store.state.blocks);
+  refreshToolbarActiveStates();
+  refreshDocTitle();
+  refreshInputsFromActive();
+
+  Store.emit('profile_changed', Store.active().profile);
   Store.emit('mode_changed', Store.state.mode);
-  Store.emit('design_changed', Store.state.design);
+
+  renderActiveCanvas();
+  applyActiveDesign();
 }
 
 document.addEventListener('DOMContentLoaded', init);

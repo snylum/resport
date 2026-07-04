@@ -1,0 +1,498 @@
+/* ============================================================
+   portfolio.css — the "portfolio site" canvas + verification UI
+   ============================================================
+   This is the live, editable stand-in for what visitors see on
+   your published proves.work site. It intentionally does NOT look
+   like a sheet of paper — it's a scrollable one-page site: a hero,
+   then a stack of cards. Uses the same --color-*/--shadow tokens
+   as the rest of the app (dazed.css) so it reads as one product,
+   just a different "page" of it.
+   ============================================================ */
+
+.canvas-zoom-target {
+  transform-origin: top center;
+  transition: transform 0.12s ease-out;
+  flex-shrink: 0;
+}
+
+.portfolio-site {
+  width: 780px;
+  max-width: 90vw;
+  background: var(--color-background);
+  border: 3px solid var(--color-border);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+/* ── Hero ─────────────────────────────────────────────────── */
+.pf-hero {
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+  padding: 3rem 2.75rem;
+  background: var(--pf-accent, var(--color-secondary));
+  background-image: linear-gradient(135deg, color-mix(in srgb, var(--pf-accent, var(--color-secondary)) 85%, white), var(--pf-accent, var(--color-secondary)));
+  color: #fff;
+  border-bottom: 3px solid var(--color-border);
+}
+
+.pf-hero-photo-wrap {
+  flex-shrink: 0;
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4px solid #fff;
+  box-shadow: 0 6px 0 0 rgba(0,0,0,0.25);
+  background: rgba(255,255,255,0.25);
+}
+
+.pf-hero-photo-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pf-hero-text {
+  min-width: 0;
+}
+
+.pf-name {
+  font-family: var(--pf-heading-font, var(--font-display));
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1.1;
+  margin: 0 0 0.15rem;
+  outline: none;
+}
+
+.pf-jobtitle {
+  font-family: var(--pf-heading-font, var(--font-display));
+  font-size: 1.05rem;
+  font-weight: 600;
+  opacity: 0.95;
+  margin-bottom: 0.5rem;
+  min-height: 1.3em;
+}
+
+.pf-tagline {
+  font-family: var(--pf-body-font, var(--font-sans));
+  font-size: 0.95rem;
+  opacity: 0.92;
+  margin: 0 0 0.6rem;
+  max-width: 46ch;
+}
+
+.pf-contact-line {
+  font-family: var(--pf-body-font, var(--font-sans));
+  font-size: 0.85rem;
+  opacity: 0.9;
+  min-height: 1.2em;
+}
+
+/* ── Section stack ────────────────────────────────────────── */
+.pf-sections {
+  padding: 2.25rem 2.75rem 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  font-family: var(--pf-body-font, var(--font-sans));
+  color: var(--color-text);
+}
+
+.pf-block-section-title {
+  font-family: var(--pf-heading-font, var(--font-display));
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin: 1rem 0 -0.35rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 3px solid var(--pf-accent, var(--color-secondary));
+  outline: none;
+}
+
+.pf-block-section-title:first-child { margin-top: 0; }
+
+.pf-card {
+  background: var(--color-surface);
+  border: 2.5px solid var(--color-border);
+  box-shadow: 5px 5px 0 0 var(--color-border);
+  padding: 1.25rem 1.4rem;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.pf-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 0 var(--color-border);
+}
+
+.pf-card.selected {
+  border-color: var(--pf-accent, var(--color-secondary));
+}
+
+.pf-summary-card {
+  font-size: 1.02rem;
+  line-height: 1.6;
+  border-left: 6px solid var(--pf-accent, var(--color-secondary));
+}
+
+.pf-exp-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.pf-exp-company {
+  font-family: var(--pf-heading-font, var(--font-display));
+  font-weight: 700;
+  font-size: 1.08rem;
+}
+
+.pf-exp-dates {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.pf-exp-sub-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.92rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pf-card ul.rb-bullets {
+  margin: 0.4rem 0 0.25rem 1.15rem;
+  padding: 0;
+}
+
+.pf-card ul.rb-bullets li {
+  margin-bottom: 0.3rem;
+  line-height: 1.5;
+}
+
+.pf-edu-card .pf-exp-company { font-weight: 700; }
+
+.pf-edu-gpa {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin-top: 0.15rem;
+}
+
+/* ── Skills / tag-based cards ─────────────────────────────── */
+.pf-card .rb-skills-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pf-card .rb-skill-tag {
+  background: color-mix(in srgb, var(--pf-accent, var(--color-secondary)) 14%, white);
+  border: 2px solid var(--color-border);
+  padding: 0.3rem 0.7rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* ── Verification control (the whole point) ──────────────── */
+.pf-verify {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.pf-verify-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--color-success);
+  color: #fff;
+  border: 2px solid var(--color-border);
+  box-shadow: 3px 3px 0 0 var(--color-border);
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  font-family: var(--font-sans);
+}
+
+.pf-verify-badge:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 0 var(--color-border);
+}
+
+.pf-verify-label {
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.pf-verify-edit {
+  background: transparent;
+  border: 2px solid var(--color-border);
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+}
+
+.pf-verify-edit:hover {
+  color: var(--color-text);
+  background: var(--color-surface-alt);
+}
+
+.pf-verify-add {
+  border: 2px dashed var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+.pf-verify-add:hover {
+  color: var(--color-text);
+  border-color: var(--color-secondary);
+  color: var(--color-secondary);
+}
+
+/* ── Footer ───────────────────────────────────────────────── */
+.pf-footer {
+  text-align: center;
+  padding: 1.25rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  border-top: 2px solid var(--color-border);
+  background: var(--color-surface-alt);
+}
+
+.pf-footer a {
+  color: var(--color-secondary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* ============================================================
+   Modal (verification "view proof" + "edit proof")
+   Custom-built centered lightbox — no native alert/confirm/prompt.
+   ============================================================ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 15, 25, 0.55);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 1.5rem;
+  animation: pf-fade-in 0.15s ease;
+}
+
+@keyframes pf-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-box {
+  position: relative;
+  background: var(--color-surface);
+  border: 3px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 460px;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 2rem 1.75rem 1.75rem;
+  animation: pf-pop-in 0.16s cubic-bezier(.2,.8,.3,1.2);
+}
+
+@keyframes pf-pop-in {
+  from { transform: scale(0.92) translateY(8px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.modal-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 30px;
+  height: 30px;
+  background: var(--color-surface-alt);
+  border: 2px solid var(--color-border);
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.modal-close:hover {
+  background: var(--color-danger);
+  color: #fff;
+}
+
+.modal-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin: 0 0 0.4rem;
+}
+
+.modal-sub {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin: 0 0 1.1rem;
+  line-height: 1.5;
+}
+
+/* view-proof content */
+.verify-modal-body {
+  text-align: center;
+}
+
+.verify-modal-img {
+  max-width: 100%;
+  max-height: 55vh;
+  border: 2px solid var(--color-border);
+  box-shadow: var(--shadow);
+  margin-bottom: 0.9rem;
+  object-fit: contain;
+}
+
+.verify-modal-link {
+  padding: 1rem 0;
+}
+
+.verify-link-icon {
+  font-size: 2.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.verify-modal-caption {
+  font-size: 0.92rem;
+  color: var(--color-text);
+  margin: 0 0 0.9rem;
+}
+
+.verify-empty {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: 1rem 0;
+}
+
+/* edit-proof form content */
+.verify-type-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.verify-type-row .option-pill {
+  flex: 1;
+  text-align: center;
+}
+
+.verify-edit-fields .field-box {
+  margin-bottom: 0.9rem;
+}
+
+.verify-edit-fields .field-box span {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.verify-edit-fields input[type="text"],
+.verify-edit-fields input[type="url"] {
+  width: 100%;
+  border: 2px solid var(--color-border);
+  padding: 0.55rem 0.7rem;
+  font-family: var(--font-sans);
+  font-size: 0.92rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.verify-edit-fields input[type="text"]:focus,
+.verify-edit-fields input[type="url"]:focus {
+  outline: none;
+  border-color: var(--color-secondary);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 2px solid var(--color-border);
+}
+
+.modal-actions .btn-ghost {
+  margin-right: auto;
+  color: var(--color-danger);
+}
+
+/* ── Small shared bits used by both the sidebar photo uploader
+   and the verification-edit modal's photo uploader ─────────── */
+.photo-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.photo-preview-placeholder {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background-color: var(--color-surface-alt);
+  background-size: cover;
+  background-position: center;
+  border: 2px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.btn-file {
+  cursor: pointer;
+}
+
+.verify-warn {
+  font-size: 0.8rem;
+  color: var(--color-danger);
+  font-weight: 600;
+  margin: -0.3rem 0 0;
+}
+
+.sd-verify-dot {
+  display: inline-block;
+  color: var(--color-success);
+  font-weight: 800;
+  font-size: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .pf-hero {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+    padding: 2.25rem 1.5rem;
+  }
+  .pf-sections { padding: 1.75rem 1.25rem 2.25rem; }
+  .pf-tagline { max-width: none; }
+}
