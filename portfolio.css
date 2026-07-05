@@ -435,6 +435,56 @@
   border-color: var(--color-secondary);
 }
 
+.username-input-row {
+  display: flex;
+  align-items: stretch;
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.username-input-row input {
+  border: none;
+  outline: none;
+  padding: 0.6rem 0.7rem;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  background: transparent;
+  color: var(--color-text);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.username-suffix {
+  padding: 0.6rem 0.7rem;
+  background: var(--color-surface-alt);
+  border-left: 2px solid var(--color-border);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.username-status {
+  font-size: 0.82rem;
+  margin: 0.5rem 0 0;
+  color: var(--color-text-muted);
+  min-height: 1.2em;
+}
+
+.username-status.ok { color: var(--color-success); font-weight: 600; }
+.username-status.warn { color: var(--color-danger); font-weight: 600; }
+
+.publish-url {
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  font-weight: 700;
+  background: var(--color-surface-alt);
+  border: 2px solid var(--color-border);
+  padding: 0.7rem 0.9rem;
+  word-break: break-all;
+  margin: 0 0 0.5rem;
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;

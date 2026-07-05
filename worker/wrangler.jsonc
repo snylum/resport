@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "proves-work-router",
+  "main": "src/index.js",
+  "compatibility_date": "2026-07-03",
+
+  // Only these two patterns are routed to this Worker.
+  // Everything else on proves.work (marketing site, /editor.html, css, js)
+  // keeps being served by whatever hosts your apex site today (e.g. a
+  // Cloudflare Pages project) — untouched by this Worker.
+  "routes": [
+    { "pattern": "proves.work/api/*", "zone_name": "proves.work" },
+    { "pattern": "*.proves.work/*", "zone_name": "proves.work" }
+  ],
+
+  "kv_namespaces": [
+    {
+      "binding": "SITES",
+      "id": "<REPLACE_WITH_YOUR_KV_NAMESPACE_ID>"
+    }
+  ]
+}

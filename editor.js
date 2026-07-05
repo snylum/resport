@@ -579,6 +579,293 @@ function openVerifyEditModal(blockId) {
   });
 }
 
+// ── 4c. Publishing to <username>.proves.work ───────────────────
+// Talks to the Cloudflare Worker in /worker (see worker/README.md).
+// Relative paths — works as long as the editor itself is served from
+// proves.work (or www.proves.work), since that's the only host the
+// Worker's /api/* route is attached to.
+const PUBLISH_TOKEN_KEY = 'proveswork_publish_token';
+const PUBLISH_USERNAME_KEY = 'proveswork_username';
+
+function getPublishToken() {
+  let token = localStorage.getItem(PUBLISH_TOKEN_KEY);
+  if (!token) {
+    token = 'tok_' + (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : String(Math.random()).slice(2) + Date.now());
+    localStorage.setItem(PUBLISH_TOKEN_KEY, token);
+  }
+  return token;
+}
+
+function getSavedUsername() {
+  return localStorage.getItem(PUBLISH_USERNAME_KEY) || '';
+}
+
+function saveUsername(u) {
+  localStorage.setItem(PUBLISH_USERNAME_KEY, u);
+}
+
+function slugifyUsername(str) {
+  return (str || '')
+    .toLowerCase()
+    .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 30);
+}
+
+// A tiny, self-contained script embedded in every published page so
+// verification badges stay clickable there too — without shipping the
+// whole editor. No dependency on Store/editor.js.
+const PUBLISHED_PAGE_SCRIPT = `
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest('[data-verify-type]');
+  if (btn) {
+    var overlay = document.getElementById('modalOverlay');
+    var content = document.getElementById('modalContent');
+    var type = btn.getAttribute('data-verify-type');
+    var label = btn.getAttribute('data-verify-label') || '';
+    var html = '';
+    if (type === 'photo') {
+      var photo = btn.getAttribute('data-verify-photo');
+      html = '<h3 class="modal-title">Verified experience</h3><div class="verify-modal-body"><img src="' + photo + '" class="verify-modal-img" alt="Verification proof"/>' + (label ? '<p class="verify-modal-caption">' + label + '</p>' : '') + '</div>';
+    } else if (type === 'link') {
+      var link = btn.getAttribute('data-verify-link');
+      html = '<h3 class="modal-title">Verified experience</h3><div class="verify-modal-body verify-modal-link"><div class="verify-link-icon">\\uD83D\\uDD17</div>' + (label ? '<p class="verify-modal-caption">' + label + '</p>' : '') + '<a class="btn btn-secondary btn-sm" href="' + link + '" target="_blank" rel="noopener noreferrer">Visit link \\u2197</a></div>';
+    }
+    content.innerHTML = html;
+    overlay.classList.remove('hidden');
+    return;
+  }
+  if (e.target.id === 'modalCloseBtn' || e.target.id === 'modalOverlay') {
+    document.getElementById('modalOverlay').classList.add('hidden');
+  }
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') document.getElementById('modalOverlay').classList.add('hidden');
+});
+`;
+
+// Plain-HTML (no contenteditable, no editor chrome) render of a single
+// portfolio block, for the published static snapshot.
+function renderStaticPortfolioBlock(block) {
+  const bulletsHTML = (bullets) => `<ul class="rb-bullets">${(bullets || []).map(b => `<li>${esc(b)}</li>`).join('')}</ul>`;
+
+  switch (block.type) {
+    case 'section':
+      return `<h2 class="pf-block-section-title">${esc(block.data.title)}</h2>`;
+    case 'summary':
+      return `<div class="pf-card pf-summary-card">${esc(block.data.text)}</div>`;
+    case 'custom':
+      return `<div class="pf-card"><h3 class="pf-exp-company">${esc(block.data.title)}</h3><p>${esc(block.data.text)}</p></div>`;
+    case 'experience': {
+      const v = block.data.verify || { type: 'none' };
+      let verifyHTML = '';
+      if (v.type === 'photo' && v.photo) {
+        verifyHTML = `<button class="pf-verify-badge" data-verify-type="photo" data-verify-photo="${esc(v.photo)}" data-verify-label="${esc(v.label || 'View proof')}" type="button">✓ Verified <span class="pf-verify-label">${esc(v.label || 'View proof')}</span></button>`;
+      } else if (v.type === 'link' && v.link) {
+        const safeHref = /^https?:\/\//i.test(v.link) ? v.link : `https://${v.link}`;
+        verifyHTML = `<button class="pf-verify-badge" data-verify-type="link" data-verify-link="${esc(safeHref)}" data-verify-label="${esc(v.label || 'View link')}" type="button">✓ Verified <span class="pf-verify-label">${esc(v.label || 'View link')}</span></button>`;
+      }
+      return `<div class="pf-card">
+        <div class="pf-exp-top-row"><span class="pf-exp-company">${esc(block.data.company)}</span><span class="pf-exp-dates">${esc(block.data.dates)}</span></div>
+        <div class="pf-exp-sub-row"><span>${esc(block.data.role)}</span><span>${esc(block.data.location)}</span></div>
+        ${bulletsHTML(block.data.bullets)}
+        ${verifyHTML ? `<div class="pf-verify">${verifyHTML}</div>` : ''}
+      </div>`;
+    }
+    case 'education':
+      return `<div class="pf-card pf-edu-card">
+        <div class="pf-exp-top-row"><span class="pf-exp-company">${esc(block.data.school)}</span><span class="pf-exp-dates">${esc(block.data.year)}</span></div>
+        <div class="pf-exp-sub-row"><span>${esc(block.data.degree)}</span><span>${esc(block.data.location)}</span></div>
+        ${block.data.gpa ? `<div class="pf-edu-gpa">${esc(block.data.gpa)}</div>` : ''}
+      </div>`;
+    case 'projects':
+      return `<div class="pf-card">
+        <div class="pf-exp-top-row"><span class="pf-exp-company">${esc(block.data.name)}</span><span class="pf-exp-dates">${esc(block.data.dates)}</span></div>
+        <div class="pf-exp-sub-row"><span>${esc(block.data.description)}</span></div>
+        ${bulletsHTML(block.data.bullets)}
+      </div>`;
+    case 'skills':
+      return `<div class="pf-card"><div class="rb-skills-wrap">${(block.data.items || []).map(s => `<span class="rb-skill-tag">${esc(s)}</span>`).join('')}</div></div>`;
+    case 'certifications':
+      return `<div class="pf-card"><div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.issuer || '')}</span><span class="ce-muted">${esc(it.date || '')}</span></div>`).join('')}</div></div>`;
+    case 'languages':
+      return `<div class="pf-card"><div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.level || '')}</span></div>`).join('')}</div></div>`;
+    default:
+      return '';
+  }
+}
+
+// Builds a complete, standalone HTML document for the published site.
+// Always snapshots state.portfolio — publishing never reads from the
+// résumé/PDF document.
+function buildPublishedSiteHTML() {
+  const p = Store.state.portfolio.profile;
+  const design = Store.state.portfolio.design;
+  const blocks = Store.state.portfolio.blocks;
+  const fullName = `${p.firstName} ${p.lastName}`.trim() || 'Untitled Portfolio';
+  const contactLine = [p.email, p.phone, p.address].filter(Boolean).join('   •   ');
+  const sectionsHTML = blocks.map(renderStaticPortfolioBlock).join('\n');
+
+  return `<!DOCTYPE html>
+<html lang="en" data-theme="dazed">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>${esc(fullName)}${p.jobTitle ? ' — ' + esc(p.jobTitle) : ''}</title>
+<meta name="description" content="${esc(p.tagline || (fullName + ' — portfolio, built with proves.work'))}" />
+<link rel="stylesheet" href="https://proves.work/dazed.css" />
+<link rel="stylesheet" href="https://proves.work/portfolio.css" />
+<style>
+  body { margin: 0; background: var(--color-background, #FDF7FA); }
+  .portfolio-site { width: 100%; max-width: 100%; border: none; box-shadow: none; }
+  .pf-sections { max-width: 780px; margin: 0 auto; }
+</style>
+</head>
+<body data-viewmode="portfolio">
+  <div class="portfolio-site" id="portfolioSite" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};">
+    <header class="pf-hero">
+      ${p.photo ? `<div class="pf-hero-photo-wrap"><img src="${esc(p.photo)}" alt="${esc(fullName)}" /></div>` : ''}
+      <div class="pf-hero-text">
+        <h1 class="pf-name">${esc(fullName)}</h1>
+        ${p.jobTitle ? `<div class="pf-jobtitle">${esc(p.jobTitle)}</div>` : ''}
+        ${p.tagline ? `<p class="pf-tagline">${esc(p.tagline)}</p>` : ''}
+        ${contactLine ? `<div class="pf-contact-line">${esc(contactLine)}</div>` : ''}
+      </div>
+    </header>
+    <div class="pf-sections">${sectionsHTML}</div>
+    <footer class="pf-footer">${esc(fullName)} · built with <a href="https://proves.work">proves.work</a></footer>
+  </div>
+
+  <div class="modal-overlay hidden" id="modalOverlay">
+    <div class="modal-box" role="dialog" aria-modal="true">
+      <button class="modal-close" id="modalCloseBtn" type="button" aria-label="Close">✕</button>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+  <script>${PUBLISHED_PAGE_SCRIPT}</script>
+</body>
+</html>`;
+}
+
+function openPublishModal() {
+  const p = Store.state.portfolio.profile;
+  const defaultUsername = getSavedUsername() || slugifyUsername(`${p.firstName}${p.lastName}`) || 'me';
+
+  const html = `
+    <h3 class="modal-title" id="modalTitle">Publish your portfolio</h3>
+    <p class="modal-sub">Pick the address where your portfolio will live. You can change this later — this only affects your portfolio, never your résumé/PDF document.</p>
+    <div class="field-box full-width">
+      <span>Your proves.work address</span>
+      <div class="username-input-row">
+        <input type="text" id="publishUsernameInput" value="${esc(defaultUsername)}" maxlength="30" autocomplete="off" spellcheck="false" />
+        <span class="username-suffix">.proves.work</span>
+      </div>
+      <p class="username-status" id="publishUsernameStatus"></p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary btn-sm" id="publishConfirmBtn" type="button" disabled>Publish</button>
+    </div>
+  `;
+
+  openModal(html, (root) => {
+    const input = root.querySelector('#publishUsernameInput');
+    const status = root.querySelector('#publishUsernameStatus');
+    const confirmBtn = root.querySelector('#publishConfirmBtn');
+    let checkTimer = null;
+
+    async function checkAvailability() {
+      const value = slugifyUsername(input.value);
+      if (input.value !== value) input.value = value;
+
+      if (value.length < 3) {
+        status.textContent = 'Must be at least 3 characters.';
+        status.className = 'username-status warn';
+        confirmBtn.disabled = true;
+        return;
+      }
+      status.textContent = 'Checking availability…';
+      status.className = 'username-status';
+      try {
+        const res = await fetch(`/api/check-username?u=${encodeURIComponent(value)}`);
+        const data = await res.json();
+        if (data.available) {
+          status.textContent = `✓ ${value}.proves.work is available`;
+          status.className = 'username-status ok';
+          confirmBtn.disabled = false;
+        } else {
+          status.textContent = data.reason === 'invalid'
+            ? 'That name is reserved or has invalid characters.'
+            : `${value}.proves.work is already taken.`;
+          status.className = 'username-status warn';
+          confirmBtn.disabled = true;
+        }
+      } catch (err) {
+        status.textContent = 'Could not check availability right now — you can still try publishing.';
+        status.className = 'username-status warn';
+        confirmBtn.disabled = false;
+      }
+    }
+
+    input.addEventListener('input', () => {
+      clearTimeout(checkTimer);
+      confirmBtn.disabled = true;
+      checkTimer = setTimeout(checkAvailability, 450);
+    });
+    checkAvailability();
+
+    confirmBtn.addEventListener('click', async () => {
+      const username = slugifyUsername(input.value);
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Publishing…';
+      try {
+        const res = await fetch('/api/publish', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ username, token: getPublishToken(), html: buildPublishedSiteHTML() })
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          status.textContent = data.error || 'Something went wrong.';
+          status.className = 'username-status warn';
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = 'Publish';
+          return;
+        }
+        saveUsername(username);
+        openPublishSuccessModal(data.url);
+      } catch (err) {
+        status.textContent = 'Network error — please try again.';
+        status.className = 'username-status warn';
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Publish';
+      }
+    });
+  });
+}
+
+function openPublishSuccessModal(url) {
+  openModal(`
+    <h3 class="modal-title" id="modalTitle">🎉 You're live!</h3>
+    <p class="modal-sub">Your portfolio is published at:</p>
+    <p class="publish-url">${esc(url)}</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="publishCopyBtn" type="button">Copy link</button>
+      <a class="btn btn-secondary btn-sm" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Visit site ↗</a>
+    </div>
+  `, (root) => {
+    root.querySelector('#publishCopyBtn').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(url);
+        root.querySelector('#publishCopyBtn').textContent = 'Copied ✓';
+      } catch (err) {
+        /* Clipboard API may be unavailable (e.g. insecure context) — link is still visible and selectable. */
+      }
+    });
+  });
+}
+
 // ── 5. Sections list (sidebar) ─────────────────────────────────
 function renderSidebarList(blocks) {
   el.sidebarSectionsList.innerHTML = '';
@@ -735,9 +1022,7 @@ function initToolbar() {
     openInfoModal('Generating your PDF', 'Rendering this résumé as a print-ready, ATS-safe PDF. This only affects this résumé copy — your live portfolio is untouched.');
   });
 
-  document.getElementById('btnPublishShowcase').addEventListener('click', () => {
-    openInfoModal('Publishing your portfolio', 'Your portfolio is going live at your proves.work URL, verification badges and all.');
-  });
+  document.getElementById('btnPublishShowcase').addEventListener('click', openPublishModal);
 
   el.btnResetResume.addEventListener('click', () => {
     if (confirm('Reset this résumé to match your current portfolio content? Any résumé-only edits (wording, template, styling made here) will be lost. Your portfolio is never affected.')) {
