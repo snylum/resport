@@ -11,9 +11,16 @@
 
 .canvas-zoom-target {
   position: absolute;
-  top: 0;
-  left: 0;
-  transform-origin: top left;
+  /* Centered via top/left 50% + translate(-50%,-50%) rather than
+     top:0/left:0. This anchors the element to its OWN current
+     rendered box, so even if .canvas-container's explicit
+     width/height (set from JS) is briefly out of sync with the
+     document's real natural size — e.g. a photo or webfont finishes
+     loading a frame late — the visible content still sits centered
+     in the container instead of drifting off toward a corner. */
+  top: 50%;
+  left: 50%;
+  transform-origin: center;
   transition: transform 0.12s ease-out;
   flex-shrink: 0;
 }

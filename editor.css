@@ -44,6 +44,68 @@ body {
   flex-shrink: 0;
 }
 
+/* ── Edit / Customize tab bar, pinned to the top of the sidebar ──
+   Lives inside the scrolling sidebar column but stays put via
+   position: sticky while the panel content below it scrolls. */
+.sidebar-mode-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-shrink: 0;
+  background: var(--color-surface);
+  border-bottom: 3px solid var(--color-border);
+}
+
+.sidebar-mode-tab {
+  flex: 1;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.85rem;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sidebar-mode-tab:not(:last-child) {
+  border-right: 3px solid var(--color-border);
+}
+
+.sidebar-mode-tab:hover {
+  color: var(--color-text);
+  background: var(--color-surface-alt);
+}
+
+.sidebar-mode-tab.active {
+  background: var(--color-accent);
+  color: var(--color-text);
+}
+
+/* ── Flat buttons inside the left column ──────────────────────
+   The rest of the app uses a neobrutalist hard-drop-shadow on
+   .btn (see styles.css), but that lifted/shadowed look is too
+   busy for the dense form controls in this column — buttons here
+   (Upload Image, + Add Section, etc.) stay flat and bordered only. */
+.editor-sidebar .btn {
+  box-shadow: none;
+  transform: none !important;
+}
+
+.editor-sidebar .btn:hover {
+  box-shadow: none;
+  transform: none !important;
+  background: var(--color-surface-alt);
+}
+
+.editor-sidebar .btn:active {
+  box-shadow: none !important;
+  transform: none !important;
+  background: var(--color-accent);
+}
+
 .sidebar-resizer {
   width: 2px;
   flex-shrink: 0;

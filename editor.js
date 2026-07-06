@@ -1206,11 +1206,11 @@ function initZoomControls() {
       const natH = doc.offsetHeight;
       el.canvasZoomTarget.style.width = `${natW}px`;
       el.canvasZoomTarget.style.height = `${natH}px`;
-      el.canvasZoomTarget.style.transform = `scale(${scale})`;
+      el.canvasZoomTarget.style.transform = `translate(-50%, -50%) scale(${scale})`;
       el.canvasContainer.style.width = `${natW * scale}px`;
       el.canvasContainer.style.height = `${natH * scale}px`;
     } else {
-      el.canvasZoomTarget.style.transform = `scale(${scale})`;
+      el.canvasZoomTarget.style.transform = `translate(-50%, -50%) scale(${scale})`;
     }
     el.zoomLevelDisplay.textContent = `${Math.round(zoom)}%`;
     el.zoomLevelDisplay.title = fitMode
@@ -1273,6 +1273,28 @@ function initZoomControls() {
   const docObserver = new ResizeObserver(scheduleRefit);
   docObserver.observe(el.resumePaper);
   docObserver.observe(el.portfolioSite);
+
+  // Belt-and-suspenders on top of the ResizeObservers above: content
+  // (sections, photos, template swaps) can change the document's
+  // natural size in ways that don't always fire a resize callback in
+  // the same tick — e.g. an <img> whose box doesn't change size once
+  // its src loads, or a webfont swap. When that happens the container
+  // we sized for the *old* natural size goes stale, and the actually-
+  // rendered (scaled) content spills out past it instead of staying
+  // centered. Re-running refit() on DOM mutations, font loads, and
+  // window load closes that gap.
+  const mutationObserver = new MutationObserver(scheduleRefit);
+  mutationObserver.observe(el.canvasZoomTarget, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    characterData: true
+  });
+
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(scheduleRefit);
+  }
+  window.addEventListener('load', scheduleRefit);
 
   // Re-fit to whichever document just became active (its layout needs
   // a frame to settle after the display:none/block swap).

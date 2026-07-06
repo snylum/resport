@@ -148,12 +148,6 @@
         </div>
       </li>
       <li>
-        <div class="mode-tabs" role="tablist" aria-label="Panel">
-          <button class="mode-tab active" id="tabEditBtn" type="button">Edit</button>
-          <button class="mode-tab" id="tabCustomizeBtn" type="button">Customize</button>
-        </div>
-      </li>
-      <li>
         <span class="toolbar-filename" id="docTitle" contenteditable="true" spellcheck="false">My Portfolio</span>
       </li>
       <li class="toolbar-divider" aria-hidden="true"></li>
@@ -166,6 +160,11 @@
   <main class="editor-workspace">
 
     <section class="editor-sidebar" id="editorSidebar">
+
+      <div class="sidebar-mode-bar" role="tablist" aria-label="Panel">
+        <button class="sidebar-mode-tab active" id="tabEditBtn" type="button">Edit</button>
+        <button class="sidebar-mode-tab" id="tabCustomizeBtn" type="button">Customize</button>
+      </div>
 
       <div class="sidebar-panel active" id="panelEdit">
         <div class="panel-scroll-container">
