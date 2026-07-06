@@ -580,11 +580,12 @@ function openVerifyEditModal(blockId) {
   });
 }
 
-// ── 4c. Publishing to <username>.proves.work ───────────────────
+// ── 4c. Publishing to <username>.resport.snylum.com ─────────────
 // Talks to the Cloudflare Worker in /worker (see worker/README.md).
-// Relative paths — works as long as the editor itself is served from
-// proves.work (or www.proves.work), since that's the only host the
+// Relative API paths (/api/*) — work as long as the editor itself is
+// served from PUBLISH_APEX below, since that's the only host the
 // Worker's /api/* route is attached to.
+const PUBLISH_APEX = 'resport.snylum.com';
 const PUBLISH_TOKEN_KEY = 'proveswork_publish_token';
 const PUBLISH_USERNAME_KEY = 'proveswork_username';
 
@@ -714,9 +715,9 @@ function buildPublishedSiteHTML() {
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>${esc(fullName)}${p.jobTitle ? ' — ' + esc(p.jobTitle) : ''}</title>
-<meta name="description" content="${esc(p.tagline || (fullName + ' — portfolio, built with proves.work'))}" />
-<link rel="stylesheet" href="https://proves.work/dazed.css" />
-<link rel="stylesheet" href="https://proves.work/portfolio.css" />
+<meta name="description" content="${esc(p.tagline || (fullName + ' — portfolio, built with ' + PUBLISH_APEX))}" />
+<link rel="stylesheet" href="https://${PUBLISH_APEX}/dazed.css" />
+<link rel="stylesheet" href="https://${PUBLISH_APEX}/portfolio.css" />
 <style>
   body { margin: 0; background: var(--color-background, #FDF7FA); }
   .portfolio-site { width: 100%; max-width: 100%; border: none; box-shadow: none; }
@@ -735,7 +736,7 @@ function buildPublishedSiteHTML() {
       </div>
     </header>
     <div class="pf-sections">${sectionsHTML}</div>
-    <footer class="pf-footer">${esc(fullName)} · built with <a href="https://proves.work">proves.work</a></footer>
+    <footer class="pf-footer">${esc(fullName)} · built with <a href="https://${PUBLISH_APEX}">${PUBLISH_APEX}</a></footer>
   </div>
 
   <div class="modal-overlay hidden" id="modalOverlay">
@@ -758,10 +759,10 @@ function openPublishModal() {
     <h3 class="modal-title" id="modalTitle">Publish your portfolio</h3>
     <p class="modal-sub">Pick the address where your portfolio will live. You can change this later — this only affects your portfolio, never your résumé/PDF document.</p>
     <div class="field-box full-width">
-      <span>Your proves.work address</span>
+      <span>Your ${PUBLISH_APEX} address</span>
       <div class="username-input-row">
         <input type="text" id="publishUsernameInput" value="${esc(defaultUsername)}" maxlength="30" autocomplete="off" spellcheck="false" />
-        <span class="username-suffix">.proves.work</span>
+        <span class="username-suffix">.${PUBLISH_APEX}</span>
       </div>
       <p class="username-status" id="publishUsernameStatus"></p>
     </div>
@@ -792,13 +793,13 @@ function openPublishModal() {
         const res = await fetch(`/api/check-username?u=${encodeURIComponent(value)}`);
         const data = await res.json();
         if (data.available) {
-          status.textContent = `✓ ${value}.proves.work is available`;
+          status.textContent = `✓ ${value}.${PUBLISH_APEX} is available`;
           status.className = 'username-status ok';
           confirmBtn.disabled = false;
         } else {
           status.textContent = data.reason === 'invalid'
             ? 'That name is reserved or has invalid characters.'
-            : `${value}.proves.work is already taken.`;
+            : `${value}.${PUBLISH_APEX} is already taken.`;
           status.className = 'username-status warn';
           confirmBtn.disabled = true;
         }

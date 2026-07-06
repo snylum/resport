@@ -1,31 +1,36 @@
 /* ============================================================
-   proves-work-router — Cloudflare Worker
+   resport-publish-router — Cloudflare Worker
    ============================================================
-   Handles TWO jobs on the proves.work zone:
+   Handles TWO jobs on the resport.snylum.com zone:
 
-   1. Wildcard subdomains  (<username>.proves.work/*)
+   1. Wildcard subdomains  (<username>.resport.snylum.com/*)
       → looks up a published portfolio snapshot in KV and serves
         the static HTML directly. No origin server involved.
 
-   2. The publish API      (proves.work/api/*)
-      → lets the editor (running on the apex domain) claim a
+   2. The publish API      (resport.snylum.com/api/*)
+      → lets the editor (running on resport.snylum.com) claim a
         username and upload a rendered HTML snapshot.
 
    Route this Worker on exactly these two Route patterns (see
    wrangler.jsonc / README.md in this folder):
-      - "proves.work/api/*"
-      - "*.proves.work/*"
+      - "resport.snylum.com/api/*"
+      - "*.resport.snylum.com/*"
 
    Your marketing site / editor (index.html, editor.html, etc.)
-   keeps being served however it is today (e.g. Cloudflare Pages
-   on the apex domain) — this Worker never touches that traffic
-   because it's only routed on /api/* at the apex.
+   keeps being served however it is today on resport.snylum.com —
+   this Worker never touches that traffic because it's only
+   routed on /api/* at that host.
    ============================================================ */
+
+// The single app host. Change this one line (and the routes in
+// wrangler.jsonc) if you ever move the editor to a different
+// domain/subdomain.
+const APP_HOST = 'resport.snylum.com';
 
 const RESERVED = new Set([
   'www', 'api', 'app', 'admin', 'mail', 'email', 'ftp', 'blog', 'help',
   'support', 'static', 'cdn', 'assets', 'img', 'images', 'dashboard',
-  'dev', 'staging', 'test', 'docs', 'status', 'shop', 'store', 'proves',
+  'dev', 'staging', 'test', 'docs', 'status', 'shop', 'store', 'resport',
   'portfolio', 'account', 'accounts', 'login', 'logout', 'signup',
   'billing', 'payments', 'ns1', 'ns2', 'mx', 'root', 'null', 'undefined'
 ]);
@@ -34,7 +39,7 @@ const RESERVED = new Set([
 const USERNAME_RE = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])?$/;
 
 const CORS_HEADERS = {
-  'access-control-allow-origin': '*', // tighten to 'https://proves.work' once you deploy the editor for real
+  'access-control-allow-origin': '*', // tighten to `https://${APP_HOST}` once you deploy the editor for real
   'access-control-allow-methods': 'GET,POST,DELETE,OPTIONS',
   'access-control-allow-headers': 'content-type'
 };
@@ -48,7 +53,7 @@ function json(obj, status = 200) {
 
 function notFoundPage(username) {
   return `<!DOCTYPE html><html><head><meta charset="utf-8" />
-<title>Not found — proves.work</title>
+<title>Not found — ${APP_HOST}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <style>
   body{font-family:-apple-system,'Inter',system-ui,sans-serif;background:#FDF7FA;color:#1A1A1A;
@@ -59,7 +64,7 @@ function notFoundPage(username) {
 <body>
   <div>
     <h1>@${escapeHtml(username)} hasn't published a portfolio yet</h1>
-    <p><a href="https://proves.work">Build yours at proves.work →</a></p>
+    <p><a href="https://${APP_HOST}">Build yours at ${APP_HOST} →</a></p>
   </div>
 </body></html>`;
 }
@@ -77,7 +82,7 @@ export default {
       return new Response(null, { headers: CORS_HEADERS });
     }
 
-    const isApex = host === 'proves.work' || host === 'www.proves.work';
+    const isApex = host === APP_HOST || host === `www.${APP_HOST}`;
 
     if (isApex && url.pathname.startsWith('/api/')) {
       return handleApi(request, env, url);
@@ -159,7 +164,7 @@ async function handleApi(request, env, url) {
       updatedAt: new Date().toISOString()
     }));
 
-    return json({ ok: true, url: `https://${username}.proves.work` });
+    return json({ ok: true, url: `https://${username}.${APP_HOST}` });
   }
 
   if (url.pathname === '/api/publish' && request.method === 'DELETE') {

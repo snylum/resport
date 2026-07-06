@@ -1,16 +1,17 @@
-# Publishing `<username>.proves.work` on Cloudflare
+# Publishing `<username>.resport.snylum.com` on Cloudflare
 
 This folder makes the editor's "Publish" button actually go live at
-`https://<username>.proves.work`. It's one Cloudflare Worker + one KV
-namespace. Your existing apex site (proves.work / www.proves.work —
+`https://<username>.resport.snylum.com`. It's one Cloudflare Worker +
+one KV namespace. Your existing app host (resport.snylum.com —
 index.html, editor.html, css, js) is untouched; this Worker is only
-routed on `/api/*` at the apex, plus every `*.proves.work` subdomain.
+routed on `/api/*` at that host, plus every `*.resport.snylum.com`
+subdomain.
 
 ## Why a Worker (and not Cloudflare Pages / Custom Domains)
 
 - Cloudflare **Custom Domains do not support wildcard DNS records** —
-  you can't point `*.proves.work` at a Custom Domain.
-- **Workers Routes** *do* support wildcards (`*.proves.work/*`), and a
+  you can't point `*.resport.snylum.com` at a Custom Domain.
+- **Workers Routes** *do* support wildcards (`*.resport.snylum.com/*`), and a
   Worker can inspect the `Host` header at request time to decide which
   published site to serve. That's exactly what's needed here: one
   Worker, one route, unlimited usernames — no per-user DNS record or
@@ -37,15 +38,16 @@ routed on `/api/*` at the apex, plus every `*.proves.work` subdomain.
 3. **Add a wildcard DNS record.** Cloudflare requires a DNS record to
    exist for any hostname a Route/Worker will intercept — even though
    the Worker itself serves the response, not an origin server. In the
-   Cloudflare dashboard → your zone → DNS:
+   Cloudflare dashboard → the `snylum.com` zone → DNS:
    - Type: `A`
-   - Name: `*`
+   - Name: `*.resport` (so it covers `<anything>.resport.snylum.com`,
+     without touching wildcards on the bare `snylum.com` root)
    - IPv4 address: `192.0.2.1` (a placeholder — traffic never actually
      reaches this IP, the Worker intercepts it first)
    - Proxy status: **Proxied** (orange cloud) — this is required
 
-   Your existing `proves.work` (and `www`) records for the main site
-   stay exactly as they are.
+   Your existing `resport.snylum.com` record (wherever the editor is
+   hosted today — Pages, etc.) stays exactly as it is.
 
 4. **Deploy the Worker:**
    ```
@@ -56,11 +58,11 @@ routed on `/api/*` at the apex, plus every `*.proves.work` subdomain.
    step needed.
 
 5. **Verify:**
-   - `https://anything-not-published.proves.work` → should show the
-     "hasn't published a portfolio yet" page.
+   - `https://anything-not-published.resport.snylum.com` → should show
+     the "hasn't published a portfolio yet" page.
    - From the editor, click **Publish**, pick a username, and confirm
-     `https://<username>.proves.work` loads your portfolio within a
-     few seconds.
+     `https://<username>.resport.snylum.com` loads your portfolio
+     within a few seconds.
 
 ## How ownership works (and its current limitation)
 
@@ -81,9 +83,9 @@ verified session/user ID instead.
 
 `CORS_HEADERS` in `worker/src/index.js` currently allows any origin
 (`*`) so this works regardless of exactly how/where you host the
-editor while you're setting this up. Once the editor is live on
-`https://proves.work`, change that to `'access-control-allow-origin':
-'https://proves.work'`.
+editor while you're setting this up. Once the editor is confirmed live
+on `https://resport.snylum.com`, change that to
+`'access-control-allow-origin': 'https://resport.snylum.com'`.
 
 ## Local testing
 
