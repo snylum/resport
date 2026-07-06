@@ -10,7 +10,10 @@
    ============================================================ */
 
 .canvas-zoom-target {
-  transform-origin: top center;
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
   transition: transform 0.12s ease-out;
   flex-shrink: 0;
 }

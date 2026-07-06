@@ -45,6 +45,7 @@ const el = {
   sidebarResizer: document.getElementById('sidebarResizer'),
   editorWorkspace: document.querySelector('.editor-workspace'),
   canvasWrap: document.getElementById('canvasWrap'),
+  canvasContainer: document.getElementById('canvasContainer'),
   canvasZoomTarget: document.getElementById('canvasZoomTarget'),
   panelEdit: document.getElementById('panelEdit'),
   panelCustomize: document.getElementById('panelCustomize'),
@@ -1158,44 +1159,115 @@ function initCustomizePanel() {
 }
 
 // ── 9. Zoom controls (applies to whichever canvas is showing) ──
+// Default behavior is "fit to page": the whole document is always
+// visible, and the zoom recalculates live whenever the space it has
+// to work with changes (sidebar drag, window resize) or the document
+// itself changes size (content edits, template/layout changes).
+// Manual +/- or ctrl+wheel zoom breaks out of fit mode; clicking the
+// percentage label returns to it.
 function initZoomControls() {
-  const MIN_ZOOM = 50;
+  const MIN_ZOOM = 25;
   const MAX_ZOOM = 150;
   const STEP = 10;
+
   let zoom = 100;
+  let fitMode = true;
+
+  const getActiveDoc = () => (
+    Store.state.viewMode === 'resume' ? el.resumePaper : el.portfolioSite
+  );
+
+  const computeFitZoom = () => {
+    const doc = getActiveDoc();
+    if (!doc) return zoom;
+    const wrapStyle = getComputedStyle(el.canvasWrap);
+    const padX = parseFloat(wrapStyle.paddingLeft) + parseFloat(wrapStyle.paddingRight);
+    const padY = parseFloat(wrapStyle.paddingTop) + parseFloat(wrapStyle.paddingBottom);
+    const availWidth = el.canvasWrap.clientWidth - padX;
+    const availHeight = el.canvasWrap.clientHeight - padY;
+    const docWidth = doc.offsetWidth;
+    const docHeight = doc.offsetHeight;
+    if (!docWidth || !docHeight || availWidth <= 0 || availHeight <= 0) return zoom;
+    const scalePct = Math.min(availWidth / docWidth, availHeight / docHeight) * 100;
+    return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, scalePct));
+  };
 
   const applyZoom = () => {
+    const doc = getActiveDoc();
     el.canvasZoomTarget.style.transform = `scale(${zoom / 100})`;
-    el.zoomLevelDisplay.textContent = `${zoom}%`;
+    // Give the container the document's real, post-scale footprint so
+    // the flex parent centers it with no leftover unscaled scroll space.
+    if (doc) {
+      el.canvasContainer.style.width = `${doc.offsetWidth * (zoom / 100)}px`;
+      el.canvasContainer.style.height = `${doc.offsetHeight * (zoom / 100)}px`;
+    }
+    el.zoomLevelDisplay.textContent = `${Math.round(zoom)}%`;
+    el.zoomLevelDisplay.title = fitMode
+      ? 'Fitted to window — click +/- to zoom manually'
+      : 'Click to fit the whole document';
     el.btnZoomOut.disabled = zoom <= MIN_ZOOM;
     el.btnZoomIn.disabled = zoom >= MAX_ZOOM;
   };
 
+  const refit = () => {
+    if (!fitMode) return;
+    zoom = computeFitZoom();
+    applyZoom();
+  };
+
   el.btnZoomIn.addEventListener('click', () => {
+    fitMode = false;
     zoom = Math.min(MAX_ZOOM, zoom + STEP);
     applyZoom();
   });
 
   el.btnZoomOut.addEventListener('click', () => {
+    fitMode = false;
     zoom = Math.max(MIN_ZOOM, zoom - STEP);
     applyZoom();
   });
 
   el.zoomLevelDisplay.addEventListener('click', () => {
-    zoom = 100;
-    applyZoom();
+    fitMode = true;
+    refit();
   });
 
   el.canvasWrap.addEventListener('wheel', (e) => {
     if (!e.ctrlKey) return;
     e.preventDefault();
+    fitMode = false;
     zoom = e.deltaY < 0
       ? Math.min(MAX_ZOOM, zoom + STEP)
       : Math.max(MIN_ZOOM, zoom - STEP);
     applyZoom();
   }, { passive: false });
 
-  applyZoom();
+  // Recompute fit whenever the canvas area's available space changes
+  // (window resize, sidebar drag — this fires continuously mid-drag)
+  // or the active document's own natural size changes (typing content,
+  // switching templates, changing columns/fonts/spacing).
+  let rafId = null;
+  const scheduleRefit = () => {
+    if (rafId) return;
+    rafId = requestAnimationFrame(() => {
+      rafId = null;
+      refit();
+    });
+  };
+
+  new ResizeObserver(scheduleRefit).observe(el.canvasWrap);
+  const docObserver = new ResizeObserver(scheduleRefit);
+  docObserver.observe(el.resumePaper);
+  docObserver.observe(el.portfolioSite);
+
+  // Re-fit to whichever document just became active (its layout needs
+  // a frame to settle after the display:none/block swap).
+  Store.on('viewmode_changed', () => {
+    fitMode = true;
+    requestAnimationFrame(refit);
+  });
+
+  refit();
 }
 
 // ── 10. Sidebar Resizer (25% – 50% of workspace width) ────────

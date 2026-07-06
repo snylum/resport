@@ -495,6 +495,17 @@ body {
   position: relative;
 }
 
+/* Sized in JS to exactly match the *scaled* document (natural size ×
+   current zoom). Because .canvas-zoom-target is transform: scale()'d
+   but positioned absolutely inside this box, the box itself carries
+   the real, post-scale footprint — so the flex parent centers it
+   correctly and .editor-canvas never reserves invisible, unscaled
+   scroll space around a shrunk document. */
+.canvas-container {
+  position: relative;
+  flex-shrink: 0;
+}
+
 .resume-paper {
   background: #ffffff;
   width: 210mm;
