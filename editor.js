@@ -1195,12 +1195,22 @@ function initZoomControls() {
 
   const applyZoom = () => {
     const doc = getActiveDoc();
-    el.canvasZoomTarget.style.transform = `scale(${zoom / 100})`;
-    // Give the container the document's real, post-scale footprint so
-    // the flex parent centers it with no leftover unscaled scroll space.
+    const scale = zoom / 100;
     if (doc) {
-      el.canvasContainer.style.width = `${doc.offsetWidth * (zoom / 100)}px`;
-      el.canvasContainer.style.height = `${doc.offsetHeight * (zoom / 100)}px`;
+      // Give the zoom target an explicit, unambiguous natural size
+      // (rather than relying on it shrink-wrapping its visible child)
+      // so the scaled footprint we assign to the container below is
+      // guaranteed to match exactly what's rendered — no drift, no
+      // off-center content.
+      const natW = doc.offsetWidth;
+      const natH = doc.offsetHeight;
+      el.canvasZoomTarget.style.width = `${natW}px`;
+      el.canvasZoomTarget.style.height = `${natH}px`;
+      el.canvasZoomTarget.style.transform = `scale(${scale})`;
+      el.canvasContainer.style.width = `${natW * scale}px`;
+      el.canvasContainer.style.height = `${natH * scale}px`;
+    } else {
+      el.canvasZoomTarget.style.transform = `scale(${scale})`;
     }
     el.zoomLevelDisplay.textContent = `${Math.round(zoom)}%`;
     el.zoomLevelDisplay.title = fitMode
@@ -1211,8 +1221,11 @@ function initZoomControls() {
   };
 
   const refit = () => {
-    if (!fitMode) return;
-    zoom = computeFitZoom();
+    // Always resync the container/zoom-target to the document's
+    // current natural size (it may have grown/shrunk from an edit),
+    // and only recompute the zoom % itself while in fit mode —
+    // manual zoom levels stay put but keep tracking content size.
+    if (fitMode) zoom = computeFitZoom();
     applyZoom();
   };
 

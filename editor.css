@@ -130,6 +130,17 @@ body {
   padding: 1rem;
 }
 
+/* CSS Grid sizes each column by the widest *min-content* of any item
+   placed in it, across the WHOLE grid — not per row. The Photo field
+   (avatar circle + "Upload Image" button) is wider than a plain label
+   + input, so without this, whichever column it lands in gets pinned
+   wide and its partner column (e.g. Last Name, next to First Name)
+   gets squeezed down to a sliver. min-width: 0 opts every field out
+   of that auto-sizing so both columns split 1fr/1fr evenly, always. */
+.field-box {
+  min-width: 0;
+}
+
 .field-box.full-width {
   grid-column: span 2;
 }
@@ -143,6 +154,8 @@ body {
 
 .field-box input {
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 0.5rem;
   border: 2px solid var(--color-border);
   outline: none;
