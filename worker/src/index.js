@@ -1,23 +1,23 @@
 /* ============================================================
-   resport-publish-router — Cloudflare Worker
+   proves-work-router — Cloudflare Worker
    ============================================================
-   Handles TWO jobs on the resport.snylum.com zone:
+   Handles TWO jobs on the proves.work zone:
 
-   1. Wildcard subdomains  (<username>.resport.snylum.com/*)
+   1. Wildcard subdomains  (<username>.proves.work/*)
       → looks up a published portfolio snapshot in KV and serves
         the static HTML directly. No origin server involved.
 
-   2. The publish API      (resport.snylum.com/api/*)
-      → lets the editor (running on resport.snylum.com) claim a
+   2. The publish API      (proves.work/api/*)
+      → lets the editor (running on proves.work) claim a
         username and upload a rendered HTML snapshot.
 
    Route this Worker on exactly these two Route patterns (see
    wrangler.jsonc / README.md in this folder):
-      - "resport.snylum.com/api/*"
-      - "*.resport.snylum.com/*"
+      - "proves.work/api/*"
+      - "*.proves.work/*"
 
    Your marketing site / editor (index.html, editor.html, etc.)
-   keeps being served however it is today on resport.snylum.com —
+   keeps being served however it is today on proves.work —
    this Worker never touches that traffic because it's only
    routed on /api/* at that host.
    ============================================================ */
@@ -25,12 +25,12 @@
 // The single app host. Change this one line (and the routes in
 // wrangler.jsonc) if you ever move the editor to a different
 // domain/subdomain.
-const APP_HOST = 'resport.snylum.com';
+const APP_HOST = 'proves.work';
 
 const RESERVED = new Set([
   'www', 'api', 'app', 'admin', 'mail', 'email', 'ftp', 'blog', 'help',
   'support', 'static', 'cdn', 'assets', 'img', 'images', 'dashboard',
-  'dev', 'staging', 'test', 'docs', 'status', 'shop', 'store', 'resport',
+  'dev', 'staging', 'test', 'docs', 'status', 'shop', 'store', 'proves', 'proveswork',
   'portfolio', 'account', 'accounts', 'login', 'logout', 'signup',
   'billing', 'payments', 'ns1', 'ns2', 'mx', 'root', 'null', 'undefined'
 ]);

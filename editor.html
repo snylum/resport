@@ -231,6 +231,29 @@
               </div>
           </div>
 
+          <div class="ai-review-wrap" data-viewmode-only="resume">
+            <div class="sm-header-row">
+              <h3 class="sm-title">Résumé Check</h3>
+            </div>
+            <p class="sm-subtitle">Runs a quick automated check for ATS-readiness and strong bullet writing — entirely in your browser, nothing is sent anywhere.</p>
+            <button class="btn btn-secondary btn-sm" id="btnReviewResume" type="button">✦ Check my résumé</button>
+            <div class="ai-review-results hidden" id="aiReviewResults">
+              <div class="ai-review-score-box">
+                <span class="ai-review-score-label">Score</span>
+                <span class="ai-review-score-num" id="aiReviewScoreNum">0</span>
+                <span class="ai-review-score-verdict" id="aiReviewVerdict"></span>
+              </div>
+              <div class="ai-review-list-box hidden" id="aiReviewIssuesBox">
+                <p class="ai-review-list-title" id="aiReviewIssuesTitle">Issues</p>
+                <ul id="aiReviewIssuesList"></ul>
+              </div>
+              <div class="ai-review-list-box hidden" id="aiReviewImprovementsBox">
+                <p class="ai-review-list-title" id="aiReviewImprovementsTitle">Improvements</p>
+                <ul id="aiReviewImprovementsList"></ul>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 

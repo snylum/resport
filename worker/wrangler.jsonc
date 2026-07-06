@@ -1,19 +1,18 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "resport-publish-router",
+  "name": "proves-work-router",
   "main": "src/index.js",
   "compatibility_date": "2026-07-03",
 
   // Only these two patterns are routed to this Worker.
-  // Everything else on resport.snylum.com (the editor, marketing
+  // Everything else on proves.work (the editor, marketing
   // page, css, js) keeps being served by whatever hosts that
-  // subdomain today — untouched by this Worker.
+  // domain today — untouched by this Worker.
   // "zone_name" is the Cloudflare zone (your registered domain,
-  // snylum.com), not the subdomain itself — subdomains are just
-  // records inside that zone.
+  // proves.work itself, since this is the apex now, not a subdomain).
   "routes": [
-    { "pattern": "resport.snylum.com/api/*", "zone_name": "snylum.com" },
-    { "pattern": "*.resport.snylum.com/*", "zone_name": "snylum.com" }
+    { "pattern": "proves.work/api/*", "zone_name": "proves.work" },
+    { "pattern": "*.proves.work/*", "zone_name": "proves.work" }
   ],
 
   "kv_namespaces": [

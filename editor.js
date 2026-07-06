@@ -580,12 +580,12 @@ function openVerifyEditModal(blockId) {
   });
 }
 
-// ── 4c. Publishing to <username>.resport.snylum.com ─────────────
+// ── 4c. Publishing to <username>.proves.work ─────────────
 // Talks to the Cloudflare Worker in /worker (see worker/README.md).
 // Relative API paths (/api/*) — work as long as the editor itself is
 // served from PUBLISH_APEX below, since that's the only host the
 // Worker's /api/* route is attached to.
-const PUBLISH_APEX = 'resport.snylum.com';
+const PUBLISH_APEX = 'proves.work';
 const PUBLISH_TOKEN_KEY = 'proveswork_publish_token';
 const PUBLISH_USERNAME_KEY = 'proveswork_username';
 
@@ -1000,6 +1000,118 @@ function initSectionDragReorder() {
   });
 }
 
+// ── 5c. Résumé PDF export — real, ATS-safe, zero extra libraries ──
+// Forces the résumé view, strips the zoom/scale transform, isolates
+// #resumePaper as the only visible element, and hands off to the
+// browser's native print dialog (every browser offers "Save as PDF").
+function downloadResumeAsPDF() {
+  if (Store.state.viewMode !== 'resume') {
+    Store.setViewMode('resume');
+  }
+  requestAnimationFrame(() => {
+    document.body.classList.add('is-printing-resume');
+    const cleanup = () => document.body.classList.remove('is-printing-resume');
+    window.addEventListener('afterprint', cleanup, { once: true });
+    // Fallback in case afterprint doesn't fire (some print-preview flows)
+    setTimeout(cleanup, 4000);
+    window.print();
+  });
+}
+
+// ── 5d. Résumé Check — automated, in-browser critique ──────────
+// Adapted from the "AI resume review" idea (Get Hired's Gemini
+// button): same UX shape (score + issues + improvements), but runs
+// entirely client-side with a heuristic scorer instead of calling
+// an external LLM, so it works with no API key and sends nothing
+// off-device. Swap `scoreResume()`'s body for a fetch() to a real
+// AI endpoint later without touching the UI code below it.
+const ACTION_VERBS = ['built', 'led', 'launched', 'designed', 'improved', 'increased', 'reduced', 'created', 'managed', 'shipped', 'optimized', 'developed', 'implemented', 'automated', 'delivered', 'drove', 'grew', 'saved', 'organized', 'mentored', 'architected'];
+
+function scoreResume() {
+  const r = Store.state.resume;
+  const issues = [];
+  const improvements = [];
+  let score = 100;
+
+  const bulletBlocks = r.blocks.filter(b => Array.isArray(b.data.bullets));
+  const allBullets = bulletBlocks.flatMap(b => b.data.bullets || []);
+
+  if (!r.profile.jobTitle) {
+    issues.push('No job title/headline set — recruiters scan this first.');
+    score -= 8;
+  }
+  if (!r.profile.email && !r.profile.phone) {
+    issues.push('No email or phone listed — make sure you\'re reachable.');
+    score -= 10;
+  }
+  if (allBullets.length === 0) {
+    issues.push('No bullet points found under Experience/Projects.');
+    score -= 15;
+  }
+
+  const weakBullets = allBullets.filter(b => {
+    const firstWord = (b || '').trim().split(/\s+/)[0]?.toLowerCase().replace(/[^a-z]/g, '');
+    return !ACTION_VERBS.includes(firstWord);
+  });
+  if (weakBullets.length) {
+    issues.push(`${weakBullets.length} bullet${weakBullets.length > 1 ? 's' : ''} don't open with a strong action verb (e.g. "Built", "Led", "Increased").`);
+    score -= Math.min(20, weakBullets.length * 4);
+  }
+
+  const noMetric = allBullets.filter(b => !/\d/.test(b || ''));
+  if (allBullets.length && noMetric.length === allBullets.length) {
+    improvements.push('Add at least one number to a bullet (%, $, time saved, users affected) to make impact concrete.');
+    score -= 8;
+  }
+
+  const tooLong = allBullets.filter(b => (b || '').split(/\s+/).length > 28);
+  if (tooLong.length) {
+    improvements.push(`${tooLong.length} bullet${tooLong.length > 1 ? 's' : ''} run long — aim for one line, under ~25 words, per bullet.`);
+    score -= 5;
+  }
+
+  const skillsBlock = r.blocks.find(b => b.type === 'skills');
+  if (!skillsBlock || (skillsBlock.data.items || []).length < 3) {
+    improvements.push('List at least a few concrete skills/tools — many ATS systems keyword-match against this section.');
+    score -= 5;
+  }
+
+  score = Math.max(1, Math.min(100, Math.round(score)));
+  return { score, issues, improvements };
+}
+
+function verdictForScore(score) {
+  if (score >= 90) return 'Excellent, ATS-ready résumé';
+  if (score >= 80) return 'Strong résumé';
+  if (score >= 70) return 'Good, but needs some polish';
+  if (score >= 60) return 'Weak ATS optimization';
+  return 'High rejection risk — worth revising';
+}
+
+function initResumeReview() {
+  const btn = document.getElementById('btnReviewResume');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const { score, issues, improvements } = scoreResume();
+
+    document.getElementById('aiReviewResults').classList.remove('hidden');
+    document.getElementById('aiReviewScoreNum').textContent = score;
+    document.getElementById('aiReviewVerdict').textContent = verdictForScore(score);
+
+    const issuesBox = document.getElementById('aiReviewIssuesBox');
+    const issuesList = document.getElementById('aiReviewIssuesList');
+    issuesList.innerHTML = issues.map(i => `<li>${esc(i)}</li>`).join('');
+    issuesBox.classList.toggle('hidden', issues.length === 0);
+    document.getElementById('aiReviewIssuesTitle').textContent = `${issues.length} Found Issue${issues.length === 1 ? '' : 's'}`;
+
+    const impBox = document.getElementById('aiReviewImprovementsBox');
+    const impList = document.getElementById('aiReviewImprovementsList');
+    impList.innerHTML = improvements.map(i => `<li>${esc(i)}</li>`).join('');
+    impBox.classList.toggle('hidden', improvements.length === 0);
+    document.getElementById('aiReviewImprovementsTitle').textContent = `${improvements.length} Improvement${improvements.length === 1 ? '' : 's'}`;
+  });
+}
+
 // ── 6. Toolbar: view-mode switch, panel switch, doc title, actions ─
 function refreshDocTitle() {
   el.docTitle.textContent = Store.state.viewMode === 'resume'
@@ -1021,7 +1133,7 @@ function initToolbar() {
   el.docTitle.addEventListener('input', (e) => Store.updateTitle(e.target.textContent));
 
   document.getElementById('btnDownloadPDF').addEventListener('click', () => {
-    openInfoModal('Generating your PDF', 'Rendering this résumé as a print-ready, ATS-safe PDF. This only affects this résumé copy — your live portfolio is untouched.');
+    downloadResumeAsPDF();
   });
 
   document.getElementById('btnPublishShowcase').addEventListener('click', openPublishModal);
@@ -1348,6 +1460,7 @@ function init() {
   initToolbar();
   initSidebarResizer();
   initFormSectionToggles();
+  initResumeReview();
   initCustomizePanel();
   initZoomControls();
   initCanvasDelegation();

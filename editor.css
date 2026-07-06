@@ -1026,3 +1026,104 @@ body {
   padding: 1.1rem;
   border-left: none;
 }
+
+/* ── PDF export (print-to-PDF via window.print) ──────────────
+   Toggled by JS just before/after calling print(): isolates the
+   résumé paper as the only visible thing on the page, at its
+   true 210mm size, un-zoomed, un-scaled, with the app chrome and
+   the zoom transform stripped out. Every browser's print dialog
+   offers "Save as PDF" as a destination, so this is a real,
+   ATS-safe PDF export with zero extra libraries. */
+body.is-printing-resume * {
+  visibility: hidden;
+}
+body.is-printing-resume #resumePaper,
+body.is-printing-resume #resumePaper * {
+  visibility: visible;
+}
+body.is-printing-resume #resumePaper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: none !important;
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0;
+  box-shadow: none;
+}
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  body.is-printing-resume {
+    background: #fff;
+  }
+}
+/* ── AI/automated Résumé Check panel ─────────────────────────── */
+.ai-review-wrap {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--color-border);
+}
+.ai-review-wrap .btn {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+.ai-review-results {
+  margin-top: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.ai-review-results.hidden {
+  display: none;
+}
+.ai-review-score-box {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+.ai-review-score-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+.ai-review-score-num {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.ai-review-score-verdict {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+.ai-review-list-box {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+}
+.ai-review-list-box.hidden {
+  display: none;
+}
+.ai-review-list-title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  margin: 0 0 0.4rem;
+}
+.ai-review-list-box ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.78rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
