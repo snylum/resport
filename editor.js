@@ -747,6 +747,47 @@ document.addEventListener('keydown', function (e) {
 
 // Plain-HTML (no contenteditable, no editor chrome) render of a single
 // portfolio block, for the published static snapshot.
+// Clean, non-editable resume block markup — used ONLY for PDF export, so
+// the exported file never contains contenteditable spans, "Edit ✎" toggles,
+// remove buttons, or any other editor chrome that leaks into the print view.
+function renderStaticResumeBlock(block) {
+  const bulletsHTML = (bullets) => `<ul class="rb-bullets">${(bullets || []).map(b => `<li>${esc(b)}</li>`).join('')}</ul>`;
+  switch (block.type) {
+    case 'section':
+      return `<h2 class="rb-section-title">${esc(block.data.title)}</h2>`;
+    case 'summary':
+      return `<p class="rb-summary-text">${esc(block.data.text)}</p>`;
+    case 'custom':
+      return `<h3 class="rb-custom-title">${esc(block.data.title)}</h3><p class="rb-summary-text">${esc(block.data.text)}</p>`;
+    case 'experience':
+      return `<div class="rb-experience">
+        <div class="rb-exp-row"><span class="rb-company">${esc(block.data.company)}</span><span class="rb-dates">${esc(block.data.dates)}</span></div>
+        <div class="rb-exp-row"><span class="rb-role">${esc(block.data.role)}</span><span class="rb-loc">${esc(block.data.location)}</span></div>
+        ${bulletsHTML(block.data.bullets)}
+      </div>`;
+    case 'education':
+      return `<div class="rb-education">
+        <div class="rb-edu-row"><span class="rb-edu-school">${esc(block.data.school)}</span><span class="rb-dates">${esc(block.data.year)}</span></div>
+        <div class="rb-edu-row"><span class="rb-edu-degree">${esc(block.data.degree)}</span><span class="rb-loc">${esc(block.data.location)}</span></div>
+        ${block.data.gpa ? `<div class="rb-edu-gpa">${esc(block.data.gpa)}</div>` : ''}
+      </div>`;
+    case 'projects':
+      return `<div class="rb-experience">
+        <div class="rb-exp-row"><span class="rb-company">${esc(block.data.name)}</span><span class="rb-dates">${esc(block.data.dates)}</span></div>
+        <div class="rb-exp-row"><span class="rb-role">${esc(block.data.description)}</span></div>
+        ${bulletsHTML(block.data.bullets)}
+      </div>`;
+    case 'skills':
+      return `<div class="rb-skills-wrap">${(block.data.items || []).map(s => `<span class="rb-skill-tag">${esc(s)}</span>`).join('')}</div>`;
+    case 'certifications':
+      return `<div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.issuer || '')}</span><span class="ce-muted">${esc(it.date || '')}</span></div>`).join('')}</div>`;
+    case 'languages':
+      return `<div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.level || '')}</span></div>`).join('')}</div>`;
+    default:
+      return '';
+  }
+}
+
 function renderStaticPortfolioBlock(block) {
   const bulletsHTML = (bullets) => `<ul class="rb-bullets">${(bullets || []).map(b => `<li>${esc(b)}</li>`).join('')}</ul>`;
 
@@ -1210,22 +1251,95 @@ function initSectionDragReorder() {
   });
 }
 
-// ── 5c. Résumé PDF export — real, ATS-safe, zero extra libraries ──
-// Forces the résumé view, strips the zoom/scale transform, isolates
-// #resumePaper as the only visible element, and hands off to the
-// browser's native print dialog (every browser offers "Save as PDF").
-function downloadResumeAsPDF() {
-  if (Store.state.viewMode !== 'resume') {
-    Store.setViewMode('resume');
-  }
-  requestAnimationFrame(() => {
-    document.body.classList.add('is-printing-resume');
-    const cleanup = () => document.body.classList.remove('is-printing-resume');
-    window.addEventListener('afterprint', cleanup, { once: true });
-    // Fallback in case afterprint doesn't fire (some print-preview flows)
-    setTimeout(cleanup, 4000);
-    window.print();
+// ── 5c. Résumé PDF export — real, downloadable PDF file ────────
+// Builds a fully static (non-editable, chrome-free) copy of the resume in
+// an off-screen container — never touches the live editable canvas — and
+// hands it to html2pdf.js, which generates and auto-downloads an actual
+// .pdf file. No print dialog, no "Edit ✎" buttons, no remove buttons.
+async function ensureHtml2Pdf() {
+  if (window.html2pdf) return window.html2pdf;
+  await new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js';
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('Could not load PDF engine'));
+    document.head.appendChild(s);
   });
+  return window.html2pdf;
+}
+
+async function downloadResumeAsPDF() {
+  const btn = document.getElementById('btnDownloadPDF');
+  const originalLabel = btn ? btn.textContent : null;
+  if (btn) { btn.disabled = true; btn.textContent = 'Preparing PDF…'; }
+
+  try {
+    const html2pdf = await ensureHtml2Pdf();
+    const resume = Store.state.resume;
+    const design = resume.design || {};
+    const blocks = resume.blocks || [];
+    const profile = resume.profile || {};
+
+    const fullName = [profile.firstName, profile.lastName].filter(Boolean).join(' ') || 'Resume';
+    const contactLine = [profile.email, profile.phone, profile.address].filter(Boolean).join(' • ');
+
+    const clone = document.createElement('div');
+    clone.className = 'resume-paper';
+    clone.setAttribute('data-template', resume.template || 'ats');
+    clone.setAttribute('data-layout', design.layout || '1');
+    clone.setAttribute('data-header-align', design.headerAlign || 'left');
+    clone.setAttribute('data-date-align', design.dateAlign || 'right');
+    clone.setAttribute('data-title-style', design.titleStyle || 'plain');
+    clone.style.setProperty('--rp-accent', design.accent || '#111');
+    clone.style.setProperty('--rp-heading-font', FONT_STACKS[design.headingFont] || FONT_STACKS.sans);
+    clone.style.setProperty('--rp-body-font', FONT_STACKS[design.bodyFont] || FONT_STACKS.sans);
+    clone.style.setProperty('--rp-font-scale', Number(design.fontSize || 100) / 100);
+    clone.style.setProperty('--rp-line-height', design.lineHeight === 'compact' ? '1.25' : design.lineHeight === 'relaxed' ? '1.7' : '1.45');
+
+    const photoHTML = profile.photo
+      ? `<div class="rb-header-photo-wrap"><img src="${esc(profile.photo)}" alt="Profile" /></div>`
+      : '';
+    clone.innerHTML = `
+      <header class="rb-header">
+        ${photoHTML}
+        <div class="rb-header-text">
+          <h1 class="rb-name">${esc(fullName)}</h1>
+          <div class="rb-title">${esc(profile.jobTitle || '')}</div>
+          <div class="rb-contact-line">${esc(contactLine)}</div>
+        </div>
+      </header>
+      <div class="tracks-layout-${design.layout || '1'}">
+        <div class="col-track main-track">${blocks.filter(b => b.col === 'main').map(b => `<div class="resume-block block-${b.type}">${renderStaticResumeBlock(b)}</div>`).join('')}</div>
+        <div class="col-track side-track">${blocks.filter(b => b.col === 'side').map(b => `<div class="resume-block block-${b.type}">${renderStaticResumeBlock(b)}</div>`).join('')}</div>
+      </div>`;
+
+    // Render off-screen (not display:none — html2canvas needs real layout).
+    clone.style.position = 'fixed';
+    clone.style.top = '0';
+    clone.style.left = '-99999px';
+    document.body.appendChild(clone);
+
+    const filename = `${fullName.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'resume'}.pdf`;
+
+    await html2pdf()
+      .set({
+        margin: 0,
+        filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'] }
+      })
+      .from(clone)
+      .save();
+
+    document.body.removeChild(clone);
+  } catch (err) {
+    console.error(err);
+    alert('Sorry — the PDF could not be generated. Please try again.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+  }
 }
 
 // ── 5d. Résumé Check — automated, in-browser critique ──────────
