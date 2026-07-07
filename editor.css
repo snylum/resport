@@ -860,60 +860,74 @@ body {
   border-style: solid;
 }
 
-/* ── Expandable section blocks (both resume + portfolio canvases) ── */
-.block-summary-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  cursor: pointer;
-  padding: 0.15rem 0.25rem;
-  border-radius: 4px;
-}
-
-.block-summary-row:hover {
-  background: var(--color-surface-alt);
-}
-
-.block-summary-text {
-  font-size: 0.9em;
+/* ── Expandable section accordion (left sidebar — the ONLY place ── */
+/* content is directly editable; the canvas is a plain preview now).  */
+.sd-summary-line {
+  font-size: 0.75rem;
   color: var(--color-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex: 1;
+  padding: 0 0.75rem 0.5rem;
 }
 
-.block-expand-toggle {
-  flex-shrink: 0;
-  background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  font-size: 0.75em;
-  padding: 0.15rem 0.5rem;
-  cursor: pointer;
+.sd-section-item.expanded .sd-summary-line {
+  display: none;
+}
+
+.sd-expand-btn {
+  font-size: 0.7em;
+}
+
+.sd-section-item.expanded .sd-expand-btn {
+  border-color: var(--rp-accent, var(--color-secondary));
+  color: var(--rp-accent, var(--color-secondary));
+}
+
+.sd-edit-body {
+  padding: 0.25rem 0.75rem 0.85rem;
+  border-top: 1px dashed var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.sd-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.sd-field-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
   color: var(--color-text-muted);
 }
 
-.block-expand-toggle:hover {
-  border-color: var(--rp-accent, var(--color-secondary));
-  color: var(--rp-accent, var(--color-secondary));
-}
-
-.block-edit-body {
-  display: none;
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px dashed var(--color-border);
-}
-
-.expandable-block.expanded .block-edit-body {
+.sd-field .ce-field {
   display: block;
+  min-height: 1.6em;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-surface-alt);
+  font-size: 0.82rem;
 }
 
-.expandable-block.expanded .block-expand-toggle {
+.sd-field .ce-field:hover {
+  background: var(--color-surface-alt);
   border-color: var(--rp-accent, var(--color-secondary));
-  color: var(--rp-accent, var(--color-secondary));
+}
+
+.sd-field .ce-field:focus {
+  background: var(--color-surface);
+  box-shadow: 0 0 0 1px var(--rp-accent, var(--color-secondary));
+}
+
+.sd-field .ce-field.ce-block {
+  min-height: 4.5em;
 }
 
 /* ── Editable text affordances ──────────────────────────────── */

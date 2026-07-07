@@ -197,19 +197,21 @@ function verifyControlHTML(block) {
 }
 
 // ── 3a. RESUME / PDF block renderer (paper-style, unchanged look) ─
-// Which blocks currently have their edit fields expanded. Pure UI state —
-// not part of Store — so it's fine to keep it as module-level state that
-// resets on reload.
+// Which blocks currently have their edit accordion expanded IN THE
+// SIDEBAR. Pure UI state — not part of Store — so it's fine to keep it
+// as module-level state that resets on reload. The canvas itself is
+// always a plain, non-editable preview now; only the left sidebar list
+// has the expand/collapse edit accordion.
 const expandedBlocks = new Set();
 
 function toggleBlockExpand(blockId) {
   if (expandedBlocks.has(blockId)) expandedBlocks.delete(blockId);
   else expandedBlocks.add(blockId);
-  renderActiveCanvas();
+  renderSidebarList(Store.active().blocks);
 }
 
-// Short, non-editable one-liner shown on a collapsed block so people can
-// tell sections apart without any field being directly editable in place.
+// Short, non-editable one-liner shown next to a collapsed sidebar item so
+// people can tell sections apart before expanding one to edit it.
 function blockSummaryLine(block) {
   const d = block.data || {};
   switch (block.type) {
@@ -226,20 +228,62 @@ function blockSummaryLine(block) {
   }
 }
 
-// Wraps a block's editable form markup with a summary row that toggles it
-// open/closed, so the preview itself is never directly editable — you
-// expand a section to edit it, then collapse it back to a plain preview.
-function withExpandChrome(wrapper, block, editHTML) {
-  const isExpanded = expandedBlocks.has(block.id);
-  wrapper.classList.add('expandable-block');
-  if (isExpanded) wrapper.classList.add('expanded');
-  wrapper.innerHTML = `
-    <div class="block-summary-row" data-action="toggle-expand" data-block="${block.id}">
-      <span class="block-summary-text">${esc(blockSummaryLine(block))}</span>
-      <button class="block-expand-toggle" type="button" data-action="toggle-expand" data-block="${block.id}">${isExpanded ? 'Done ✓' : 'Edit ✎'}</button>
-    </div>
-    <div class="block-edit-body">${editHTML}</div>
-  `;
+// ── 3a-i. Sidebar accordion edit-body markup (the ONLY place with
+// actual editable ce-fields now). One labeled field-box per data field,
+// reusing the same ceField/renderBulletList/renderSkillTags/renderEntryList
+// helpers (and therefore the same Store.updateBlockData wiring) that used
+// to live directly on the canvas.
+function blockEditFieldsHTML(block) {
+  const d = block.data || {};
+  const field = (label, html) => `<div class="sd-field"><span class="sd-field-label">${esc(label)}</span>${html}</div>`;
+  switch (block.type) {
+    case 'section':
+      return field('Section title', ceField(d.title, 'title', block.id));
+    case 'summary':
+      return field('Text', ceField(d.text, 'text', block.id, { cls: 'ce-block' }));
+    case 'custom':
+      return field('Title', ceField(d.title, 'title', block.id))
+        + field('Text', ceField(d.text, 'text', block.id, { cls: 'ce-block' }));
+    case 'experience':
+      return field('Company', ceField(d.company, 'company', block.id))
+        + field('Dates', ceField(d.dates, 'dates', block.id))
+        + field('Role', ceField(d.role, 'role', block.id))
+        + field('Location', ceField(d.location, 'location', block.id))
+        + field('Bullets', renderBulletList(d.bullets, block.id, 'bullets'))
+        + field('Verification', `<div class="pf-verify">${verifyControlHTML(block)}</div>`);
+    case 'education':
+      return field('School', ceField(d.school, 'school', block.id))
+        + field('Year', ceField(d.year, 'year', block.id))
+        + field('Degree', ceField(d.degree, 'degree', block.id))
+        + field('Location', ceField(d.location, 'location', block.id))
+        + field('GPA', ceField(d.gpa, 'gpa', block.id));
+    case 'projects':
+      return field('Name', ceField(d.name, 'name', block.id))
+        + field('Dates', ceField(d.dates, 'dates', block.id))
+        + field('Description', ceField(d.description, 'description', block.id))
+        + field('Bullets', renderBulletList(d.bullets, block.id, 'bullets'));
+    case 'skills':
+      return field('Skills', renderSkillTags(d.items, block.id, 'items'));
+    case 'certifications':
+      return field('Certifications', renderEntryList(d.items, block.id, 'items', [
+        { key: 'name', cls: 'ce-strong' }, { key: 'issuer', cls: 'ce-muted' }, { key: 'date', cls: 'ce-muted' }
+      ]));
+    case 'languages':
+      return field('Languages', renderEntryList(d.items, block.id, 'items', [
+        { key: 'name', cls: 'ce-strong' }, { key: 'level', cls: 'ce-muted' }
+      ]));
+    default:
+      return '';
+  }
+}
+
+// View-only verify badge for the canvas preview (no edit/add-proof
+// affordance there anymore — that lives in the sidebar accordion).
+function canvasVerifyBadge(block) {
+  const v = block.data.verify || { type: 'none' };
+  if (v.type === 'none') return '';
+  const labelText = v.label || (v.type === 'photo' ? 'View proof' : 'View link');
+  return `<div class="pf-verify"><button class="pf-verify-badge" data-action="view-verify" data-block="${block.id}" type="button">✓ Verified <span class="pf-verify-label">${esc(labelText)}</span></button></div>`;
 }
 
 function createResumeBlock(block) {
@@ -247,79 +291,10 @@ function createResumeBlock(block) {
   wrapper.className = `resume-block block-${block.type}`;
   wrapper.dataset.id = block.id;
   if (Store.state.selectedBlockId === block.id) wrapper.classList.add('selected');
-
-  let innerHTML = '';
-  switch (block.type) {
-    case 'section':
-      innerHTML = `<h2 class="rb-section-title">${ceField(block.data.title, 'title', block.id)}</h2>`;
-      break;
-    case 'summary':
-      innerHTML = `<p class="rb-summary-text">${ceField(block.data.text, 'text', block.id, { cls: 'ce-block' })}</p>`;
-      break;
-    case 'custom':
-      innerHTML = `
-        <h3 class="rb-custom-title">${ceField(block.data.title, 'title', block.id)}</h3>
-        <p class="rb-summary-text">${ceField(block.data.text, 'text', block.id, { cls: 'ce-block' })}</p>`;
-      break;
-    case 'experience':
-      innerHTML = `
-        <div class="rb-experience">
-          <div class="rb-exp-row">
-            <span class="rb-company">${ceField(block.data.company, 'company', block.id)}</span>
-            <span class="rb-dates">${ceField(block.data.dates, 'dates', block.id)}</span>
-          </div>
-          <div class="rb-exp-row">
-            <span class="rb-role">${ceField(block.data.role, 'role', block.id)}</span>
-            <span class="rb-loc">${ceField(block.data.location, 'location', block.id)}</span>
-          </div>
-          ${renderBulletList(block.data.bullets, block.id, 'bullets')}
-        </div>`;
-      break;
-    case 'education':
-      innerHTML = `
-        <div class="rb-education">
-          <div class="rb-edu-row">
-            <span class="rb-edu-school">${ceField(block.data.school, 'school', block.id)}</span>
-            <span class="rb-dates">${ceField(block.data.year, 'year', block.id)}</span>
-          </div>
-          <div class="rb-edu-row">
-            <span class="rb-edu-degree">${ceField(block.data.degree, 'degree', block.id)}</span>
-            <span class="rb-loc">${ceField(block.data.location, 'location', block.id)}</span>
-          </div>
-          <div class="rb-edu-gpa">${ceField(block.data.gpa, 'gpa', block.id)}</div>
-        </div>`;
-      break;
-    case 'projects':
-      innerHTML = `
-        <div class="rb-experience">
-          <div class="rb-exp-row">
-            <span class="rb-company">${ceField(block.data.name, 'name', block.id)}</span>
-            <span class="rb-dates">${ceField(block.data.dates, 'dates', block.id)}</span>
-          </div>
-          <div class="rb-exp-row"><span class="rb-role">${ceField(block.data.description, 'description', block.id)}</span></div>
-          ${renderBulletList(block.data.bullets, block.id, 'bullets')}
-        </div>`;
-      break;
-    case 'skills':
-      innerHTML = renderSkillTags(block.data.items, block.id, 'items');
-      break;
-    case 'certifications':
-      innerHTML = renderEntryList(block.data.items, block.id, 'items', [
-        { key: 'name', cls: 'ce-strong' }, { key: 'issuer', cls: 'ce-muted' }, { key: 'date', cls: 'ce-muted' }
-      ]);
-      break;
-    case 'languages':
-      innerHTML = renderEntryList(block.data.items, block.id, 'items', [
-        { key: 'name', cls: 'ce-strong' }, { key: 'level', cls: 'ce-muted' }
-      ]);
-      break;
-    default:
-      break;
-  }
-
-  withExpandChrome(wrapper, block, innerHTML);
+  wrapper.innerHTML = renderStaticResumeBlock(block);
   return wrapper;
 }
+
 
 // ── 3b. PORTFOLIO SITE block renderer (cards + verification) ─────
 function createPortfolioBlock(block) {
@@ -332,76 +307,72 @@ function createPortfolioBlock(block) {
   switch (block.type) {
     case 'section':
       baseClass = 'pf-block-section-title';
-      innerHTML = ceField(block.data.title, 'title', block.id);
+      innerHTML = esc(block.data.title);
       break;
     case 'summary':
       baseClass = 'pf-card pf-summary-card';
-      innerHTML = ceField(block.data.text, 'text', block.id, { cls: 'ce-block' });
+      innerHTML = esc(block.data.text);
       break;
     case 'custom':
       baseClass = 'pf-card';
       innerHTML = `
-        <h3 class="pf-exp-company">${ceField(block.data.title, 'title', block.id)}</h3>
-        <p>${ceField(block.data.text, 'text', block.id, { cls: 'ce-block' })}</p>`;
+        <h3 class="pf-exp-company">${esc(block.data.title)}</h3>
+        <p>${esc(block.data.text)}</p>`;
       break;
     case 'experience':
       baseClass = 'pf-card';
       innerHTML = `
         <div class="pf-exp-top-row">
-          <span class="pf-exp-company">${ceField(block.data.company, 'company', block.id)}</span>
-          <span class="pf-exp-dates">${ceField(block.data.dates, 'dates', block.id)}</span>
+          <span class="pf-exp-company">${esc(block.data.company)}</span>
+          <span class="pf-exp-dates">${esc(block.data.dates)}</span>
         </div>
         <div class="pf-exp-sub-row">
-          <span>${ceField(block.data.role, 'role', block.id)}</span>
-          <span>${ceField(block.data.location, 'location', block.id)}</span>
+          <span>${esc(block.data.role)}</span>
+          <span>${esc(block.data.location)}</span>
         </div>
-        ${renderBulletList(block.data.bullets, block.id, 'bullets')}
-        <div class="pf-verify">${verifyControlHTML(block)}</div>`;
+        <ul class="rb-bullets">${(block.data.bullets || []).map(b => `<li>${esc(b)}</li>`).join('')}</ul>
+        ${canvasVerifyBadge(block)}`;
       break;
     case 'education':
       baseClass = 'pf-card pf-edu-card';
       innerHTML = `
         <div class="pf-exp-top-row">
-          <span class="pf-exp-company">${ceField(block.data.school, 'school', block.id)}</span>
-          <span class="pf-exp-dates">${ceField(block.data.year, 'year', block.id)}</span>
+          <span class="pf-exp-company">${esc(block.data.school)}</span>
+          <span class="pf-exp-dates">${esc(block.data.year)}</span>
         </div>
         <div class="pf-exp-sub-row">
-          <span>${ceField(block.data.degree, 'degree', block.id)}</span>
-          <span>${ceField(block.data.location, 'location', block.id)}</span>
+          <span>${esc(block.data.degree)}</span>
+          <span>${esc(block.data.location)}</span>
         </div>
-        <div class="pf-edu-gpa">${ceField(block.data.gpa, 'gpa', block.id)}</div>`;
+        <div class="pf-edu-gpa">${esc(block.data.gpa)}</div>`;
       break;
     case 'projects':
       baseClass = 'pf-card';
       innerHTML = `
         <div class="pf-exp-top-row">
-          <span class="pf-exp-company">${ceField(block.data.name, 'name', block.id)}</span>
-          <span class="pf-exp-dates">${ceField(block.data.dates, 'dates', block.id)}</span>
+          <span class="pf-exp-company">${esc(block.data.name)}</span>
+          <span class="pf-exp-dates">${esc(block.data.dates)}</span>
         </div>
-        <div class="pf-exp-sub-row"><span>${ceField(block.data.description, 'description', block.id)}</span></div>
-        ${renderBulletList(block.data.bullets, block.id, 'bullets')}`;
+        <div class="pf-exp-sub-row"><span>${esc(block.data.description)}</span></div>
+        <ul class="rb-bullets">${(block.data.bullets || []).map(b => `<li>${esc(b)}</li>`).join('')}</ul>`;
       break;
     case 'skills':
       baseClass = 'pf-card';
-      innerHTML = renderSkillTags(block.data.items, block.id, 'items');
+      innerHTML = `<div class="rb-skills-wrap">${(block.data.items || []).map(s => `<span class="rb-skill-tag">${esc(s)}</span>`).join('')}</div>`;
       break;
     case 'certifications':
       baseClass = 'pf-card';
-      innerHTML = renderEntryList(block.data.items, block.id, 'items', [
-        { key: 'name', cls: 'ce-strong' }, { key: 'issuer', cls: 'ce-muted' }, { key: 'date', cls: 'ce-muted' }
-      ]);
+      innerHTML = `<div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.issuer || '')}</span><span class="ce-muted">${esc(it.date || '')}</span></div>`).join('')}</div>`;
       break;
     case 'languages':
       baseClass = 'pf-card';
-      innerHTML = renderEntryList(block.data.items, block.id, 'items', [
-        { key: 'name', cls: 'ce-strong' }, { key: 'level', cls: 'ce-muted' }
-      ]);
+      innerHTML = `<div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.level || '')}</span></div>`).join('')}</div>`;
       break;
     default:
       break;
   }
   if (baseClass) wrapper.classList.add(...baseClass.split(' '));
-  withExpandChrome(wrapper, block, innerHTML);
+  wrapper.innerHTML = innerHTML;
   return wrapper;
 }
 
@@ -1122,15 +1093,21 @@ function renderSidebarList(blocks) {
       ? `<button class="sd-icon-btn sd-swap-btn" data-action="swap" data-id="${block.id}" title="Move to ${block.col === 'side' ? 'main column' : 'sidebar'}" type="button">${block.col === 'side' ? '⇤' : '⇥'}</button>`
       : '';
 
+    const isExpanded = expandedBlocks.has(block.id);
+    if (isExpanded) item.classList.add('expanded');
+
     item.innerHTML = `
       <div class="sd-item-header">
         <span class="sd-drag-handle">☰</span>
         <span class="sd-title-text">${esc(titleText)} ${verifyBadge}</span>
         <span class="sd-item-actions">
           ${swapBtn}
+          <button class="sd-icon-btn sd-expand-btn" data-action="toggle-expand" data-block="${block.id}" title="${isExpanded ? 'Done editing' : 'Edit this section'}" type="button">${isExpanded ? 'Done ✓' : 'Edit ✎'}</button>
           <button class="sd-icon-btn sd-delete-btn" data-action="delete" data-id="${block.id}" title="Delete section" type="button">✕</button>
         </span>
       </div>
+      <div class="sd-summary-line">${esc(blockSummaryLine(block))}</div>
+      ${isExpanded ? `<div class="sd-edit-body">${blockEditFieldsHTML(block)}</div>` : ''}
     `;
     el.sidebarSectionsList.appendChild(item);
   });
@@ -1161,18 +1138,40 @@ function initSidebarActions() {
     if (actionBtn) {
       e.preventDefault();
       e.stopPropagation();
-      const id = actionBtn.dataset.id;
-      if (actionBtn.dataset.action === 'delete') {
-        confirmDeleteSection(id);
-      } else if (actionBtn.dataset.action === 'swap') {
+      const action = actionBtn.dataset.action;
+      // "delete" / "swap" address a block via data-id (list-management
+      // actions on the item header); everything else (accordion toggle,
+      // add/remove list item, verify) addresses a block via data-block
+      // (field-editing actions, same scheme the old canvas chrome used).
+      if (action === 'delete') {
+        confirmDeleteSection(actionBtn.dataset.id);
+      } else if (action === 'swap') {
+        const id = actionBtn.dataset.id;
         const block = Store.active().blocks.find(b => b.id === id);
         if (block) Store.setBlockColumn(id, block.col === 'side' ? 'main' : 'side');
+      } else if (action === 'toggle-expand') {
+        toggleBlockExpand(actionBtn.dataset.block);
+      } else if (action === 'add-item') {
+        Store.addListItem(actionBtn.dataset.block, actionBtn.dataset.field, actionBtn.dataset.itemType === 'object' ? {} : '');
+      } else if (action === 'remove-item') {
+        Store.removeListItem(actionBtn.dataset.block, actionBtn.dataset.field, Number(actionBtn.dataset.index));
+      } else if (action === 'view-verify') {
+        openVerifyViewModal(actionBtn.dataset.block);
+      } else if (action === 'edit-verify') {
+        openVerifyEditModal(actionBtn.dataset.block);
       }
       return;
     }
+    // Clicking inside the open edit body (e.g. into a ce-field to type)
+    // should still select the block, but must never toggle it closed —
+    // only the explicit Edit ✎ / Done ✓ button does that.
     const item = e.target.closest('.sd-section-item');
     if (item) Store.setSelectedBlock(item.dataset.id);
   });
+
+  // Same field-sync used by the (now read-only) canvas — writes a
+  // ce-field's text back into the Store the moment it loses focus.
+  el.sidebarSectionsList.addEventListener('focusout', handleFieldSync);
 }
 
 function initAddSectionMenu() {
