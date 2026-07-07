@@ -84,7 +84,7 @@ export const FONT_OPTIONS = [
 
 // Default design for the portfolio site (independent of résumé templates —
 // the portfolio has one flowing layout, but still themeable via color/font).
-export const PORTFOLIO_DEFAULT_DESIGN = { accent: '#7C4DFF', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'contained' };
+export const PORTFOLIO_DEFAULT_DESIGN = { accent: '#7C4DFF', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'contained', heroAlign: 'left' };
 
 // Portfolio templates: unlike résumé templates (which change structural
 // layout — columns, alignment), the portfolio has one adaptive layout,
@@ -155,7 +155,77 @@ export const PORTFOLIO_TEMPLATES = [
     name: 'Corporate / Consulting',
     tagline: 'Minimal ink, serif headings',
     icon: '💼',
-    design: { accent: '#1A1A1A', headingFont: 'serif', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'contained' }
+    design: { accent: '#1A1A1A', headingFont: 'serif', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'contained', heroAlign: 'left' }
+  },
+  {
+    id: 'photography',
+    name: 'Photography / Visual Arts',
+    tagline: 'Centered hero, full-bleed slides',
+    icon: '📷',
+    design: { accent: '#111111', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'horizontal', contentWidth: 'full', heroAlign: 'center' }
+  },
+  {
+    id: 'legal',
+    name: 'Legal',
+    tagline: 'Formal serif, centered letterhead',
+    icon: '⚖️',
+    design: { accent: '#0B2545', headingFont: 'serif', bodyFont: 'serif', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'contained', heroAlign: 'center' }
+  },
+  {
+    id: 'healthcare',
+    name: 'Healthcare / Medical',
+    tagline: 'Calm teal, clean and legible',
+    icon: '⚕️',
+    design: { accent: '#2A9D8F', headingFont: 'sans', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'fade-up', contentWidth: 'contained', heroAlign: 'left' }
+  },
+  {
+    id: 'finance',
+    name: 'Finance / Banking',
+    tagline: 'Deep green, right-aligned card',
+    icon: '📊',
+    design: { accent: '#14532D', headingFont: 'serif', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'wide', heroAlign: 'right' }
+  },
+  {
+    id: 'writer',
+    name: 'Writer / Journalist',
+    tagline: 'Editorial serif, narrow column',
+    icon: '✍️',
+    design: { accent: '#7A1F2B', headingFont: 'serif', bodyFont: 'serif', headerStyle: 'scroll', sectionAnimation: 'fade-up', contentWidth: 'contained', heroAlign: 'center' }
+  },
+  {
+    id: 'music',
+    name: 'Music / Performing Arts',
+    tagline: 'Bold accent, full-bleed slide deck',
+    icon: '🎤',
+    design: { accent: '#D62839', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'horizontal', contentWidth: 'full', heroAlign: 'center' }
+  },
+  {
+    id: 'realestate',
+    name: 'Real Estate / Sales',
+    tagline: 'Confident gold, pinned header',
+    icon: '🏡',
+    design: { accent: '#A47148', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'none', contentWidth: 'wide', heroAlign: 'right' }
+  },
+  {
+    id: 'fitness',
+    name: 'Fitness / Coaching',
+    tagline: 'High-energy orange, slide story',
+    icon: '💪',
+    design: { accent: '#E85D04', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'horizontal', contentWidth: 'full', heroAlign: 'left' }
+  },
+  {
+    id: 'nonprofit',
+    name: 'Nonprofit / Social Impact',
+    tagline: 'Earthy green, warm and grounded',
+    icon: '🌱',
+    design: { accent: '#4C7A3F', headingFont: 'serif', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'fade-up', contentWidth: 'contained', heroAlign: 'center' }
+  },
+  {
+    id: 'academic',
+    name: 'Academic / Research',
+    tagline: 'Understated navy, dense reading column',
+    icon: '📚',
+    design: { accent: '#22314A', headingFont: 'serif', bodyFont: 'serif', headerStyle: 'pinned', sectionAnimation: 'none', contentWidth: 'contained', heroAlign: 'left' }
   }
 ];
 

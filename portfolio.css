@@ -110,6 +110,42 @@
   z-index: 20;
 }
 
+/* Horizontal mode never uses sticky for the header — see the "fixed
+   shell" block below, which makes the header a static flex item that's
+   always fully visible instead, so there's nothing to fall out of sync. */
+.portfolio-site[data-section-anim="horizontal"][data-header-style="pinned"] .pf-hero {
+  position: static;
+}
+
+/* ── Hero alignment ───────────────────────────────────────────
+   Lets the personal-details card sit left (default), centered, or
+   pushed to the right within the hero band. */
+.pf-hero {
+  text-align: left;
+}
+.portfolio-site[data-hero-align="center"] .pf-hero {
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+.portfolio-site[data-hero-align="center"] .pf-hero-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.portfolio-site[data-hero-align="center"] .pf-tagline {
+  max-width: 60ch;
+}
+.portfolio-site[data-hero-align="right"] .pf-hero {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+.portfolio-site[data-hero-align="right"] .pf-hero-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
 /* ── Section animation: fade-up ──────────────────────────────
    Each direct child of .pf-sections starts hidden/offset and is
    revealed (via the .pf-revealed class, added by an IntersectionObserver
@@ -131,6 +167,32 @@
    scroll-snap "slide deck" feel as the proves.work homepage,
    rather than a single card per swipe. Each .pf-slide groups a
    section title with all the cards under it. */
+/* ── Fixed shell ──────────────────────────────────────────────
+   Horizontal mode is a "deck", not a page: the whole site fills the
+   viewport (or, inside the editor canvas, whatever box it's given)
+   as a fixed-height column. The hero and footer are plain flex items
+   — always on screen, never sticky, never able to drift out of sync
+   with each other — and only the middle (the dot rail + slide track)
+   is allowed to flex. Nothing here produces page-level vertical
+   scroll; if a single slide's content is taller than the space it's
+   given, THAT slide scrolls internally (see .pf-slide-inner), not
+   the page. */
+.portfolio-site[data-section-anim="horizontal"] {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.portfolio-site[data-section-anim="horizontal"] .pf-hero,
+.portfolio-site[data-section-anim="horizontal"] .pf-footer {
+  flex-shrink: 0;
+}
+
+.portfolio-site[data-section-anim="horizontal"] .pf-slide-dots {
+  flex-shrink: 0;
+}
+
 .portfolio-site[data-section-anim="horizontal"] .pf-sections {
   display: flex;
   flex-direction: row;
@@ -140,7 +202,11 @@
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  height: calc(100vh - 176px); /* below the pf-hero + dot rail */
+  flex: 1;
+  min-height: 0; /* lets this flex child shrink below its content size,
+                    so IT scrolls internally instead of pushing the
+                    shell (and the footer with it) taller than the
+                    viewport */
 }
 
 .portfolio-site[data-section-anim="horizontal"] .pf-sections::-webkit-scrollbar { display: none; }
@@ -149,6 +215,7 @@
 .pf-slide {
   flex: 0 0 100%;
   width: 100%;
+  min-height: 0;
   scroll-snap-align: start;
   display: flex;
   align-items: center;
@@ -159,8 +226,11 @@
 .pf-slide-inner {
   width: 100%;
   max-width: 700px;
-  max-height: 100%;
+  height: 100%;
   overflow-y: auto;
+  /* Internal scroll is a per-slide fallback, not the default look —
+     only kicks in when that slide's own content genuinely doesn't
+     fit the space it's given. */
   padding: 2rem 2.75rem 2.5rem;
   display: flex;
   flex-direction: column;
@@ -196,16 +266,28 @@
 /* Small screens: horizontal slides revert to normal vertical
    stacking, same breakpoint behavior as the homepage. */
 @media (max-width: 768px) {
+  .portfolio-site[data-section-anim="horizontal"] {
+    height: auto;
+    overflow: visible;
+  }
   .portfolio-site[data-section-anim="horizontal"] .pf-sections {
     flex-direction: column;
     overflow-x: hidden;
     overflow-y: visible;
     scroll-snap-type: none;
-    height: auto;
+    flex: none;
   }
-  .pf-slide { width: 100%; }
-  .pf-slide-inner { max-width: 100%; padding: 1.5rem; }
+  .pf-slide { width: 100%; min-height: 0; }
+  .pf-slide-inner { max-width: 100%; height: auto; overflow-y: visible; padding: 1.5rem; }
   .pf-slide-dots { display: none; }
+  .portfolio-site[data-hero-align="center"] .pf-hero,
+  .portfolio-site[data-hero-align="right"] .pf-hero {
+    flex-direction: column;
+    text-align: center;
+  }
+  .portfolio-site[data-hero-align="right"] .pf-hero-text {
+    align-items: center;
+  }
 }
 
 .pf-sections {

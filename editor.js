@@ -42,6 +42,7 @@ const el = {
   pfPhotoWrap: document.getElementById('pfPhotoWrap'),
   pfPhotoImg: document.getElementById('pfPhotoImg'),
   pfSections: document.getElementById('pfSections'),
+  pfSlideDots: document.getElementById('pfSlideDots'),
   pfFooterName: document.getElementById('pfFooterName'),
 
   sidebarSectionsList: document.getElementById('sidebarSectionsList'),
@@ -378,6 +379,131 @@ function createPortfolioBlock(block) {
   return wrapper;
 }
 
+// ── 3b2. Live (editable) horizontal-slide rendering ────────────
+// Mirrors buildHorizontalSectionsHTML/groupBlocksIntoSlides (used for
+// the published static export) but builds real, editable block
+// elements via createPortfolioBlock instead of static HTML strings,
+// so the in-editor preview's horizontal mode is click-to-select,
+// double-click-to-edit, and live-updating just like every other
+// section-animation mode — not just a flat, unsliced row of cards.
+let pfSlideEls = [];
+let pfDotEls = [];
+let pfCurrentSlide = 0;
+let pfSlideNavBound = false;
+
+function renderPortfolioCanvasBlocks(blocks, mode) {
+  if (mode !== 'horizontal') {
+    el.pfSlideDots.innerHTML = '';
+    el.pfSlideDots.classList.add('hidden');
+    pfSlideEls = [];
+    pfDotEls = [];
+    el.pfSections.innerHTML = '';
+    blocks.forEach(block => el.pfSections.appendChild(createPortfolioBlock(block)));
+    return;
+  }
+
+  const slides = groupBlocksIntoSlides(blocks);
+  const keepIndex = Math.min(pfCurrentSlide, Math.max(0, slides.length - 1));
+
+  el.pfSections.innerHTML = '';
+  pfSlideEls = slides.map((slideBlocks, i) => {
+    const slideEl = document.createElement('div');
+    slideEl.className = 'pf-slide';
+    slideEl.id = `pfSlide-${i}`;
+    const innerEl = document.createElement('div');
+    innerEl.className = 'pf-slide-inner';
+    slideBlocks.forEach(block => innerEl.appendChild(createPortfolioBlock(block)));
+    slideEl.appendChild(innerEl);
+    el.pfSections.appendChild(slideEl);
+    return slideEl;
+  });
+
+  el.pfSlideDots.innerHTML = '';
+  el.pfSlideDots.classList.toggle('hidden', slides.length <= 1);
+  pfDotEls = slides.map((_, i) => {
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    dot.className = `pf-dot${i === keepIndex ? ' active' : ''}`;
+    dot.dataset.pfSlide = String(i);
+    dot.setAttribute('aria-label', `Section ${i + 1}`);
+    el.pfSlideDots.appendChild(dot);
+    return dot;
+  });
+
+  pfCurrentSlide = keepIndex;
+  // Jump (no smooth animation — this is a re-render, not a user nav
+  // action) back to whichever slide was active before the re-render,
+  // once the new layout has settled.
+  requestAnimationFrame(() => {
+    pfSlideEls[pfCurrentSlide]?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'start' });
+  });
+
+  initPortfolioHorizontalNav();
+}
+
+function pfSetActiveDot(i) {
+  pfDotEls.forEach((d, di) => d.classList.toggle('active', di === i));
+}
+
+function pfGoToSlide(i) {
+  if (i < 0 || i >= pfSlideEls.length) return;
+  pfCurrentSlide = i;
+  pfIsProgrammaticScroll = true;
+  pfSlideEls[i].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+  pfSetActiveDot(i);
+  setTimeout(() => { pfIsProgrammaticScroll = false; }, 500);
+}
+
+let pfIsProgrammaticScroll = false;
+let pfWheelCooldown = false;
+
+// Wired once — el.pfSections/el.pfSlideDots are stable elements that
+// persist across re-renders (only their children are rebuilt each
+// time), so delegation lets this survive renderPortfolioCanvasBlocks
+// swapping the slide/dot elements out from under it.
+function initPortfolioHorizontalNav() {
+  if (pfSlideNavBound) return;
+  pfSlideNavBound = true;
+
+  el.pfSlideDots.addEventListener('click', (e) => {
+    const dot = e.target.closest('.pf-dot');
+    if (!dot) return;
+    pfGoToSlide(parseInt(dot.dataset.pfSlide, 10));
+  });
+
+  el.pfSections.addEventListener('scroll', () => {
+    if (pfIsProgrammaticScroll || !pfSlideEls.length) return;
+    const trackRect = el.pfSections.getBoundingClientRect();
+    let closest = 0, closestDist = Infinity;
+    pfSlideEls.forEach((s, i) => {
+      const dist = Math.abs(s.getBoundingClientRect().left - trackRect.left);
+      if (dist < closestDist) { closestDist = dist; closest = i; }
+    });
+    if (closest !== pfCurrentSlide) {
+      pfCurrentSlide = closest;
+      pfSetActiveDot(closest);
+    }
+  }, { passive: true });
+
+  el.pfSections.addEventListener('keydown', (e) => {
+    if (!pfSlideEls.length) return;
+    if (e.key === 'ArrowRight') { e.preventDefault(); pfGoToSlide(pfCurrentSlide + 1); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); pfGoToSlide(pfCurrentSlide - 1); }
+  });
+
+  el.pfSections.addEventListener('wheel', (e) => {
+    if (!pfSlideEls.length) return;
+    if (el.portfolioSite.getAttribute('data-section-anim') !== 'horizontal') return;
+    if (window.innerWidth <= 768) return;
+    if (Math.abs(e.deltaY) < 10 && Math.abs(e.deltaX) < 10) return;
+    e.preventDefault();
+    if (pfWheelCooldown) return;
+    pfWheelCooldown = true;
+    pfGoToSlide(pfCurrentSlide + ((e.deltaY > 0 || e.deltaX > 0) ? 1 : -1));
+    setTimeout(() => { pfWheelCooldown = false; }, 700);
+  }, { passive: false });
+}
+
 // ── 3c. Render whichever canvas matches the active document ───
 function renderActiveCanvas() {
   const blocks = Store.active().blocks;
@@ -390,8 +516,7 @@ function renderActiveCanvas() {
       (block.col === 'side' ? el.sideTrack : el.mainTrack).appendChild(blockEl);
     });
   } else {
-    el.pfSections.innerHTML = '';
-    blocks.forEach(block => el.pfSections.appendChild(createPortfolioBlock(block)));
+    renderPortfolioCanvasBlocks(blocks, Store.active().design.sectionAnimation || 'none');
     initPortfolioAnimation(Store.active().design.sectionAnimation || 'none');
   }
 
@@ -1082,7 +1207,7 @@ function buildPublishedSiteHTML() {
 </style>
 </head>
 <body data-viewmode="portfolio">
-  <div class="portfolio-site" id="portfolioSite" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-content-width="${esc(design.contentWidth || 'contained')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};">
+  <div class="portfolio-site" id="portfolioSite" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};">
     <header class="pf-hero">
       ${p.photo ? `<div class="pf-hero-photo-wrap"><img src="${esc(p.photo)}" alt="${esc(fullName)}" /></div>` : ''}
       <div class="pf-hero-text">
@@ -1824,6 +1949,7 @@ function applyPortfolioDesign(design) {
   el.portfolioSite.setAttribute('data-header-style', design.headerStyle || 'scroll');
   el.portfolioSite.setAttribute('data-section-anim', design.sectionAnimation || 'none');
   el.portfolioSite.setAttribute('data-content-width', design.contentWidth || 'contained');
+  el.portfolioSite.setAttribute('data-hero-align', design.heroAlign || 'left');
   initPortfolioAnimation(design.sectionAnimation || 'none');
 }
 

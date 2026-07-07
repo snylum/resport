@@ -541,6 +541,15 @@
                 </div>
                 <p class="customize-hint">"Contained" keeps a narrow reading column even on wide screens — like the editor canvas. "Wide"/"Full-width" let your published page fill the browser instead.</p>
               </div>
+              <div class="customize-group">
+                <p class="customize-label">Personal Details Card</p>
+                <div class="option-pill-row" data-target="heroAlign">
+                  <button class="option-pill" data-value="left">Left</button>
+                  <button class="option-pill" data-value="center">Center</button>
+                  <button class="option-pill" data-value="right">Right</button>
+                </div>
+                <p class="customize-hint">Aligns your photo and name within the header band.</p>
+              </div>
             </div>
           </div>
 
@@ -621,7 +630,8 @@
                 </div>
               </header>
 
-              <div class="pf-sections" id="pfSections"></div>
+              <nav class="pf-slide-dots hidden" id="pfSlideDots" aria-label="Portfolio sections"></nav>
+              <div class="pf-sections" id="pfSections" tabindex="0"></div>
 
               <footer class="pf-footer">
                 <span id="pfFooterName">Juan Lala</span> · built with <a href="index.html">proves.work</a>
