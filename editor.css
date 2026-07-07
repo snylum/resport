@@ -860,6 +860,62 @@ body {
   border-style: solid;
 }
 
+/* ── Expandable section blocks (both resume + portfolio canvases) ── */
+.block-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  cursor: pointer;
+  padding: 0.15rem 0.25rem;
+  border-radius: 4px;
+}
+
+.block-summary-row:hover {
+  background: var(--color-surface-alt);
+}
+
+.block-summary-text {
+  font-size: 0.9em;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.block-expand-toggle {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 0.75em;
+  padding: 0.15rem 0.5rem;
+  cursor: pointer;
+  color: var(--color-text-muted);
+}
+
+.block-expand-toggle:hover {
+  border-color: var(--rp-accent, var(--color-secondary));
+  color: var(--rp-accent, var(--color-secondary));
+}
+
+.block-edit-body {
+  display: none;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--color-border);
+}
+
+.expandable-block.expanded .block-edit-body {
+  display: block;
+}
+
+.expandable-block.expanded .block-expand-toggle {
+  border-color: var(--rp-accent, var(--color-secondary));
+  color: var(--rp-accent, var(--color-secondary));
+}
+
 /* ── Editable text affordances ──────────────────────────────── */
 .ce-field {
   outline: none;

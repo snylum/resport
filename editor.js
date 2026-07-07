@@ -197,6 +197,51 @@ function verifyControlHTML(block) {
 }
 
 // ── 3a. RESUME / PDF block renderer (paper-style, unchanged look) ─
+// Which blocks currently have their edit fields expanded. Pure UI state —
+// not part of Store — so it's fine to keep it as module-level state that
+// resets on reload.
+const expandedBlocks = new Set();
+
+function toggleBlockExpand(blockId) {
+  if (expandedBlocks.has(blockId)) expandedBlocks.delete(blockId);
+  else expandedBlocks.add(blockId);
+  renderActiveCanvas();
+}
+
+// Short, non-editable one-liner shown on a collapsed block so people can
+// tell sections apart without any field being directly editable in place.
+function blockSummaryLine(block) {
+  const d = block.data || {};
+  switch (block.type) {
+    case 'section': return d.title || 'Section title';
+    case 'summary': return (d.text || '').slice(0, 70) || 'Summary';
+    case 'custom': return d.title || 'Custom section';
+    case 'experience': return [d.company, d.role].filter(Boolean).join(' — ') || 'Experience entry';
+    case 'education': return [d.school, d.degree].filter(Boolean).join(' — ') || 'Education entry';
+    case 'projects': return d.name || 'Project';
+    case 'skills': return (d.items || []).join(', ') || 'Skills';
+    case 'certifications': return (d.items || []).map(i => i.name).filter(Boolean).join(', ') || 'Certifications';
+    case 'languages': return (d.items || []).map(i => i.name).filter(Boolean).join(', ') || 'Languages';
+    default: return 'Section';
+  }
+}
+
+// Wraps a block's editable form markup with a summary row that toggles it
+// open/closed, so the preview itself is never directly editable — you
+// expand a section to edit it, then collapse it back to a plain preview.
+function withExpandChrome(wrapper, block, editHTML) {
+  const isExpanded = expandedBlocks.has(block.id);
+  wrapper.classList.add('expandable-block');
+  if (isExpanded) wrapper.classList.add('expanded');
+  wrapper.innerHTML = `
+    <div class="block-summary-row" data-action="toggle-expand" data-block="${block.id}">
+      <span class="block-summary-text">${esc(blockSummaryLine(block))}</span>
+      <button class="block-expand-toggle" type="button" data-action="toggle-expand" data-block="${block.id}">${isExpanded ? 'Done ✓' : 'Edit ✎'}</button>
+    </div>
+    <div class="block-edit-body">${editHTML}</div>
+  `;
+}
+
 function createResumeBlock(block) {
   const wrapper = document.createElement('div');
   wrapper.className = `resume-block block-${block.type}`;
@@ -272,7 +317,7 @@ function createResumeBlock(block) {
       break;
   }
 
-  wrapper.innerHTML = innerHTML;
+  withExpandChrome(wrapper, block, innerHTML);
   return wrapper;
 }
 
@@ -282,24 +327,26 @@ function createPortfolioBlock(block) {
   wrapper.dataset.id = block.id;
   if (Store.state.selectedBlockId === block.id) wrapper.classList.add('selected');
 
+  let baseClass = '';
+  let innerHTML = '';
   switch (block.type) {
     case 'section':
-      wrapper.className = 'pf-block-section-title';
-      wrapper.innerHTML = ceField(block.data.title, 'title', block.id);
+      baseClass = 'pf-block-section-title';
+      innerHTML = ceField(block.data.title, 'title', block.id);
       break;
     case 'summary':
-      wrapper.className = 'pf-card pf-summary-card';
-      wrapper.innerHTML = ceField(block.data.text, 'text', block.id, { cls: 'ce-block' });
+      baseClass = 'pf-card pf-summary-card';
+      innerHTML = ceField(block.data.text, 'text', block.id, { cls: 'ce-block' });
       break;
     case 'custom':
-      wrapper.className = 'pf-card';
-      wrapper.innerHTML = `
+      baseClass = 'pf-card';
+      innerHTML = `
         <h3 class="pf-exp-company">${ceField(block.data.title, 'title', block.id)}</h3>
         <p>${ceField(block.data.text, 'text', block.id, { cls: 'ce-block' })}</p>`;
       break;
     case 'experience':
-      wrapper.className = 'pf-card';
-      wrapper.innerHTML = `
+      baseClass = 'pf-card';
+      innerHTML = `
         <div class="pf-exp-top-row">
           <span class="pf-exp-company">${ceField(block.data.company, 'company', block.id)}</span>
           <span class="pf-exp-dates">${ceField(block.data.dates, 'dates', block.id)}</span>
@@ -312,8 +359,8 @@ function createPortfolioBlock(block) {
         <div class="pf-verify">${verifyControlHTML(block)}</div>`;
       break;
     case 'education':
-      wrapper.className = 'pf-card pf-edu-card';
-      wrapper.innerHTML = `
+      baseClass = 'pf-card pf-edu-card';
+      innerHTML = `
         <div class="pf-exp-top-row">
           <span class="pf-exp-company">${ceField(block.data.school, 'school', block.id)}</span>
           <span class="pf-exp-dates">${ceField(block.data.year, 'year', block.id)}</span>
@@ -325,8 +372,8 @@ function createPortfolioBlock(block) {
         <div class="pf-edu-gpa">${ceField(block.data.gpa, 'gpa', block.id)}</div>`;
       break;
     case 'projects':
-      wrapper.className = 'pf-card';
-      wrapper.innerHTML = `
+      baseClass = 'pf-card';
+      innerHTML = `
         <div class="pf-exp-top-row">
           <span class="pf-exp-company">${ceField(block.data.name, 'name', block.id)}</span>
           <span class="pf-exp-dates">${ceField(block.data.dates, 'dates', block.id)}</span>
@@ -335,24 +382,26 @@ function createPortfolioBlock(block) {
         ${renderBulletList(block.data.bullets, block.id, 'bullets')}`;
       break;
     case 'skills':
-      wrapper.className = 'pf-card';
-      wrapper.innerHTML = renderSkillTags(block.data.items, block.id, 'items');
+      baseClass = 'pf-card';
+      innerHTML = renderSkillTags(block.data.items, block.id, 'items');
       break;
     case 'certifications':
-      wrapper.className = 'pf-card';
-      wrapper.innerHTML = renderEntryList(block.data.items, block.id, 'items', [
+      baseClass = 'pf-card';
+      innerHTML = renderEntryList(block.data.items, block.id, 'items', [
         { key: 'name', cls: 'ce-strong' }, { key: 'issuer', cls: 'ce-muted' }, { key: 'date', cls: 'ce-muted' }
       ]);
       break;
     case 'languages':
-      wrapper.className = 'pf-card';
-      wrapper.innerHTML = renderEntryList(block.data.items, block.id, 'items', [
+      baseClass = 'pf-card';
+      innerHTML = renderEntryList(block.data.items, block.id, 'items', [
         { key: 'name', cls: 'ce-strong' }, { key: 'level', cls: 'ce-muted' }
       ]);
       break;
     default:
       break;
   }
+  if (baseClass) wrapper.classList.add(...baseClass.split(' '));
+  withExpandChrome(wrapper, block, innerHTML);
   return wrapper;
 }
 
@@ -412,6 +461,8 @@ function handleTrackClick(e) {
       openVerifyViewModal(blockId);
     } else if (action === 'edit-verify') {
       openVerifyEditModal(blockId);
+    } else if (action === 'toggle-expand') {
+      toggleBlockExpand(blockId);
     }
     return;
   }
@@ -810,6 +861,15 @@ function openPublishModal() {
       </div>
       <p class="username-status" id="publishUsernameStatus"></p>
     </div>
+    <p class="modal-sub"><a href="#" id="publishRestoreLink">Already published this name from another browser or device?</a></p>
+    <div class="field-box full-width hidden" id="publishRestoreBox">
+      <span>Paste your publish key</span>
+      <input type="text" id="publishRestoreInput" placeholder="tok_..." autocomplete="off" spellcheck="false" />
+      <p class="username-status" id="publishRestoreStatus">You get this key the first time you publish a name — copy it from the success screen and keep it somewhere safe. Pasting it here lets this browser take back over publishing to that address.</p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost btn-sm" id="publishRestoreBtn" type="button">Use this key</button>
+      </div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-secondary btn-sm" id="publishConfirmBtn" type="button" disabled>Publish</button>
     </div>
@@ -819,7 +879,31 @@ function openPublishModal() {
     const input = root.querySelector('#publishUsernameInput');
     const status = root.querySelector('#publishUsernameStatus');
     const confirmBtn = root.querySelector('#publishConfirmBtn');
+    const restoreLink = root.querySelector('#publishRestoreLink');
+    const restoreBox = root.querySelector('#publishRestoreBox');
+    const restoreInput = root.querySelector('#publishRestoreInput');
+    const restoreBtn = root.querySelector('#publishRestoreBtn');
+    const restoreStatus = root.querySelector('#publishRestoreStatus');
     let checkTimer = null;
+
+    restoreLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      restoreBox.classList.toggle('hidden');
+    });
+
+    restoreBtn.addEventListener('click', () => {
+      const key = restoreInput.value.trim();
+      if (!key) {
+        restoreStatus.textContent = 'Paste the publish key you saved when you first published this name.';
+        restoreStatus.className = 'username-status warn';
+        return;
+      }
+      localStorage.setItem(PUBLISH_TOKEN_KEY, key);
+      saveUsername(slugifyUsername(input.value));
+      restoreStatus.textContent = 'Key saved to this browser. Re-checking…';
+      restoreStatus.className = 'username-status ok';
+      checkAvailability();
+    });
 
     async function checkAvailability() {
       const value = slugifyUsername(input.value);
@@ -919,6 +1003,7 @@ function openPublishSuccessModal(url, isLocalPreview = false) {
     : 'Your portfolio is published at:';
   const linkLabel = isLocalPreview ? 'Open preview ↗' : 'Visit site ↗';
   const showCopy = !isLocalPreview;
+  const token = getPublishToken();
 
   openModal(`
     <h3 class="modal-title" id="modalTitle">${title}</h3>
@@ -928,6 +1013,15 @@ function openPublishSuccessModal(url, isLocalPreview = false) {
       ${showCopy ? `<button class="btn btn-ghost btn-sm" id="publishCopyBtn" type="button">Copy link</button>` : ''}
       <a class="btn btn-secondary btn-sm" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${linkLabel}</a>
     </div>
+    ${!isLocalPreview ? `
+    <div class="field-box full-width" style="margin-top:1rem;">
+      <span>Your publish key — save this somewhere safe</span>
+      <p class="username-status warn">This is the only way to update or reclaim this site from a different browser or device, or after clearing your browser data. It isn't shown again automatically.</p>
+      <div class="username-input-row">
+        <input type="text" id="publishTokenDisplay" value="${esc(token)}" readonly />
+        <button class="btn btn-ghost btn-sm" id="publishTokenCopyBtn" type="button">Copy key</button>
+      </div>
+    </div>` : ''}
   `, (root) => {
     const copyBtn = root.querySelector('#publishCopyBtn');
     if (copyBtn) {
@@ -937,6 +1031,17 @@ function openPublishSuccessModal(url, isLocalPreview = false) {
           copyBtn.textContent = 'Copied ✓';
         } catch (err) {
           /* Clipboard API may be unavailable (e.g. insecure context) — link is still visible and selectable. */
+        }
+      });
+    }
+    const tokenCopyBtn = root.querySelector('#publishTokenCopyBtn');
+    if (tokenCopyBtn) {
+      tokenCopyBtn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(token);
+          tokenCopyBtn.textContent = 'Copied ✓';
+        } catch (err) {
+          root.querySelector('#publishTokenDisplay').select();
         }
       });
     }
@@ -1390,6 +1495,12 @@ function initCustomizePanel() {
 // itself changes size (content edits, template/layout changes).
 // Manual +/- or ctrl+wheel zoom breaks out of fit mode; clicking the
 // percentage label returns to it.
+// Set by initZoomControls; called directly by the sidebar resizer drag
+// so the canvas re-fits in lockstep with the drag itself, instead of
+// solely trusting ResizeObserver's own (rAF-batched, sometimes-delayed)
+// timing to notice the canvas area changed size.
+let forceCanvasRefit = () => {};
+
 function initZoomControls() {
   const MIN_ZOOM = 25;
   const MAX_ZOOM = 150;
@@ -1509,6 +1620,8 @@ function initZoomControls() {
   docObserver.observe(el.resumePaper);
   docObserver.observe(el.portfolioSite);
 
+  forceCanvasRefit = refit;
+
   // Belt-and-suspenders on top of the ResizeObservers above: content
   // (sections, photos, template swaps) can change the document's
   // natural size in ways that don't always fire a resize callback in
@@ -1563,6 +1676,11 @@ function initSidebarResizer() {
     const maxPctForCanvasRoom = ((workspaceRect.width - CANVAS_MIN_PX) / workspaceRect.width) * 100;
     pct = Math.min(MAX_PCT, maxPctForCanvasRoom, Math.max(MIN_PCT, pct));
     el.editorSidebar.style.width = `${pct}%`;
+    // Recompute the fit immediately, in the same tick as the width
+    // change — don't wait for ResizeObserver's own timing, so a
+    // manually-zoomed document shrinks to stay fully visible in
+    // real time as the sidebar (and available canvas space) changes.
+    forceCanvasRefit();
   });
 
   document.addEventListener('mouseup', () => {
@@ -1585,9 +1703,8 @@ function refreshEverythingForActiveDoc() {
 
 function initSampleContentControls() {
   el.btnRandomize.addEventListener('click', () => {
-    const name = Store.randomizeContent();
+    Store.randomizeContent();
     refreshEverythingForActiveDoc();
-    openInfoModal('Randomized ✓', `Loaded sample content inspired by ${name}. Nothing here is permanent — keep clicking Randomize, or edit any field directly.`);
   });
 
   el.btnResetContent.addEventListener('click', () => {
