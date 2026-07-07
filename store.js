@@ -123,6 +123,139 @@ const defaultProfile = {
   tagline: 'I build things for the web and like proving it.'
 };
 
+// ── Sample content library for the Randomize feature ────────────
+// Short, factual, own-words summaries of real Nobel laureates and
+// other widely-known changemakers, reshaped as resume/portfolio
+// content purely as inspiring placeholder/demo data. Every "Randomize"
+// click picks one at random (plus a random accent/font pairing) so
+// people never stare at the same blank "Juan Lala" starter twice.
+export const SAMPLE_PROFILES = [
+  {
+    profile: { jobTitle: 'Education Activist & Author', firstName: 'Malala', lastName: 'Yousafzai', email: 'malala@example.com', phone: '', address: 'Birmingham, UK', photo: null, tagline: 'Fighting for every girl\'s right to 12 years of free, safe, quality education.' },
+    blocks: [
+      { type: 'summary', data: { text: 'Education advocate and youngest-ever Nobel Prize laureate, working globally to expand access to schooling for girls affected by conflict, poverty, and discrimination.' } },
+      { type: 'section', data: { title: 'Experience' } },
+      { type: 'experience', data: { company: 'Malala Fund', role: 'Co-Founder', location: 'Birmingham, UK', dates: '2013 – Present', bullets: ['Built a global fund investing in local education programs and advocates across multiple countries.', 'Advocated to world leaders and institutions for policy change on girls\' education access.'], verify: emptyVerify() } },
+      { type: 'section', data: { title: 'Recognition' } },
+      { type: 'custom', data: { title: 'Nobel Peace Prize (2014)', text: 'Awarded jointly for the struggle against the suppression of children and young people, and for the right of all children to education.' } },
+      { type: 'section', data: { title: 'Education' } },
+      { type: 'education', data: { school: 'University of Oxford', degree: 'B.A. Philosophy, Politics & Economics', location: 'Oxford, UK', year: '2020', gpa: '' } },
+      { type: 'section', data: { title: 'Skills' } },
+      { type: 'skills', data: { items: ['Public Speaking', 'Policy Advocacy', 'Fundraising', 'Writing', 'Nonprofit Leadership'] } }
+    ]
+  },
+  {
+    profile: { jobTitle: 'Physicist & Chemist', firstName: 'Marie', lastName: 'Curie', email: 'marie.curie@example.com', phone: '', address: 'Paris, France', photo: null, tagline: 'Pioneering research on radioactivity, in the lab and against the odds.' },
+    blocks: [
+      { type: 'summary', data: { text: 'Physicist and chemist whose research on radioactivity opened an entirely new field of science and led to major advances in medicine and physics.' } },
+      { type: 'section', data: { title: 'Experience' } },
+      { type: 'experience', data: { company: 'University of Paris', role: 'Professor of General Physics', location: 'Paris, France', dates: '1906 – 1934', bullets: ['First woman appointed to a professorship at the University of Paris.', 'Directed research into the properties and applications of radioactive elements.'], verify: emptyVerify() } },
+      { type: 'section', data: { title: 'Recognition' } },
+      { type: 'custom', data: { title: 'Nobel Prizes in Physics (1903) & Chemistry (1911)', text: 'The first person to win Nobel Prizes in two different sciences, recognized for foundational work on radioactivity and the discovery of polonium and radium.' } },
+      { type: 'section', data: { title: 'Education' } },
+      { type: 'education', data: { school: 'University of Paris (Sorbonne)', degree: 'Degrees in Physics & Mathematics', location: 'Paris, France', year: '1894', gpa: '' } },
+      { type: 'section', data: { title: 'Skills' } },
+      { type: 'skills', data: { items: ['Experimental Physics', 'Radiochemistry', 'Scientific Research', 'Mentorship', 'Laboratory Management'] } }
+    ]
+  },
+  {
+    profile: { jobTitle: 'President & Anti-Apartheid Leader', firstName: 'Nelson', lastName: 'Mandela', email: 'nelson.mandela@example.com', phone: '', address: 'Johannesburg, South Africa', photo: null, tagline: 'Leading the long walk from resistance to reconciliation.' },
+    blocks: [
+      { type: 'summary', data: { text: 'Lawyer and anti-apartheid leader who spent 27 years as a political prisoner before becoming South Africa\'s first democratically elected president, championing reconciliation and human rights.' } },
+      { type: 'section', data: { title: 'Experience' } },
+      { type: 'experience', data: { company: 'Government of South Africa', role: 'President', location: 'Pretoria, South Africa', dates: '1994 – 1999', bullets: ['Led South Africa\'s transition from apartheid to multiracial democracy.', 'Established the Truth and Reconciliation Commission to address the era\'s human rights abuses.'], verify: emptyVerify() } },
+      { type: 'section', data: { title: 'Recognition' } },
+      { type: 'custom', data: { title: 'Nobel Peace Prize (1993)', text: 'Awarded jointly for work toward the peaceful termination of the apartheid regime and for laying the foundations for a new, democratic South Africa.' } },
+      { type: 'section', data: { title: 'Education' } },
+      { type: 'education', data: { school: 'University of London (External Programme)', degree: 'LL.B. Law', location: 'London, UK', year: '1989', gpa: '' } },
+      { type: 'section', data: { title: 'Skills' } },
+      { type: 'skills', data: { items: ['Leadership', 'Negotiation', 'Public Policy', 'Law', 'Reconciliation & Mediation'] } }
+    ]
+  },
+  {
+    profile: { jobTitle: 'Environmentalist & Founder', firstName: 'Wangari', lastName: 'Maathai', email: 'wangari.maathai@example.com', phone: '', address: 'Nairobi, Kenya', photo: null, tagline: 'Planting trees, and with them, peace, democracy, and sustainable development.' },
+    blocks: [
+      { type: 'summary', data: { text: 'Environmental and political activist who linked grassroots tree-planting to community empowerment, sustainable development, and democratic governance across Africa.' } },
+      { type: 'section', data: { title: 'Experience' } },
+      { type: 'experience', data: { company: 'Green Belt Movement', role: 'Founder', location: 'Nairobi, Kenya', dates: '1977 – 2011', bullets: ['Founded a grassroots organization that has supported the planting of tens of millions of trees across Kenya.', 'Trained thousands of women in forestry, food processing, and other trades to earn income while conserving the environment.'], verify: emptyVerify() } },
+      { type: 'section', data: { title: 'Recognition' } },
+      { type: 'custom', data: { title: 'Nobel Peace Prize (2004)', text: 'The first African woman to receive the prize, honored for her contribution to sustainable development, democracy, and peace.' } },
+      { type: 'section', data: { title: 'Education' } },
+      { type: 'education', data: { school: 'University of Nairobi', degree: 'Ph.D. Veterinary Anatomy', location: 'Nairobi, Kenya', year: '1971', gpa: '' } },
+      { type: 'section', data: { title: 'Skills' } },
+      { type: 'skills', data: { items: ['Community Organizing', 'Environmental Policy', 'Nonprofit Leadership', 'Public Speaking', 'Sustainable Development'] } }
+    ]
+  },
+  {
+    profile: { jobTitle: 'Child Rights Activist', firstName: 'Kailash', lastName: 'Satyarthi', email: 'kailash.satyarthi@example.com', phone: '', address: 'New Delhi, India', photo: null, tagline: 'Working to end child labor and trafficking, one rescue and one law at a time.' },
+    blocks: [
+      { type: 'summary', data: { text: 'Children\'s rights advocate who has led rescue operations and policy campaigns against child labor and trafficking for over three decades.' } },
+      { type: 'section', data: { title: 'Experience' } },
+      { type: 'experience', data: { company: 'Bachpan Bachao Andolan (Save the Childhood Movement)', role: 'Founder', location: 'New Delhi, India', dates: '1980 – Present', bullets: ['Helped coordinate the rescue of tens of thousands of children from forced labor and trafficking.', 'Campaigned for international standards and legislation on child labor and education.'], verify: emptyVerify() } },
+      { type: 'section', data: { title: 'Recognition' } },
+      { type: 'custom', data: { title: 'Nobel Peace Prize (2014)', text: 'Awarded jointly for the struggle against the suppression of children and young people, and for the right of all children to education.' } },
+      { type: 'section', data: { title: 'Education' } },
+      { type: 'education', data: { school: 'Samrat Ashok Technological Institute', degree: 'B.E. Electrical Engineering', location: 'Vidisha, India', year: '1972', gpa: '' } },
+      { type: 'section', data: { title: 'Skills' } },
+      { type: 'skills', data: { items: ['Human Rights Advocacy', 'Nonprofit Leadership', 'Public Policy', 'Crisis Response', 'Coalition Building'] } }
+    ]
+  },
+  {
+    profile: { jobTitle: 'Economist & Microfinance Pioneer', firstName: 'Muhammad', lastName: 'Yunus', email: 'muhammad.yunus@example.com', phone: '', address: 'Dhaka, Bangladesh', photo: null, tagline: 'Proving that credit, not charity, can be a human right.' },
+    blocks: [
+      { type: 'summary', data: { text: 'Economist and social entrepreneur who pioneered microcredit and microfinance as tools for lifting families out of poverty through small, collateral-free loans.' } },
+      { type: 'section', data: { title: 'Experience' } },
+      { type: 'experience', data: { company: 'Grameen Bank', role: 'Founder & Managing Director', location: 'Dhaka, Bangladesh', dates: '1983 – 2011', bullets: ['Built a bank extending small loans to millions of borrowers without requiring collateral.', 'Popularized the microfinance model that has since been adapted in dozens of countries.'], verify: emptyVerify() } },
+      { type: 'section', data: { title: 'Recognition' } },
+      { type: 'custom', data: { title: 'Nobel Peace Prize (2006)', text: 'Awarded jointly for efforts to create economic and social development from below through microcredit.' } },
+      { type: 'section', data: { title: 'Education' } },
+      { type: 'education', data: { school: 'Vanderbilt University', degree: 'Ph.D. Economics', location: 'Nashville, TN, USA', year: '1971', gpa: '' } },
+      { type: 'section', data: { title: 'Skills' } },
+      { type: 'skills', data: { items: ['Microfinance', 'Economic Policy', 'Social Entrepreneurship', 'Organizational Leadership', 'Financial Inclusion'] } }
+    ]
+  },
+  {
+    profile: { jobTitle: 'Political Economist', firstName: 'Elinor', lastName: 'Ostrom', email: 'elinor.ostrom@example.com', phone: '', address: 'Bloomington, IN, USA', photo: null, tagline: 'Studying how communities govern shared resources without top-down control.' },
+    blocks: [
+      { type: 'summary', data: { text: 'Political economist whose research on how communities successfully self-manage shared resources reshaped economic thinking on governance and the commons.' } },
+      { type: 'section', data: { title: 'Experience' } },
+      { type: 'experience', data: { company: 'Indiana University', role: 'Professor of Political Science', location: 'Bloomington, IN, USA', dates: '1965 – 2012', bullets: ['Co-founded the Workshop in Political Theory and Policy Analysis to study institutions and collective action.', 'Conducted fieldwork on community-managed forests, fisheries, and irrigation systems worldwide.'], verify: emptyVerify() } },
+      { type: 'section', data: { title: 'Recognition' } },
+      { type: 'custom', data: { title: 'Nobel Memorial Prize in Economic Sciences (2009)', text: 'The first woman to receive the prize, recognized for her analysis of economic governance, especially the commons.' } },
+      { type: 'section', data: { title: 'Education' } },
+      { type: 'education', data: { school: 'University of California, Los Angeles', degree: 'Ph.D. Political Science', location: 'Los Angeles, CA, USA', year: '1965', gpa: '' } },
+      { type: 'section', data: { title: 'Skills' } },
+      { type: 'skills', data: { items: ['Institutional Analysis', 'Field Research', 'Policy Analysis', 'Academic Writing', 'Collective Action Theory'] } }
+    ]
+  },
+  {
+    profile: { jobTitle: 'Indigenous Rights Activist', firstName: 'Rigoberta', lastName: 'Menchú Tum', email: 'rigoberta.menchu@example.com', phone: '', address: 'Guatemala City, Guatemala', photo: null, tagline: 'Advocating for the rights and reconciliation of Indigenous peoples.' },
+    blocks: [
+      { type: 'summary', data: { text: 'Indigenous rights advocate who has campaigned internationally for the rights, land, and cultural recognition of Indigenous peoples in Guatemala and beyond.' } },
+      { type: 'section', data: { title: 'Experience' } },
+      { type: 'experience', data: { company: 'Rigoberta Menchú Tum Foundation', role: 'Founder', location: 'Guatemala City, Guatemala', dates: '1993 – Present', bullets: ['Advocated for Indigenous rights and social reconciliation following Guatemala\'s civil conflict.', 'Represented Indigenous rights issues before international bodies including the United Nations.'], verify: emptyVerify() } },
+      { type: 'section', data: { title: 'Recognition' } },
+      { type: 'custom', data: { title: 'Nobel Peace Prize (1992)', text: 'Awarded in recognition of work for social justice and ethno-cultural reconciliation based on respect for the rights of Indigenous peoples.' } },
+      { type: 'section', data: { title: 'Education' } },
+      { type: 'education', data: { school: 'Self-taught / community education', degree: 'Community & Cultural Studies', location: 'Guatemala', year: '—', gpa: '' } },
+      { type: 'section', data: { title: 'Skills' } },
+      { type: 'skills', data: { items: ['Human Rights Advocacy', 'Public Speaking', 'Community Organizing', 'Cross-Cultural Communication', 'International Relations'] } }
+    ]
+  }
+];
+
+// A curated set of accent/font pairings drawn from the résumé
+// templates above, used to randomize the look alongside the content.
+export const SAMPLE_STYLES = [
+  { accent: '#1A1A1A', headingFont: 'sans', bodyFont: 'sans' },
+  { accent: '#1E3A5F', headingFont: 'serif', bodyFont: 'serif' },
+  { accent: '#00693E', headingFont: 'modern', bodyFont: 'sans' },
+  { accent: '#33475B', headingFont: 'sans', bodyFont: 'sans' },
+  { accent: '#7C4DFF', headingFont: 'modern', bodyFont: 'sans' },
+  { accent: '#B8860B', headingFont: 'classic', bodyFont: 'serif' },
+  { accent: '#C0392B', headingFont: 'modern', bodyFont: 'sans' }
+];
+
 function deepClone(obj) {
   return JSON.parse(JSON.stringify(obj));
 }
@@ -315,6 +448,61 @@ class EditorStore {
   setDesign(key, value) {
     this.active().design[key] = value;
     this.emit('design_changed', this.active().design);
+  }
+
+  // ── Randomize / Reset (sample content) ───────────────────────
+  // Picks a random inspiring-figure sample profile + a random style,
+  // and applies it to whichever document (portfolio or resume) is
+  // currently active. IDs are re-generated so drag/select/verify
+  // state never collides with whatever was there before.
+  randomizeContent() {
+    const sample = SAMPLE_PROFILES[Math.floor(Math.random() * SAMPLE_PROFILES.length)];
+    const style = SAMPLE_STYLES[Math.floor(Math.random() * SAMPLE_STYLES.length)];
+    const doc = this.active();
+
+    doc.profile = deepClone(sample.profile);
+    doc.blocks = ensureVerifyShape(sample.blocks.map(b => ({
+      id: uid(),
+      type: b.type,
+      col: 'main',
+      data: deepClone(b.data)
+    })));
+
+    if (this.state.viewMode === 'resume') {
+      doc.design = { ...doc.design, accent: style.accent, headingFont: style.headingFont, bodyFont: style.bodyFont };
+    } else {
+      doc.design = { accent: style.accent, headingFont: style.headingFont, bodyFont: style.bodyFont };
+    }
+
+    this.state.selectedBlockId = null;
+    this.emit('profile_changed', doc.profile);
+    this.emit('blocks_changed', doc.blocks);
+    this.emit('design_changed', doc.design);
+    return sample.profile.firstName + ' ' + sample.profile.lastName;
+  }
+
+  // Restores the original "Juan Lala" starter content on whichever
+  // document is active — a clean, known-good baseline to get back to.
+  resetContent() {
+    const vm = this.state.viewMode;
+    if (vm === 'resume') {
+      this.state.resume = {
+        resumeTitle: this.state.resume.resumeTitle,
+        profile: { ...defaultProfile },
+        blocks: ensureVerifyShape(deepClone(defaultBlocks)),
+        template: TEMPLATES[0].id,
+        design: { ...TEMPLATES[0].design }
+      };
+    } else {
+      this.state.portfolio.profile = { ...defaultProfile };
+      this.state.portfolio.blocks = ensureVerifyShape(deepClone(defaultBlocks));
+      this.state.portfolio.design = { ...PORTFOLIO_DEFAULT_DESIGN };
+    }
+    this.state.selectedBlockId = null;
+    const doc = this.active();
+    this.emit('profile_changed', doc.profile);
+    this.emit('blocks_changed', doc.blocks);
+    this.emit('design_changed', doc.design);
   }
 }
 

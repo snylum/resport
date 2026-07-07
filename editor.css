@@ -459,6 +459,18 @@ body {
   color: var(--color-text-muted);
 }
 
+/* ── Randomize / Reset sample-content controls ───────────────── */
+.sample-content-wrap {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0 1.5rem 1rem;
+}
+
+.sample-content-wrap .btn {
+  flex: 1;
+  justify-content: center;
+}
+
 /* ── Sections manager header row + add-section popover ───────── */
 .sm-header-row {
   display: flex;
@@ -579,6 +591,20 @@ body {
 .canvas-container {
   position: relative;
   flex-shrink: 0;
+}
+
+/* THE FIX: this element is scaled + translated(-50%,-50%) from JS on
+   every zoom/refit, but had no positioning context of its own — so the
+   -50%/-50% translate was computed against its normal static-flow box
+   and yanked the whole document up and to the left, clipping it against
+   the canvas edge instead of centering it. Anchoring it to the center
+   of its (already correctly-sized) .canvas-container parent is what
+   the JS comments assumed was already happening. */
+.canvas-zoom-target {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform-origin: center center;
 }
 
 .resume-paper {

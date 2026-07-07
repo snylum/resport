@@ -1,4 +1,6 @@
 import { Store, esc, uid, TEMPLATES, FONT_STACKS, FONT_OPTIONS, BLOCK_LIBRARY } from './store.js';
+// (SAMPLE_PROFILES/SAMPLE_STYLES live entirely inside Store.randomizeContent()
+// in store.js — nothing in editor.js needs to reach into them directly.)
 
 // ── DOM Elements Cache ───────────────────────────────────────
 const el = {
@@ -7,6 +9,7 @@ const el = {
   tabEditBtn: document.getElementById('tabEditBtn'),
   tabCustomizeBtn: document.getElementById('tabCustomizeBtn'),
   docTitle: document.getElementById('docTitle'),
+  navUsername: document.getElementById('navUsername'),
   btnResetResume: document.getElementById('btnResetResume'),
 
   inJobTitle: document.getElementById('inJobTitle'),
@@ -54,6 +57,8 @@ const el = {
   zoomLevelDisplay: document.getElementById('zoomLevelDisplay'),
   btnAddSection: document.getElementById('btnAddSection'),
   addSectionMenu: document.getElementById('addSectionMenu'),
+  btnRandomize: document.getElementById('btnRandomize'),
+  btnResetContent: document.getElementById('btnResetContent'),
   inAccentCustom: document.getElementById('inAccentCustom'),
   accentSwatchCustom: document.getElementById('accentSwatchCustom'),
   selHeadingFont: document.getElementById('selHeadingFont'),
@@ -606,6 +611,45 @@ function saveUsername(u) {
   localStorage.setItem(PUBLISH_USERNAME_KEY, u);
 }
 
+// Lets people set their proves.work username right from the logo in
+// the toolbar (instead of only inside the Publish modal). Shares the
+// same localStorage key so whatever's set here is what Publish defaults to.
+function initUsernameEditor() {
+  const p = Store.state.portfolio.profile;
+  const current = getSavedUsername() || slugifyUsername(`${p.firstName}${p.lastName}`) || 'me';
+  el.navUsername.textContent = current;
+
+  const commit = () => {
+    const clean = slugifyUsername(el.navUsername.textContent) || 'me';
+    el.navUsername.textContent = clean;
+    saveUsername(clean);
+  };
+
+  el.navUsername.addEventListener('focus', () => {
+    const range = document.createRange();
+    range.selectNodeContents(el.navUsername);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  });
+
+  el.navUsername.addEventListener('blur', commit);
+
+  el.navUsername.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      el.navUsername.blur();
+    } else if (e.key === 'Escape') {
+      el.navUsername.textContent = current;
+      el.navUsername.blur();
+    }
+  });
+
+  // Don't let clicking into the username field bubble up to the
+  // <a class="nav-logo-mark"> next to it and navigate away.
+  el.navUsername.addEventListener('click', (e) => e.stopPropagation());
+}
+
 function slugifyUsername(str) {
   return (str || '')
     .toLowerCase()
@@ -791,6 +835,7 @@ function openPublishModal() {
       status.className = 'username-status';
       try {
         const res = await fetch(`/api/check-username?u=${encodeURIComponent(value)}`);
+        if (!res.ok) throw new Error('no-backend');
         const data = await res.json();
         if (data.available) {
           status.textContent = `✓ ${value}.${PUBLISH_APEX} is available`;
@@ -804,7 +849,10 @@ function openPublishModal() {
           confirmBtn.disabled = true;
         }
       } catch (err) {
-        status.textContent = 'Could not check availability right now — you can still try publishing.';
+        // No live publish backend reachable from here (e.g. this copy of
+        // the editor isn't served from proves.work / no worker deployed).
+        // Rather than dead-end the flow, fall through to a local preview.
+        status.textContent = `Live availability check isn't reachable right now — you can still generate a local preview of ${value}.${PUBLISH_APEX}.`;
         status.className = 'username-status warn';
         confirmBtn.disabled = false;
       }
@@ -827,6 +875,7 @@ function openPublishModal() {
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ username, token: getPublishToken(), html: buildPublishedSiteHTML() })
         });
+        if (!res.ok) throw new Error('no-backend');
         const data = await res.json();
         if (!data.ok) {
           status.textContent = data.error || 'Something went wrong.';
@@ -838,33 +887,49 @@ function openPublishModal() {
         saveUsername(username);
         openPublishSuccessModal(data.url);
       } catch (err) {
-        status.textContent = 'Network error — please try again.';
-        status.className = 'username-status warn';
+        // No live worker to publish to from here — generate a real,
+        // fully-working local preview instead of dead-ending on a
+        // network error. Swap this branch out once the worker in
+        // /worker is actually deployed and reachable at PUBLISH_APEX.
+        saveUsername(username);
+        const blob = new Blob([buildPublishedSiteHTML()], { type: 'text/html' });
+        const blobUrl = URL.createObjectURL(blob);
         confirmBtn.disabled = false;
         confirmBtn.textContent = 'Publish';
+        openPublishSuccessModal(blobUrl, true);
       }
     });
   });
 }
 
-function openPublishSuccessModal(url) {
+function openPublishSuccessModal(url, isLocalPreview = false) {
+  const title = isLocalPreview ? '👀 Local preview ready' : '🎉 You\'re live!';
+  const sub = isLocalPreview
+    ? `The live publish backend isn't reachable from here, so this is a real, fully-rendered local preview instead of a hosted address — open it any time in this browser:`
+    : 'Your portfolio is published at:';
+  const linkLabel = isLocalPreview ? 'Open preview ↗' : 'Visit site ↗';
+  const showCopy = !isLocalPreview;
+
   openModal(`
-    <h3 class="modal-title" id="modalTitle">🎉 You're live!</h3>
-    <p class="modal-sub">Your portfolio is published at:</p>
-    <p class="publish-url">${esc(url)}</p>
+    <h3 class="modal-title" id="modalTitle">${title}</h3>
+    <p class="modal-sub">${sub}</p>
+    ${showCopy ? `<p class="publish-url">${esc(url)}</p>` : ''}
     <div class="modal-actions">
-      <button class="btn btn-ghost btn-sm" id="publishCopyBtn" type="button">Copy link</button>
-      <a class="btn btn-secondary btn-sm" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Visit site ↗</a>
+      ${showCopy ? `<button class="btn btn-ghost btn-sm" id="publishCopyBtn" type="button">Copy link</button>` : ''}
+      <a class="btn btn-secondary btn-sm" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${linkLabel}</a>
     </div>
   `, (root) => {
-    root.querySelector('#publishCopyBtn').addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(url);
-        root.querySelector('#publishCopyBtn').textContent = 'Copied ✓';
-      } catch (err) {
-        /* Clipboard API may be unavailable (e.g. insecure context) — link is still visible and selectable. */
-      }
-    });
+    const copyBtn = root.querySelector('#publishCopyBtn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(url);
+          copyBtn.textContent = 'Copied ✓';
+        } catch (err) {
+          /* Clipboard API may be unavailable (e.g. insecure context) — link is still visible and selectable. */
+        }
+      });
+    }
   });
 }
 
@@ -914,13 +979,32 @@ function renderSidebarList(blocks) {
   initSectionDragReorder();
 }
 
+function confirmDeleteSection(id) {
+  openModal(`
+    <h3 class="modal-title" id="modalTitle">Remove this section?</h3>
+    <p class="modal-sub">This deletes just this one card — nothing else on your page is touched. This can't be undone.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="cancelDeleteBtn" type="button">Cancel</button>
+      <button class="btn btn-secondary btn-sm" id="confirmDeleteBtn" type="button">Remove section</button>
+    </div>
+  `, (root) => {
+    root.querySelector('#cancelDeleteBtn').addEventListener('click', closeModal);
+    root.querySelector('#confirmDeleteBtn').addEventListener('click', () => {
+      Store.removeBlock(id);
+      closeModal();
+    });
+  });
+}
+
 function initSidebarActions() {
   el.sidebarSectionsList.addEventListener('click', (e) => {
     const actionBtn = e.target.closest('[data-action]');
     if (actionBtn) {
+      e.preventDefault();
+      e.stopPropagation();
       const id = actionBtn.dataset.id;
       if (actionBtn.dataset.action === 'delete') {
-        if (confirm('Remove this section?')) Store.removeBlock(id);
+        confirmDeleteSection(id);
       } else if (actionBtn.dataset.action === 'swap') {
         const block = Store.active().blocks.find(b => b.id === id);
         if (block) Store.setBlockColumn(id, block.col === 'side' ? 'main' : 'side');
@@ -943,10 +1027,18 @@ function initAddSectionMenu() {
   });
 
   el.addSectionMenu.addEventListener('click', (e) => {
+    e.stopPropagation();
     const btn = e.target.closest('[data-type]');
     if (!btn) return;
-    Store.addBlock(btn.dataset.type, 'main');
+    const newId = Store.addBlock(btn.dataset.type, 'main');
     el.addSectionMenu.classList.add('hidden');
+    // Newly added blocks are appended to the END of the list — without
+    // this it can look like existing content vanished when really the
+    // new (empty/placeholder) block just landed off-screen below the fold.
+    requestAnimationFrame(() => {
+      document.querySelector(`.sd-section-item[data-id="${newId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.querySelector(`[data-id="${newId}"].resume-block, [data-id="${newId}"].pf-card, [data-id="${newId}"].pf-block-section-title`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
   });
 
   document.addEventListener('click', (e) => {
@@ -1139,10 +1231,20 @@ function initToolbar() {
   document.getElementById('btnPublishShowcase').addEventListener('click', openPublishModal);
 
   el.btnResetResume.addEventListener('click', () => {
-    if (confirm('Reset this résumé to match your current portfolio content? Any résumé-only edits (wording, template, styling made here) will be lost. Your portfolio is never affected.')) {
-      Store.resetResumeToPortfolio();
-      openInfoModal('Résumé reset', 'This résumé now matches your portfolio content again. Feel free to re-apply a template and tweak it for a specific job.');
-    }
+    openModal(`
+      <h3 class="modal-title" id="modalTitle">Reset résumé to match portfolio?</h3>
+      <p class="modal-sub">Any résumé-only edits (wording, template, styling made here) will be lost. Your portfolio is never affected.</p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost btn-sm" id="cancelResumeResetBtn" type="button">Cancel</button>
+        <button class="btn btn-secondary btn-sm" id="confirmResumeResetBtn" type="button">Reset résumé</button>
+      </div>
+    `, (root) => {
+      root.querySelector('#cancelResumeResetBtn').addEventListener('click', closeModal);
+      root.querySelector('#confirmResumeResetBtn').addEventListener('click', () => {
+        Store.resetResumeToPortfolio();
+        closeModal();
+      });
+    });
   });
 }
 
@@ -1451,11 +1553,47 @@ function initSidebarResizer() {
   });
 }
 
+// ── Randomize / Reset sample content ───────────────────────────
+function refreshEverythingForActiveDoc() {
+  refreshDocTitle();
+  refreshInputsFromActive();
+  refreshHeader();
+  renderActiveCanvas();
+  applyActiveDesign();
+}
+
+function initSampleContentControls() {
+  el.btnRandomize.addEventListener('click', () => {
+    const name = Store.randomizeContent();
+    refreshEverythingForActiveDoc();
+    openInfoModal('Randomized ✓', `Loaded sample content inspired by ${name}. Nothing here is permanent — keep clicking Randomize, or edit any field directly.`);
+  });
+
+  el.btnResetContent.addEventListener('click', () => {
+    openModal(`
+      <h3 class="modal-title" id="modalTitle">Reset to starter content?</h3>
+      <p class="modal-sub">This replaces everything in this document with the original starter content. This can't be undone.</p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost btn-sm" id="cancelContentResetBtn" type="button">Cancel</button>
+        <button class="btn btn-secondary btn-sm" id="confirmContentResetBtn" type="button">Reset</button>
+      </div>
+    `, (root) => {
+      root.querySelector('#cancelContentResetBtn').addEventListener('click', closeModal);
+      root.querySelector('#confirmContentResetBtn').addEventListener('click', () => {
+        Store.resetContent();
+        refreshEverythingForActiveDoc();
+        closeModal();
+      });
+    });
+  });
+}
+
 // ── Application bootstrapping ──────────────────────────────────
 function init() {
   document.body.dataset.viewmode = Store.state.viewMode;
 
   initModal();
+  initUsernameEditor();
   initInputListeners();
   initToolbar();
   initSidebarResizer();
@@ -1466,6 +1604,7 @@ function init() {
   initCanvasDelegation();
   initSidebarActions();
   initAddSectionMenu();
+  initSampleContentControls();
 
   refreshToolbarActiveStates();
   refreshDocTitle();

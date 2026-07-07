@@ -81,7 +81,7 @@
 
     .toolbar-filename:focus {
       border-color: var(--color-border);
-      background: var(--color-surface-alt);
+      background: #F0F0F0;
     }
 
     /* Publish button: same .btn component, violet instead of the
@@ -123,6 +123,42 @@
       margin: 0.5rem 0;
     }
 
+    .nav-logo-mark {
+      text-decoration: none;
+      color: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .nav-username-sep {
+      color: var(--color-text-muted);
+      font-weight: 400;
+    }
+    .nav-username {
+      font-style: italic;
+      font-weight: 500;
+      color: var(--color-text-muted);
+      outline: none;
+      border-bottom: 1px dashed transparent;
+      padding: 0 0.1rem;
+      cursor: text;
+      max-width: 16ch;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .nav-username:hover {
+      border-bottom-color: var(--color-text-muted);
+    }
+    .nav-username:focus {
+      color: var(--color-text);
+      border-bottom-color: var(--color-secondary);
+    }
+    @media (max-width: 900px) {
+      .nav-username { display: none; }
+      .nav-username-sep { display: none; }
+    }
+
     [data-viewmode-only]{ }
     body[data-viewmode="portfolio"] [data-viewmode-only="resume"] { display: none !important; }
     body[data-viewmode="resume"] [data-viewmode-only="portfolio"] { display: none !important; }
@@ -137,9 +173,11 @@
 <body data-viewmode="portfolio">
 
   <nav class="site-nav">
-    <a href="index.html" class="nav-logo">
-      <span class="logo-dot"></span>proves.work
-    </a>
+    <div class="nav-logo">
+      <a href="index.html" class="nav-logo-mark">
+        <span class="logo-dot"></span>proves.work
+      </a><span class="nav-username-sep">/</span><span class="nav-username" id="navUsername" contenteditable="true" spellcheck="false" title="Click to edit your username"></span>
+    </div>
     <ul class="nav-links">
       <li>
         <div class="view-mode-tabs" role="tablist" aria-label="Document">
@@ -215,6 +253,11 @@
                 </div>
               </div>
             </div>
+          </div>
+
+          <div class="sample-content-wrap">
+            <button class="btn btn-ghost btn-sm" id="btnRandomize" type="button" title="Fill this document with a random inspiring sample person">🎲 Randomize</button>
+            <button class="btn btn-ghost btn-sm" id="btnResetContent" type="button" title="Restore the original starter content">↺ Reset</button>
           </div>
 
           <div class="sections-manager-wrap">
