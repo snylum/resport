@@ -361,6 +361,11 @@ class EditorStore {
       } else {
         block.data[field][index] = value;
       }
+    } else if (Array.isArray(block.data[field])) {
+      // Guard: never let a list field (bullets, skills, entries) get
+      // clobbered by a scalar write that lost its index — that would
+      // silently wipe every item in the list.
+      return;
     } else {
       block.data[field] = value;
     }

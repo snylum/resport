@@ -439,7 +439,10 @@ Store.on('selection_changed', (id) => {
 // ── 3d. Canvas-level delegated events: field sync + list + verify ─
 function handleFieldSync(e) {
   const target = e.target;
-  if (!target.matches('[data-field]')) return;
+  // Only sync actual editable text fields — buttons like "+ Add bullet" /
+  // "+ Add skill" also carry data-field (so add-item knows the target
+  // array) but must never be treated as a value to write back.
+  if (!target.matches('.ce-field[contenteditable="true"][data-field]')) return;
   const blockId = target.dataset.block;
   const field = target.dataset.field;
   const index = target.dataset.index !== undefined ? Number(target.dataset.index) : null;
