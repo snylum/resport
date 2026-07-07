@@ -84,6 +84,31 @@
       background: #F0F0F0;
     }
 
+    /* Tells you at a glance what's actually visible at your address
+       right now — a saved draft here can still differ from what's
+       live until an admin approves it. */
+    .site-status-badge {
+      font-family: var(--font-sans);
+      font-weight: 700;
+      font-size: 0.72rem;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      padding: 0.3rem 0.65rem;
+      border-radius: 999px;
+      border: 2px solid var(--color-border);
+      white-space: nowrap;
+    }
+    .site-status-badge.hidden { display: none; }
+    .site-status-badge.status-draft { background: var(--color-surface-alt); color: var(--color-text-muted); }
+    .site-status-badge.status-pending { background: #FFF4D6; color: #8A6100; border-color: #F0D48A; }
+    .site-status-badge.status-live { background: #DBFCE7; color: #12704A; border-color: #9BE7BE; }
+    .site-status-badge.status-rejected,
+    .site-status-badge.status-deleted { background: #FCE4E4; color: #9C2A2A; border-color: #F1B8B8; }
+
+    @media (max-width: 1050px) {
+      .site-status-badge { display: none; }
+    }
+
     /* Publish button: same .btn component, violet instead of the
        marketing page's pink, so it's visibly a different action
        family even though it's built the same way. */
@@ -189,6 +214,7 @@
       <li class="toolbar-divider" aria-hidden="true"></li>
       <li data-viewmode-only="resume"><button class="btn btn-ghost btn-sm" id="btnResetResume" type="button" title="Re-copy this résumé from your portfolio content">↺ Reset</button></li>
       <li data-viewmode-only="resume"><button class="btn btn-ghost btn-sm" id="btnDownloadPDF" type="button">⬇ PDF</button></li>
+      <li data-viewmode-only="portfolio"><span class="site-status-badge hidden" id="siteStatusBadge"></span></li>
       <li data-viewmode-only="portfolio"><button class="btn btn-ghost btn-sm" id="btnPreviewShowcase" type="button">👀 Preview</button></li>
       <li data-viewmode-only="portfolio"><button class="btn btn-secondary btn-sm" id="btnPublishShowcase" type="button">✦ Publish</button></li>
     </ul>
@@ -301,6 +327,16 @@
 
       <div class="sidebar-panel" id="panelCustomize">
         <div class="panel-scroll-container">
+
+          <div class="form-section active" data-viewmode-only="portfolio">
+            <button class="form-section-toggle" type="button">
+              <span class="fs-title">Template</span>
+              <span class="fs-chevron">▼</span>
+            </button>
+            <div class="form-section-content">
+              <div class="template-gallery" id="portfolioTemplateGallery"></div>
+            </div>
+          </div>
 
           <div class="form-section active" data-viewmode-only="resume">
             <button class="form-section-toggle" type="button">
@@ -486,6 +522,24 @@
                   <button class="option-pill" data-value="bar">Bar</button>
                   <button class="option-pill" data-value="boxed">Boxed</button>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section active" data-viewmode-only="portfolio">
+            <button class="form-section-toggle" type="button">
+              <span class="fs-title">Layout</span>
+              <span class="fs-chevron">▼</span>
+            </button>
+            <div class="form-section-content">
+              <div class="customize-group">
+                <p class="customize-label">Content Width</p>
+                <div class="option-pill-row" data-target="contentWidth">
+                  <button class="option-pill" data-value="contained">Contained</button>
+                  <button class="option-pill" data-value="wide">Wide</button>
+                  <button class="option-pill" data-value="full">Full-width</button>
+                </div>
+                <p class="customize-hint">"Contained" keeps a narrow reading column even on wide screens — like the editor canvas. "Wide"/"Full-width" let your published page fill the browser instead.</p>
               </div>
             </div>
           </div>

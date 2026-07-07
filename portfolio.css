@@ -127,8 +127,10 @@
 }
 
 /* ── Section animation: horizontal scroll ────────────────────
-   Sections lay out left-to-right with scroll-snap, like the
-   proves.work homepage, instead of stacking vertically. */
+   Full-viewport slides, one per portfolio section — the same
+   scroll-snap "slide deck" feel as the proves.work homepage,
+   rather than a single card per swipe. Each .pf-slide groups a
+   section title with all the cards under it. */
 .portfolio-site[data-section-anim="horizontal"] .pf-sections {
   display: flex;
   flex-direction: row;
@@ -136,14 +138,75 @@
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
-  padding-bottom: 1.5rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  height: calc(100vh - 176px); /* below the pf-hero + dot rail */
 }
 
-.portfolio-site[data-section-anim="horizontal"] .pf-sections > * {
-  flex: 0 0 min(560px, 82vw);
+.portfolio-site[data-section-anim="horizontal"] .pf-sections::-webkit-scrollbar { display: none; }
+.portfolio-site[data-section-anim="horizontal"] .pf-sections { padding: 0; gap: 0; }
+
+.pf-slide {
+  flex: 0 0 100%;
+  width: 100%;
   scroll-snap-align: start;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
+.pf-slide-inner {
+  width: 100%;
+  max-width: 700px;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 2rem 2.75rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Dot rail, positioned like the homepage's .slide-dots but scoped
+   to sit just under the hero instead of pinned to the viewport,
+   since a portfolio page can be embedded/previewed at any size. */
+.pf-slide-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 0 0.35rem;
+}
+
+.pf-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.pf-dot.active {
+  background: var(--pf-accent, var(--color-primary));
+  border-color: var(--pf-accent, var(--color-primary));
+  transform: scale(1.3);
+}
+
+/* Small screens: horizontal slides revert to normal vertical
+   stacking, same breakpoint behavior as the homepage. */
+@media (max-width: 768px) {
+  .portfolio-site[data-section-anim="horizontal"] .pf-sections {
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: visible;
+    scroll-snap-type: none;
+    height: auto;
+  }
+  .pf-slide { width: 100%; }
+  .pf-slide-inner { max-width: 100%; padding: 1.5rem; }
+  .pf-slide-dots { display: none; }
+}
 
 .pf-sections {
   padding: 2.25rem 2.75rem 3rem;
@@ -152,6 +215,43 @@
   gap: 1.25rem;
   font-family: var(--pf-body-font, var(--font-sans));
   color: var(--color-text);
+}
+
+/* ── Content width ────────────────────────────────────────────
+   Controls how wide the published/preview page's content actually
+   runs. "Contained" (the historical default) centers a comfortable
+   780px reading column even on a full-width browser tab — which is
+   correct for a résumé-style read, but reads as oddly narrow/boxed
+   if someone expects the page to fill the viewport the way the
+   in-editor canvas does. "Wide" and "Full" let it stretch out.
+   Doesn't apply to horizontal mode, which has its own full-bleed
+   slide sizing (see .pf-slide-inner below) — that layout is already
+   edge-to-edge by design. */
+.portfolio-site[data-content-width="contained"]:not([data-section-anim="horizontal"]) .pf-sections {
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+.portfolio-site[data-content-width="wide"]:not([data-section-anim="horizontal"]) .pf-sections {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.portfolio-site[data-content-width="full"]:not([data-section-anim="horizontal"]) .pf-sections {
+  max-width: 100%;
+  margin: 0;
+  padding-left: 4vw;
+  padding-right: 4vw;
+}
+
+.portfolio-site[data-content-width="wide"] .pf-slide-inner {
+  max-width: 1000px;
+}
+
+.portfolio-site[data-content-width="full"] .pf-slide-inner {
+  max-width: 100%;
+  padding-left: 4vw;
+  padding-right: 4vw;
 }
 
 .pf-block-section-title {

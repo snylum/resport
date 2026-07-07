@@ -84,7 +84,80 @@ export const FONT_OPTIONS = [
 
 // Default design for the portfolio site (independent of résumé templates —
 // the portfolio has one flowing layout, but still themeable via color/font).
-export const PORTFOLIO_DEFAULT_DESIGN = { accent: '#7C4DFF', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'none' };
+export const PORTFOLIO_DEFAULT_DESIGN = { accent: '#7C4DFF', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'contained' };
+
+// Portfolio templates: unlike résumé templates (which change structural
+// layout — columns, alignment), the portfolio has one adaptive layout,
+// so a "template" here is a coordinated bundle across every themeable
+// design axis (accent, font pairing, header behavior, section motion,
+// content width) tuned toward how a given field actually presents
+// itself — a designer's page should feel different from an engineer's
+// or a teacher's, not just wear a different accent color.
+export const PORTFOLIO_TEMPLATES = [
+  {
+    id: 'general',
+    name: 'General / Default',
+    tagline: 'Balanced, works for any field',
+    icon: '✦',
+    design: { ...PORTFOLIO_DEFAULT_DESIGN }
+  },
+  {
+    id: 'tech',
+    name: 'Tech / Developer',
+    tagline: 'Monospace accents, pinned header',
+    icon: '💻',
+    design: { accent: '#7C4DFF', headingFont: 'modern', bodyFont: 'mono', headerStyle: 'pinned', sectionAnimation: 'fade-up', contentWidth: 'wide' }
+  },
+  {
+    id: 'engineering',
+    name: 'Engineering',
+    tagline: 'Precise, structured, no-frills',
+    icon: '⚙️',
+    design: { accent: '#33475B', headingFont: 'mono', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'none', contentWidth: 'wide' }
+  },
+  {
+    id: 'educator',
+    name: 'Educator',
+    tagline: 'Warm serif, academic feel',
+    icon: '🎓',
+    design: { accent: '#1E3A5F', headingFont: 'serif', bodyFont: 'serif', headerStyle: 'scroll', sectionAnimation: 'fade-up', contentWidth: 'contained' }
+  },
+  {
+    id: 'virtual-assistant',
+    name: 'Virtual Assistant',
+    tagline: 'Friendly, approachable, tidy',
+    icon: '🗂️',
+    design: { accent: '#00A896', headingFont: 'sans', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'contained' }
+  },
+  {
+    id: 'customer-service',
+    name: 'Customer Service',
+    tagline: 'Warm coral, easy to read',
+    icon: '🎧',
+    design: { accent: '#FF6F59', headingFont: 'sans', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'fade-up', contentWidth: 'contained' }
+  },
+  {
+    id: 'arts-design',
+    name: 'Arts & Design',
+    tagline: 'Full-bleed gallery slides',
+    icon: '🎨',
+    design: { accent: '#C0392B', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'horizontal', contentWidth: 'full' }
+  },
+  {
+    id: 'marketing',
+    name: 'Marketing / Creative',
+    tagline: 'Gold accent, horizontal story',
+    icon: '📣',
+    design: { accent: '#B8860B', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'horizontal', contentWidth: 'wide' }
+  },
+  {
+    id: 'corporate',
+    name: 'Corporate / Consulting',
+    tagline: 'Minimal ink, serif headings',
+    icon: '💼',
+    design: { accent: '#1A1A1A', headingFont: 'serif', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'contained' }
+  }
+];
 
 const defaultDesign = { ...TEMPLATES[0].design };
 
@@ -280,6 +353,7 @@ class EditorStore {
         siteTitle: 'My Portfolio',
         profile: { ...defaultProfile },
         blocks: ensureVerifyShape(deepClone(defaultBlocks)),
+        template: 'general',
         design: { ...PORTFOLIO_DEFAULT_DESIGN }
       },
 
@@ -450,6 +524,20 @@ class EditorStore {
     this.emit('design_changed', this.state.resume.design);
   }
 
+  // Portfolio templates apply a coordinated design bundle (accent,
+  // fonts, header behavior, section motion, content width) in one
+  // click — same idea as résumé templates, just themed toward a
+  // field instead of a structural layout.
+  setPortfolioTemplate(id) {
+    if (this.state.viewMode !== 'portfolio') return;
+    const t = PORTFOLIO_TEMPLATES.find(x => x.id === id);
+    if (!t) return;
+    this.state.portfolio.template = id;
+    this.state.portfolio.design = { ...t.design };
+    this.emit('template_changed', id);
+    this.emit('design_changed', this.state.portfolio.design);
+  }
+
   setDesign(key, value) {
     this.active().design[key] = value;
     this.emit('design_changed', this.active().design);
@@ -501,6 +589,7 @@ class EditorStore {
     } else {
       this.state.portfolio.profile = { ...defaultProfile };
       this.state.portfolio.blocks = ensureVerifyShape(deepClone(defaultBlocks));
+      this.state.portfolio.template = 'general';
       this.state.portfolio.design = { ...PORTFOLIO_DEFAULT_DESIGN };
     }
     this.state.selectedBlockId = null;

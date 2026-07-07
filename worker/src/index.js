@@ -141,7 +141,12 @@ async function serveSite(username, env) {
     return new Response(pendingPage(username), { status: 200, headers: { 'content-type': 'text/html;charset=UTF-8' } });
   }
 
-  return new Response(record.html, {
+  // Serve the last *approved* snapshot (liveHtml) when we have one —
+  // record.html may be a newer, not-yet-approved draft that was
+  // uploaded after this site went live (edits don't go public until
+  // re-approved). Records saved before liveHtml existed fall back to
+  // record.html so old published sites keep working.
+  return new Response(record.liveHtml || record.html, {
     status: 200,
     headers: {
       'content-type': 'text/html;charset=UTF-8',
@@ -196,6 +201,18 @@ async function handleApi(request, env, url) {
     return json({ available: !existing });
   }
 
+  // Lets the editor show "Draft / Pending approval / Live / Rejected"
+  // on the /editor toolbar for the site the current browser has
+  // published (or attempted to publish). Public/unauthenticated —
+  // it only ever returns a status string, never the HTML itself.
+  if (url.pathname === '/api/site-status' && request.method === 'GET') {
+    const username = (url.searchParams.get('u') || '').toLowerCase().trim();
+    if (!USERNAME_RE.test(username)) return json({ status: 'draft' });
+    const record = await env.SITES.get(`site:${username}`, 'json');
+    if (!record || record.status === 'deleted') return json({ status: 'draft' });
+    return json({ status: record.status || 'live', updatedAt: record.updatedAt || null });
+  }
+
   if (url.pathname === '/api/publish' && request.method === 'POST') {
     let body;
     try {
@@ -237,6 +254,10 @@ async function handleApi(request, env, url) {
     await env.SITES.put(`site:${username}`, JSON.stringify({
       ownerEmail: ownerEmail || (existing ? existing.ownerEmail : null) || null,
       html,
+      // liveHtml is untouched here on purpose — it stays whatever was
+      // last *approved*, so this new draft can't go public on its own.
+      // It's only promoted to liveHtml by an admin 'live' approval.
+      liveHtml: (existing && existing.liveHtml) || null,
       status: 'pending',
       updatedAt: new Date().toISOString(),
       createdAt: (existing && existing.createdAt) || new Date().toISOString()
@@ -320,8 +341,19 @@ async function handleApi(request, env, url) {
     const existing = await env.SITES.get(`site:${username}`, 'json');
     if (!existing) return json({ ok: false, error: 'Not found.' }, 404);
 
+    // Going live always (re-)promotes the current draft (`html`) to
+    // `liveHtml` — that's the snapshot serveSite() actually serves.
+    // Going anywhere else (pending/rejected/deleted) leaves liveHtml
+    // untouched, so a restore back to 'live' later — with no newer
+    // draft to approve — can fall back to it and bring back the site
+    // "as it was" instead of surfacing a stale not-found page.
+    const nextLiveHtml = nextStatus === 'live'
+      ? (existing.html || existing.liveHtml || null)
+      : (existing.liveHtml || null);
+
     await env.SITES.put(`site:${username}`, JSON.stringify({
       ...existing,
+      liveHtml: nextLiveHtml,
       status: nextStatus,
       reviewedAt: new Date().toISOString(),
       reviewedBy: adminEmail,

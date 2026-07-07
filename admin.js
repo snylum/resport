@@ -205,7 +205,12 @@ el.adminSitesList.addEventListener('click', (e) => {
   if (action === 'view') viewSite(username);
   else if (action === 'approve') setStatus(username, 'live');
   else if (action === 'reject') setStatus(username, 'rejected');
-  else if (action === 'restore') setStatus(username, 'pending');
+  // Restoring brings the site straight back to 'live' rather than
+  // dropping it into 'pending' for re-review — the Worker re-promotes
+  // whichever snapshot was last approved (liveHtml), or the latest
+  // draft if nothing was ever approved, so the site comes back as
+  // close to its last published version as possible.
+  else if (action === 'restore') setStatus(username, 'live');
 });
 
 document.querySelectorAll('.admin-tab').forEach(tab => {

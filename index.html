@@ -128,6 +128,31 @@
       text-align: center;
       width: 100%;
     }
+
+    .panel-pricing {
+      flex-direction: column;
+    }
+
+    .pricing-body {
+      display: flex;
+      flex-direction: row;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .pricing-fee-note {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--color-text-muted);
+      background: var(--color-surface-alt);
+      border-top: 2px solid var(--color-border);
+      padding: 0.65rem 1.25rem;
+      margin: 0;
+    }
+
+    .pricing-fee-note strong {
+      color: var(--color-text);
+    }
   </style>
 </head>
 <body class="is-loading">
@@ -219,7 +244,7 @@
       <div class="panel-feature-grid">
         <div class="feat">
           <div class="feat-icon">🧱</div>
-          <h3>Gumroad-Style Customizer</h3>
+          <h3>Blockcraft Canvas Editor</h3>
           <p>A simple, sleek sidebar canvas customizer to style typography, spacing, and layout columns instantly.</p>
         </div>
         <div class="feat">
@@ -290,36 +315,39 @@
 
     <!-- SLIDE 5: PRICING -->
     <section class="panel panel-pricing" id="slide-4">
-      <div class="panel-intro">
-        <p class="eyebrow">Pricing</p>
-        <h2>Start free.<br>Upgrade when ready.</h2>
-        <p class="intro-sub">No credit card needed to start. Customize your first layout block today.</p>
-      </div>
-      <div class="pricing-cards">
-        <div class="price-card">
-          <div class="price-name">Free</div>
-          <div class="price-amount">₱0 <span>/forever</span></div>
-          <ul class="price-features">
-            <li>✓ Gumroad-style profile editor</li>
-            <li>✓ Custom public path</li>
-            <li>✓ Basic layouts</li>
-            <li>✓ PDF résumé export</li>
-          </ul>
-          <a href="editor.html" class="btn btn-ghost" style="width:100%;justify-content:center">Start free</a>
+      <div class="pricing-body">
+        <div class="panel-intro">
+          <p class="eyebrow">Pricing</p>
+          <h2>Start free.<br>Upgrade when ready.</h2>
+          <p class="intro-sub">No credit card needed to start. Customize your first layout block today.</p>
         </div>
-        <div class="price-card price-featured">
-          <div class="price-badge">Most popular</div>
-          <div class="price-name">Pro</div>
-          <div class="price-amount">₱149 <span>/mo</span></div>
-          <ul class="price-features">
-            <li>✓ Everything in Free</li>
-            <li>✓ Custom Root Domain Mapping</li>
-            <li>✓ Advanced styling profiles</li>
-            <li>✓ Priority asset rendering</li>
-          </ul>
-          <a href="#" class="btn btn-primary" style="width:100%;justify-content:center">Get Pro</a>
+        <div class="pricing-cards">
+          <div class="price-card">
+            <div class="price-name">Free</div>
+            <div class="price-amount">₱0 <span>/forever</span></div>
+            <ul class="price-features">
+              <li>✓ Blockcraft canvas editor</li>
+              <li>✓ Custom public path</li>
+              <li>✓ Basic layouts</li>
+              <li>✓ PDF résumé export</li>
+            </ul>
+            <a href="editor.html" class="btn btn-ghost" style="width:100%;justify-content:center">Start free</a>
+          </div>
+          <div class="price-card price-featured">
+            <div class="price-badge">Most popular</div>
+            <div class="price-name">Pro</div>
+            <div class="price-amount">₱149 <span>/mo</span></div>
+            <ul class="price-features">
+              <li>✓ Everything in Free</li>
+              <li>✓ Custom Root Domain Mapping</li>
+              <li>✓ Advanced styling profiles</li>
+              <li>✓ Priority asset rendering</li>
+            </ul>
+            <a href="#" class="btn btn-primary" style="width:100%;justify-content:center">Get Pro</a>
+          </div>
         </div>
       </div>
+      <p class="pricing-fee-note">💡 Publishing your live <strong>.proves.work</strong> address is a one-time <strong>₱249</strong> fee — valid for <strong>3 months</strong>, no subscription. Renew anytime for the same flat fee.</p>
     </section>
 
     <!-- SLIDE 6: CTA / FOOTER -->

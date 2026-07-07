@@ -1,4 +1,4 @@
-import { Store, esc, uid, TEMPLATES, FONT_STACKS, FONT_OPTIONS, BLOCK_LIBRARY } from './store.js';
+import { Store, esc, uid, TEMPLATES, PORTFOLIO_TEMPLATES, FONT_STACKS, FONT_OPTIONS, BLOCK_LIBRARY } from './store.js';
 // (SAMPLE_PROFILES/SAMPLE_STYLES live entirely inside Store.randomizeContent()
 // in store.js — nothing in editor.js needs to reach into them directly.)
 
@@ -10,6 +10,7 @@ const el = {
   tabCustomizeBtn: document.getElementById('tabCustomizeBtn'),
   docTitle: document.getElementById('docTitle'),
   navUsername: document.getElementById('navUsername'),
+  siteStatusBadge: document.getElementById('siteStatusBadge'),
   btnResetResume: document.getElementById('btnResetResume'),
 
   inJobTitle: document.getElementById('inJobTitle'),
@@ -64,6 +65,7 @@ const el = {
   selHeadingFont: document.getElementById('selHeadingFont'),
   selBodyFont: document.getElementById('selBodyFont'),
   templateGallery: document.getElementById('templateGallery'),
+  portfolioTemplateGallery: document.getElementById('portfolioTemplateGallery'),
 
   // Modal
   modalOverlay: document.getElementById('modalOverlay'),
@@ -498,6 +500,14 @@ function handleModalEscape(e) {
   if (e.key === 'Escape') closeModal();
 }
 
+function alertModal(message) {
+  openModal(`
+    <h3 class="modal-title">Heads up</h3>
+    <p class="modal-sub">${esc(message)}</p>
+    <div class="modal-actions"><button class="btn btn-secondary btn-sm" id="alertOkBtn" type="button">OK</button></div>
+  `, (root) => root.querySelector('#alertOkBtn').addEventListener('click', closeModal));
+}
+
 function initModal() {
   el.modalCloseBtn.addEventListener('click', closeModal);
   el.modalOverlay.addEventListener('click', (e) => {
@@ -734,6 +744,43 @@ function saveUsername(u) {
   localStorage.setItem(PUBLISH_USERNAME_KEY, u);
 }
 
+// ── Site status badge (toolbar) ───────────────────────────────
+// Tells you, right on /editor, whether what's saved for your address
+// is a draft that's never been submitted, awaiting admin approval,
+// actually live, or was rejected/unpublished — since the editor's
+// own "saved" state doesn't tell you what visitors currently see.
+const SITE_STATUS_LABELS = {
+  draft: '● Draft — not published',
+  pending: '● Pending approval',
+  live: '● Live',
+  rejected: '● Rejected by admin',
+  deleted: '● Unpublished'
+};
+
+async function refreshSiteStatusBadge() {
+  if (!el.siteStatusBadge) return;
+  const username = getSavedUsername();
+  if (!username) {
+    el.siteStatusBadge.className = 'site-status-badge status-draft';
+    el.siteStatusBadge.textContent = SITE_STATUS_LABELS.draft;
+    el.siteStatusBadge.classList.remove('hidden');
+    return;
+  }
+  try {
+    const res = await fetch(`/api/site-status?u=${encodeURIComponent(username)}`);
+    if (!res.ok) throw new Error('no-backend');
+    const data = await res.json();
+    const status = data.status || 'draft';
+    el.siteStatusBadge.className = `site-status-badge status-${status}`;
+    el.siteStatusBadge.textContent = SITE_STATUS_LABELS[status] || SITE_STATUS_LABELS.draft;
+    el.siteStatusBadge.classList.remove('hidden');
+  } catch (err) {
+    // No backend reachable from here — don't claim a status we can't
+    // verify.
+    el.siteStatusBadge.classList.add('hidden');
+  }
+}
+
 // Lets people set their proves.work username right from the logo in
 // the toolbar (instead of only inside the Publish modal). Shares the
 // same localStorage key so whatever's set here is what Publish defaults to.
@@ -826,6 +873,57 @@ document.addEventListener('keydown', function (e) {
     });
   }, { threshold: 0.15 });
   items.forEach(function (n) { io.observe(n); });
+})();
+// Horizontal-slide mode: dot nav, arrow keys, and wheel-to-slide —
+// scoped to .pf-sections only (the fixed hero above it is untouched),
+// the same interaction model as the homepage's own slide deck.
+(function () {
+  var root = document.getElementById('portfolioSite');
+  if (!root || root.getAttribute('data-section-anim') !== 'horizontal') return;
+  var track = root.querySelector('.pf-sections');
+  var slides = root.querySelectorAll('.pf-slide');
+  var dots = root.querySelectorAll('.pf-dot');
+  if (!track || !slides.length) return;
+  var current = 0;
+  var isProgrammatic = false;
+
+  function goTo(i) {
+    if (i < 0 || i >= slides.length) return;
+    current = i;
+    isProgrammatic = true;
+    slides[i].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+    setDots(i);
+    setTimeout(function () { isProgrammatic = false; }, 500);
+  }
+  function setDots(i) {
+    dots.forEach(function (d, di) { d.classList.toggle('active', di === i); });
+  }
+  dots.forEach(function (d) {
+    d.addEventListener('click', function () { goTo(parseInt(d.getAttribute('data-pf-slide'), 10)); });
+  });
+  track.addEventListener('scroll', function () {
+    if (isProgrammatic) return;
+    var closest = 0, closestDist = Infinity;
+    slides.forEach(function (s, i) {
+      var dist = Math.abs(s.getBoundingClientRect().left - track.getBoundingClientRect().left);
+      if (dist < closestDist) { closestDist = dist; closest = i; }
+    });
+    if (closest !== current) { current = closest; setDots(current); }
+  }, { passive: true });
+  track.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight') goTo(current + 1);
+    else if (e.key === 'ArrowLeft') goTo(current - 1);
+  });
+  var wheelCooldown = false;
+  track.addEventListener('wheel', function (e) {
+    if (window.innerWidth <= 768) return;
+    if (Math.abs(e.deltaY) < 10 && Math.abs(e.deltaX) < 10) return;
+    e.preventDefault();
+    if (wheelCooldown) return;
+    wheelCooldown = true;
+    goTo(current + ((e.deltaY > 0 || e.deltaX > 0) ? 1 : -1));
+    setTimeout(function () { wheelCooldown = false; }, 700);
+  }, { passive: false });
 })();
 `;
 
@@ -923,6 +1021,38 @@ function renderStaticPortfolioBlock(block) {
   }
 }
 
+// Groups flat blocks into full-panel "slides" for horizontal mode —
+// each 'section' title block starts a new slide, and everything
+// under it (cards, summaries, etc.) rides along inside that same
+// slide, so one slide == one themed section, the same way each
+// panel on the proves.work homepage is one themed section rather
+// than one card. Anything before the first section title becomes
+// its own leading slide instead of being dropped.
+function groupBlocksIntoSlides(blocks) {
+  const slides = [];
+  let current = null;
+  blocks.forEach(block => {
+    if (block.type === 'section' || !current) {
+      current = [];
+      slides.push(current);
+    }
+    current.push(block);
+  });
+  return slides;
+}
+
+function buildHorizontalSectionsHTML(blocks) {
+  const slides = groupBlocksIntoSlides(blocks);
+  const slidesHTML = slides.map((slideBlocks, i) => `
+    <div class="pf-slide" id="pfSlide-${i}">
+      <div class="pf-slide-inner">${slideBlocks.map(renderStaticPortfolioBlock).join('\n')}</div>
+    </div>`).join('\n');
+  const dotsHTML = slides.length > 1
+    ? `<nav class="pf-slide-dots" aria-label="Portfolio sections">${slides.map((_, i) => `<button class="pf-dot${i === 0 ? ' active' : ''}" data-pf-slide="${i}" aria-label="Section ${i + 1}"></button>`).join('')}</nav>`
+    : '';
+  return `${dotsHTML}<div class="pf-sections">${slidesHTML}</div>`;
+}
+
 // Builds a complete, standalone HTML document for the published site.
 // Always snapshots state.portfolio — publishing never reads from the
 // résumé/PDF document.
@@ -932,7 +1062,10 @@ function buildPublishedSiteHTML() {
   const blocks = Store.state.portfolio.blocks;
   const fullName = `${p.firstName} ${p.lastName}`.trim() || 'Untitled Portfolio';
   const contactLine = [p.email, p.phone, p.address].filter(Boolean).join('   •   ');
-  const sectionsHTML = blocks.map(renderStaticPortfolioBlock).join('\n');
+  const isHorizontal = (design.sectionAnimation || 'none') === 'horizontal';
+  const sectionsHTML = isHorizontal
+    ? buildHorizontalSectionsHTML(blocks)
+    : `<div class="pf-sections">${blocks.map(renderStaticPortfolioBlock).join('\n')}</div>`;
 
   return `<!DOCTYPE html>
 <html lang="en" data-theme="dazed">
@@ -946,11 +1079,10 @@ function buildPublishedSiteHTML() {
 <style>
   body { margin: 0; background: var(--color-background, #FDF7FA); }
   .portfolio-site { width: 100%; max-width: 100%; border: none; box-shadow: none; }
-  .pf-sections { max-width: 780px; margin: 0 auto; }
 </style>
 </head>
 <body data-viewmode="portfolio">
-  <div class="portfolio-site" id="portfolioSite" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};">
+  <div class="portfolio-site" id="portfolioSite" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-content-width="${esc(design.contentWidth || 'contained')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};">
     <header class="pf-hero">
       ${p.photo ? `<div class="pf-hero-photo-wrap"><img src="${esc(p.photo)}" alt="${esc(fullName)}" /></div>` : ''}
       <div class="pf-hero-text">
@@ -960,7 +1092,7 @@ function buildPublishedSiteHTML() {
         ${contactLine ? `<div class="pf-contact-line">${esc(contactLine)}</div>` : ''}
       </div>
     </header>
-    <div class="pf-sections">${sectionsHTML}</div>
+    ${sectionsHTML}
     <footer class="pf-footer">${esc(fullName)} · built with <a href="https://${PUBLISH_APEX}">${PUBLISH_APEX}</a></footer>
   </div>
 
@@ -1059,49 +1191,71 @@ function openPublishModal() {
     });
     checkAvailability();
 
-    confirmBtn.addEventListener('click', async () => {
+    confirmBtn.addEventListener('click', () => {
       const username = slugifyUsername(input.value);
-      confirmBtn.disabled = true;
-      confirmBtn.textContent = 'Publishing…';
-      const account = getSavedGoogleAccount();
-      try {
-        const res = await fetch('/api/publish', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            username,
-            // Signed in: the Worker verifies this ID token server-side
-            // and ties the username to the Google account. Signed out:
-            // published anonymously, same as before (no ownership proof).
-            googleCredential: account ? account.credential : null,
-            html: buildPublishedSiteHTML()
-          })
-        });
-        if (!res.ok) throw new Error('no-backend');
-        const data = await res.json();
-        if (!data.ok) {
-          status.textContent = data.error || 'Something went wrong.';
-          status.className = 'username-status warn';
-          confirmBtn.disabled = false;
-          confirmBtn.textContent = 'Publish';
-          return;
-        }
-        saveUsername(username);
-        openPublishSuccessModal(data.url, 'pending');
-      } catch (err) {
-        // No live worker to publish to from here — generate a real,
-        // fully-working local preview instead of dead-ending on a
-        // network error. Swap this branch out once the worker in
-        // /worker is actually deployed and reachable at PUBLISH_APEX.
-        saveUsername(username);
-        const blob = new Blob([buildPublishedSiteHTML()], { type: 'text/html' });
-        const blobUrl = URL.createObjectURL(blob);
-        confirmBtn.disabled = false;
-        confirmBtn.textContent = 'Publish';
-        openPublishSuccessModal(blobUrl, 'local');
-      }
+      openPublishFeeModal(username);
     });
   });
+}
+
+// One-time publishing fee, valid for a fixed window — shown as a
+// confirmation step before the actual publish request goes out.
+// (No real payment processor is wired up yet: "Pay & Publish" just
+// proceeds, the same way the rest of this prototype mocks payment.)
+const PUBLISH_FEE = { amount: 249, currency: '₱', validityMonths: 3 };
+
+function openPublishFeeModal(username) {
+  const html = `
+    <h3 class="modal-title" id="modalTitle">One-time publishing fee</h3>
+    <p class="modal-sub">Keeping <strong>${esc(username)}.${PUBLISH_APEX}</strong> live costs a one-time fee of <strong>${PUBLISH_FEE.currency}${PUBLISH_FEE.amount}</strong>, valid for <strong>${PUBLISH_FEE.validityMonths} months</strong>. After that, republish (same fee) to keep your address live.</p>
+    <p class="modal-sub" style="font-size:0.8rem;">This covers review, hosting, and abuse protection for your subdomain. No recurring charge — it simply expires after ${PUBLISH_FEE.validityMonths} months unless renewed.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="publishFeeBackBtn" type="button">Back</button>
+      <button class="btn btn-secondary btn-sm" id="publishFeeConfirmBtn" type="button">Pay ${PUBLISH_FEE.currency}${PUBLISH_FEE.amount} & Publish</button>
+    </div>
+  `;
+  openModal(html, (root) => {
+    root.querySelector('#publishFeeBackBtn').addEventListener('click', () => openPublishModal());
+    root.querySelector('#publishFeeConfirmBtn').addEventListener('click', (e) => doPublish(username, e.target));
+  });
+}
+
+async function doPublish(username, confirmBtn) {
+  confirmBtn.disabled = true;
+  confirmBtn.textContent = 'Publishing…';
+  const account = getSavedGoogleAccount();
+  try {
+    const res = await fetch('/api/publish', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        username,
+        // Signed in: the Worker verifies this ID token server-side
+        // and ties the username to the Google account. Signed out:
+        // published anonymously, same as before (no ownership proof).
+        googleCredential: account ? account.credential : null,
+        html: buildPublishedSiteHTML()
+      })
+    });
+    if (!res.ok) throw new Error('no-backend');
+    const data = await res.json();
+    if (!data.ok) {
+      alertModal(data.error || 'Something went wrong.');
+      return;
+    }
+    saveUsername(username);
+    refreshSiteStatusBadge();
+    openPublishSuccessModal(data.url, 'pending');
+  } catch (err) {
+    // No live worker to publish to from here — generate a real,
+    // fully-working local preview instead of dead-ending on a
+    // network error. Swap this branch out once the worker in
+    // /worker is actually deployed and reachable at PUBLISH_APEX.
+    saveUsername(username);
+    const blob = new Blob([buildPublishedSiteHTML()], { type: 'text/html' });
+    const blobUrl = URL.createObjectURL(blob);
+    openPublishSuccessModal(blobUrl, 'local');
+  }
 }
 
 function openPublishSuccessModal(url, mode = 'pending') {
@@ -1544,6 +1698,7 @@ function initToolbar() {
   });
 
   document.getElementById('btnPublishShowcase').addEventListener('click', openPublishModal);
+  refreshSiteStatusBadge();
   document.getElementById('btnPreviewShowcase').addEventListener('click', () => {
     const blob = new Blob([buildPublishedSiteHTML()], { type: 'text/html' });
     window.open(URL.createObjectURL(blob), '_blank', 'noopener');
@@ -1614,6 +1769,25 @@ function populateFontSelects() {
   el.selBodyFont.innerHTML = opts;
 }
 
+// Portfolio templates are generated (not hand-written in HTML like the
+// résumé gallery) since there are several of them and each card's
+// swatch just reflects that template's own accent/font — one source
+// of truth in PORTFOLIO_TEMPLATES instead of keeping markup in sync.
+function populatePortfolioTemplateGallery() {
+  if (!el.portfolioTemplateGallery) return;
+  el.portfolioTemplateGallery.innerHTML = PORTFOLIO_TEMPLATES.map(t => `
+    <button class="template-card" data-portfolio-template="${t.id}" type="button">
+      <div class="tpl-preview" style="align-items:center;justify-content:center;background:color-mix(in srgb, ${t.design.accent} 12%, white);">
+        <span style="font-size:1.4rem;line-height:1;">${t.icon}</span>
+        <div class="tpl-line" style="width:55%;height:6px;margin-top:6px;background:${t.design.accent};"></div>
+        <div class="tpl-line short" style="background:#999;"></div>
+      </div>
+      <div class="tpl-card-name">${esc(t.name)}</div>
+      <div class="tpl-card-tag">${esc(t.tagline)}</div>
+    </button>
+  `).join('');
+}
+
 function applyResumeDesign(design) {
   el.resumePaper.setAttribute('data-template', Store.state.resume.template);
   el.resumePaper.setAttribute('data-layout', design.layout);
@@ -1649,6 +1823,7 @@ function applyPortfolioDesign(design) {
   el.portfolioSite.style.setProperty('--pf-body-font', FONT_STACKS[design.bodyFont] || FONT_STACKS.sans);
   el.portfolioSite.setAttribute('data-header-style', design.headerStyle || 'scroll');
   el.portfolioSite.setAttribute('data-section-anim', design.sectionAnimation || 'none');
+  el.portfolioSite.setAttribute('data-content-width', design.contentWidth || 'contained');
   initPortfolioAnimation(design.sectionAnimation || 'none');
 }
 
@@ -1684,10 +1859,15 @@ function syncCustomizeControls(design) {
   document.querySelectorAll('.template-card[data-template]').forEach(card => {
     card.classList.toggle('active', Store.state.viewMode === 'resume' && card.dataset.template === Store.state.resume.template);
   });
+
+  document.querySelectorAll('.template-card[data-portfolio-template]').forEach(card => {
+    card.classList.toggle('active', Store.state.viewMode === 'portfolio' && card.dataset.portfolioTemplate === Store.state.portfolio.template);
+  });
 }
 
 function initCustomizePanel() {
   populateFontSelects();
+  populatePortfolioTemplateGallery();
 
   document.querySelectorAll('.option-pill-row[data-target]').forEach(row => {
     const key = row.dataset.target;
@@ -1706,6 +1886,10 @@ function initCustomizePanel() {
 
   document.querySelectorAll('.template-card[data-template]').forEach(card => {
     card.addEventListener('click', () => Store.setTemplate(card.dataset.template));
+  });
+
+  document.querySelectorAll('.template-card[data-portfolio-template]').forEach(card => {
+    card.addEventListener('click', () => Store.setPortfolioTemplate(card.dataset.portfolioTemplate));
   });
 
   Store.on('design_changed', applyActiveDesign);

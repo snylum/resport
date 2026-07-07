@@ -619,4 +619,5 @@ body.is-loading #wrapper {
 
   .pricing-cards { flex-direction: column; padding: 2rem 1.5rem; gap: 1.25rem; overflow-y: auto; }
   .price-card { width: 100%; }
+  .pricing-body { flex-direction: column; overflow-y: auto; }
 }
