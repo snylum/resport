@@ -646,7 +646,7 @@ function initUsernameEditor() {
   });
 
   // Don't let clicking into the username field bubble up to the
-  // <a class="nav-logo-mark"> next to it and navigate away.
+  // .nav-logo-suffix link next to it and navigate away.
   el.navUsername.addEventListener('click', (e) => e.stopPropagation());
 }
 
@@ -829,6 +829,16 @@ function openPublishModal() {
         status.textContent = 'Must be at least 3 characters.';
         status.className = 'username-status warn';
         confirmBtn.disabled = true;
+        return;
+      }
+      // If this is the name already saved for this browser (e.g. set once
+      // from the toolbar, or from a prior publish), it's theirs — don't
+      // run it past the "is it taken" check at all, since a naive
+      // availability check has no way to know a name is already yours.
+      if (value === getSavedUsername()) {
+        status.textContent = `✓ ${value}.${PUBLISH_APEX} is already yours`;
+        status.className = 'username-status ok';
+        confirmBtn.disabled = false;
         return;
       }
       status.textContent = 'Checking availability…';
@@ -1436,10 +1446,21 @@ function initZoomControls() {
 
   const refit = () => {
     // Always resync the container/zoom-target to the document's
-    // current natural size (it may have grown/shrunk from an edit),
-    // and only recompute the zoom % itself while in fit mode —
-    // manual zoom levels stay put but keep tracking content size.
-    if (fitMode) zoom = computeFitZoom();
+    // current natural size (it may have grown/shrunk from an edit).
+    // In fit mode, zoom tracks available space exactly. In manual zoom
+    // mode, the chosen zoom % is otherwise left alone — EXCEPT it's
+    // clamped down if the available space has shrunk below what it
+    // needs (e.g. dragging the sidebar wider), so the document scales
+    // itself down to stay fully visible instead of clipping/cutting
+    // off at the canvas edge. It's never pushed back up automatically
+    // when space frees up again — that would fight a zoom the person
+    // chose on purpose.
+    const fitZoom = computeFitZoom();
+    if (fitMode) {
+      zoom = fitZoom;
+    } else if (zoom > fitZoom) {
+      zoom = fitZoom;
+    }
     applyZoom();
   };
 

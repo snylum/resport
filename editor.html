@@ -123,24 +123,26 @@
       margin: 0.5rem 0;
     }
 
-    .nav-logo-mark {
-      text-decoration: none;
-      color: inherit;
+    .nav-logo {
       display: inline-flex;
       align-items: center;
-      gap: 0.4rem;
+      gap: 0;
     }
-    .nav-username-sep {
-      color: var(--color-text-muted);
-      font-weight: 400;
+    .nav-logo .logo-dot {
+      margin-right: 0.4rem;
+    }
+    .nav-logo-suffix {
+      text-decoration: none;
+      color: inherit;
+      font-style: normal;
     }
     .nav-username {
       font-style: italic;
-      font-weight: 500;
-      color: var(--color-text-muted);
+      font-weight: 700;
+      color: var(--color-text);
       outline: none;
       border-bottom: 1px dashed transparent;
-      padding: 0 0.1rem;
+      padding: 0 0.05rem;
       cursor: text;
       max-width: 16ch;
       white-space: nowrap;
@@ -151,12 +153,10 @@
       border-bottom-color: var(--color-text-muted);
     }
     .nav-username:focus {
-      color: var(--color-text);
       border-bottom-color: var(--color-secondary);
     }
     @media (max-width: 900px) {
-      .nav-username { display: none; }
-      .nav-username-sep { display: none; }
+      .nav-username { max-width: 8ch; }
     }
 
     [data-viewmode-only]{ }
@@ -174,9 +174,7 @@
 
   <nav class="site-nav">
     <div class="nav-logo">
-      <a href="index.html" class="nav-logo-mark">
-        <span class="logo-dot"></span>proves.work
-      </a><span class="nav-username-sep">/</span><span class="nav-username" id="navUsername" contenteditable="true" spellcheck="false" title="Click to edit your username"></span>
+      <span class="logo-dot"></span><span class="nav-username" id="navUsername" contenteditable="true" spellcheck="false" title="Click to edit your username">username</span><a href="index.html" class="nav-logo-suffix">.proves.work</a>
     </div>
     <ul class="nav-links">
       <li>
