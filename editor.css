@@ -906,7 +906,7 @@ body {
   color: var(--color-text-muted);
 }
 
-.sd-field .ce-field {
+.sd-field > .ce-field {
   display: block;
   min-height: 1.6em;
   padding: 0.35rem 0.5rem;
@@ -916,18 +916,34 @@ body {
   font-size: 0.82rem;
 }
 
-.sd-field .ce-field:hover {
+.sd-field > .ce-field:hover {
   background: var(--color-surface-alt);
   border-color: var(--rp-accent, var(--color-secondary));
 }
 
-.sd-field .ce-field:focus {
+.sd-field > .ce-field:focus {
   background: var(--color-surface);
   box-shadow: 0 0 0 1px var(--rp-accent, var(--color-secondary));
 }
 
-.sd-field .ce-field.ce-block {
+.sd-field > .ce-field.ce-block {
   min-height: 4.5em;
+}
+
+/* Skill tags, bullets, and entry-list rows keep their own inline/pill
+   styling inside the sidebar accordion — they must NOT pick up the
+   boxed input look above (that selector only targets .ce-field that is
+   a *direct* child of .sd-field, so these nested ones are unaffected;
+   this rule is just an explicit belt-and-suspenders reset). */
+.sd-field .rb-skill-tag .ce-field,
+.sd-field .rb-bullets .ce-field,
+.sd-field .rb-entry-row .ce-field {
+  display: inline;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 0;
 }
 
 /* ── Editable text affordances ──────────────────────────────── */

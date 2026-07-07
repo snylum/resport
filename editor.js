@@ -616,16 +616,87 @@ function openVerifyEditModal(blockId) {
 // served from PUBLISH_APEX below, since that's the only host the
 // Worker's /api/* route is attached to.
 const PUBLISH_APEX = 'proves.work';
-const PUBLISH_TOKEN_KEY = 'proveswork_publish_token';
 const PUBLISH_USERNAME_KEY = 'proveswork_username';
 
-function getPublishToken() {
-  let token = localStorage.getItem(PUBLISH_TOKEN_KEY);
-  if (!token) {
-    token = 'tok_' + (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : String(Math.random()).slice(2) + Date.now());
-    localStorage.setItem(PUBLISH_TOKEN_KEY, token);
+// ── Google Sign-In (replaces the old copy-paste "publish key") ──────
+// NOTE: this front-end scaffold requests + decodes a Google ID token
+// (JWT) so the person's Google account is what proves ownership of a
+// username, instead of a random token they had to copy/paste/lose.
+// GOOGLE_CLIENT_ID must be set to a real OAuth Client ID from Google
+// Cloud Console (APIs & Services → Credentials → OAuth client ID →
+// "Web application", with this site's origin allowed) before sign-in
+// will actually work. The Worker in /worker also needs a matching
+// update to verify the ID token server-side and key published sites of
+// off the token's `sub`/email instead of the old opaque token — see
+// worker/README.md.
+const GOOGLE_CLIENT_ID = '41010460965-oti1phnr8kdbij312qijrg82bc2japj7.apps.googleusercontent.com';
+const GOOGLE_ACCOUNT_KEY = 'proveswork_google_account';
+
+function getSavedGoogleAccount() {
+  try { return JSON.parse(localStorage.getItem(GOOGLE_ACCOUNT_KEY) || 'null'); }
+  catch (err) { return null; }
+}
+
+function saveGoogleAccount(account) {
+  localStorage.setItem(GOOGLE_ACCOUNT_KEY, JSON.stringify(account));
+}
+
+function clearGoogleAccount() {
+  localStorage.removeItem(GOOGLE_ACCOUNT_KEY);
+}
+
+// Decodes the (already-verified-by-Google-on-the-client) JWT payload
+// just to read the email/name for display. The actual trust boundary
+// is server-side — the Worker must re-verify the raw credential JWT
+// itself before treating it as proof of identity; this decode is only
+// for showing "Signed in as ...".
+function decodeGoogleCredential(credential) {
+  const payload = credential.split('.')[1];
+  const json = decodeURIComponent(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))
+    .split('').map(c => '%' + c.charCodeAt(0).toString(16).padStart(2, '0')).join(''));
+  return JSON.parse(json);
+}
+
+function handleGoogleCredential(response) {
+  const payload = decodeGoogleCredential(response.credential);
+  saveGoogleAccount({ email: payload.email, name: payload.name, credential: response.credential });
+  renderPublishAccountBox();
+}
+
+function renderGoogleSignInButton(container) {
+  if (!(window.google && window.google.accounts && window.google.accounts.id)) {
+    container.innerHTML = `<p class="username-status warn">Google sign-in script hasn't loaded (offline, or blocked) — you can still publish anonymously below.</p>`;
+    return;
   }
-  return token;
+  window.google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential });
+  window.google.accounts.id.renderButton(container, { theme: 'outline', size: 'medium', text: 'signin_with' });
+}
+
+// Renders the "Account" box at the top of the Publish modal: either a
+// Sign in with Google button, or the signed-in email + a sign-out link.
+// Signing in with Google is how progress can follow you across
+// devices/browsers going forward — it replaces the old copy-paste
+// publish key entirely.
+function renderPublishAccountBox() {
+  const box = document.getElementById('publishAccountBox');
+  if (!box) return;
+  const account = getSavedGoogleAccount();
+  if (account) {
+    box.innerHTML = `
+      <p class="username-status ok">Signed in as ${esc(account.email)} — your progress can sync across devices.</p>
+      <button class="btn btn-ghost btn-sm" id="googleSignOutBtn" type="button">Sign out</button>
+    `;
+    box.querySelector('#googleSignOutBtn').addEventListener('click', () => {
+      clearGoogleAccount();
+      renderPublishAccountBox();
+    });
+  } else {
+    box.innerHTML = `
+      <p class="modal-sub">Sign in with Google to save your progress and publish rights across devices (optional — you can still publish anonymously below).</p>
+      <div id="googleSignInSlot"></div>
+    `;
+    renderGoogleSignInButton(box.querySelector('#googleSignInSlot'));
+  }
 }
 
 function getSavedUsername() {
@@ -867,6 +938,7 @@ function openPublishModal() {
 
   const html = `
     <h3 class="modal-title" id="modalTitle">Publish your portfolio</h3>
+    <div class="field-box full-width" id="publishAccountBox"></div>
     <p class="modal-sub">Pick the address where your portfolio will live. You can change this later — this only affects your portfolio, never your résumé/PDF document.</p>
     <div class="field-box full-width">
       <span>Your ${PUBLISH_APEX} address</span>
@@ -876,49 +948,18 @@ function openPublishModal() {
       </div>
       <p class="username-status" id="publishUsernameStatus"></p>
     </div>
-    <p class="modal-sub"><a href="#" id="publishRestoreLink">Already published this name from another browser or device?</a></p>
-    <div class="field-box full-width hidden" id="publishRestoreBox">
-      <span>Paste your publish key</span>
-      <input type="text" id="publishRestoreInput" placeholder="tok_..." autocomplete="off" spellcheck="false" />
-      <p class="username-status" id="publishRestoreStatus">You get this key the first time you publish a name — copy it from the success screen and keep it somewhere safe. Pasting it here lets this browser take back over publishing to that address.</p>
-      <div class="modal-actions">
-        <button class="btn btn-ghost btn-sm" id="publishRestoreBtn" type="button">Use this key</button>
-      </div>
-    </div>
     <div class="modal-actions">
       <button class="btn btn-secondary btn-sm" id="publishConfirmBtn" type="button" disabled>Publish</button>
     </div>
   `;
 
   openModal(html, (root) => {
+    renderPublishAccountBox();
+
     const input = root.querySelector('#publishUsernameInput');
     const status = root.querySelector('#publishUsernameStatus');
     const confirmBtn = root.querySelector('#publishConfirmBtn');
-    const restoreLink = root.querySelector('#publishRestoreLink');
-    const restoreBox = root.querySelector('#publishRestoreBox');
-    const restoreInput = root.querySelector('#publishRestoreInput');
-    const restoreBtn = root.querySelector('#publishRestoreBtn');
-    const restoreStatus = root.querySelector('#publishRestoreStatus');
     let checkTimer = null;
-
-    restoreLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      restoreBox.classList.toggle('hidden');
-    });
-
-    restoreBtn.addEventListener('click', () => {
-      const key = restoreInput.value.trim();
-      if (!key) {
-        restoreStatus.textContent = 'Paste the publish key you saved when you first published this name.';
-        restoreStatus.className = 'username-status warn';
-        return;
-      }
-      localStorage.setItem(PUBLISH_TOKEN_KEY, key);
-      saveUsername(slugifyUsername(input.value));
-      restoreStatus.textContent = 'Key saved to this browser. Re-checking…';
-      restoreStatus.className = 'username-status ok';
-      checkAvailability();
-    });
 
     async function checkAvailability() {
       const value = slugifyUsername(input.value);
@@ -978,11 +1019,19 @@ function openPublishModal() {
       const username = slugifyUsername(input.value);
       confirmBtn.disabled = true;
       confirmBtn.textContent = 'Publishing…';
+      const account = getSavedGoogleAccount();
       try {
         const res = await fetch('/api/publish', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ username, token: getPublishToken(), html: buildPublishedSiteHTML() })
+          body: JSON.stringify({
+            username,
+            // Signed in: the Worker verifies this ID token server-side
+            // and ties the username to the Google account. Signed out:
+            // published anonymously, same as before (no ownership proof).
+            googleCredential: account ? account.credential : null,
+            html: buildPublishedSiteHTML()
+          })
         });
         if (!res.ok) throw new Error('no-backend');
         const data = await res.json();
@@ -1018,7 +1067,6 @@ function openPublishSuccessModal(url, isLocalPreview = false) {
     : 'Your portfolio is published at:';
   const linkLabel = isLocalPreview ? 'Open preview ↗' : 'Visit site ↗';
   const showCopy = !isLocalPreview;
-  const token = getPublishToken();
 
   openModal(`
     <h3 class="modal-title" id="modalTitle">${title}</h3>
@@ -1028,15 +1076,6 @@ function openPublishSuccessModal(url, isLocalPreview = false) {
       ${showCopy ? `<button class="btn btn-ghost btn-sm" id="publishCopyBtn" type="button">Copy link</button>` : ''}
       <a class="btn btn-secondary btn-sm" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${linkLabel}</a>
     </div>
-    ${!isLocalPreview ? `
-    <div class="field-box full-width" style="margin-top:1rem;">
-      <span>Your publish key — save this somewhere safe</span>
-      <p class="username-status warn">This is the only way to update or reclaim this site from a different browser or device, or after clearing your browser data. It isn't shown again automatically.</p>
-      <div class="username-input-row">
-        <input type="text" id="publishTokenDisplay" value="${esc(token)}" readonly />
-        <button class="btn btn-ghost btn-sm" id="publishTokenCopyBtn" type="button">Copy key</button>
-      </div>
-    </div>` : ''}
   `, (root) => {
     const copyBtn = root.querySelector('#publishCopyBtn');
     if (copyBtn) {
@@ -1046,17 +1085,6 @@ function openPublishSuccessModal(url, isLocalPreview = false) {
           copyBtn.textContent = 'Copied ✓';
         } catch (err) {
           /* Clipboard API may be unavailable (e.g. insecure context) — link is still visible and selectable. */
-        }
-      });
-    }
-    const tokenCopyBtn = root.querySelector('#publishTokenCopyBtn');
-    if (tokenCopyBtn) {
-      tokenCopyBtn.addEventListener('click', async () => {
-        try {
-          await navigator.clipboard.writeText(token);
-          tokenCopyBtn.textContent = 'Copied ✓';
-        } catch (err) {
-          root.querySelector('#publishTokenDisplay').select();
         }
       });
     }
@@ -1102,7 +1130,7 @@ function renderSidebarList(blocks) {
         <span class="sd-title-text">${esc(titleText)} ${verifyBadge}</span>
         <span class="sd-item-actions">
           ${swapBtn}
-          <button class="sd-icon-btn sd-expand-btn" data-action="toggle-expand" data-block="${block.id}" title="${isExpanded ? 'Done editing' : 'Edit this section'}" type="button">${isExpanded ? 'Done ✓' : 'Edit ✎'}</button>
+          <button class="sd-icon-btn sd-expand-btn" data-action="toggle-expand" data-block="${block.id}" title="${isExpanded ? 'Done editing' : 'Edit this section'}" type="button">${isExpanded ? '✓' : '✎'}</button>
           <button class="sd-icon-btn sd-delete-btn" data-action="delete" data-id="${block.id}" title="Delete section" type="button">✕</button>
         </span>
       </div>
@@ -1751,7 +1779,14 @@ function initZoomControls() {
   mutationObserver.observe(el.canvasZoomTarget, {
     childList: true,
     subtree: true,
-    attributes: true,
+    // Only 'class' — NOT the blanket 'attributes: true' this used to be.
+    // applyZoom() itself sets style.transform/width/height directly on
+    // this same element, so watching all attributes made every zoom
+    // change observe its own mutation, re-run refit(), and clamp the
+    // zoom straight back down to fit-percentage. Class changes (e.g.
+    // template/selection swaps) still matter for re-fitting; the
+    // self-inflicted style writes from applyZoom must not.
+    attributeFilter: ['class'],
     characterData: true
   });
 

@@ -121,6 +121,28 @@ async function serveSite(username, env) {
   });
 }
 
+// Must match GOOGLE_CLIENT_ID in editor.js exactly.
+const GOOGLE_CLIENT_ID = '41010460965-oti1phnr8kdbij312qijrg82bc2japj7.apps.googleusercontent.com';
+
+// Verifies a Google ID token (JWT) server-side via Google's tokeninfo
+// endpoint — this is the real trust boundary; the editor's own decode
+// of the JWT is only for display and must never be trusted on its own.
+// Returns the verified email, or null if the token is missing/invalid/
+// for the wrong client.
+async function verifyGoogleCredential(credential) {
+  if (!credential) return null;
+  try {
+    const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+    if (!res.ok) return null;
+    const payload = await res.json();
+    if (payload.aud !== GOOGLE_CLIENT_ID) return null;
+    if (!payload.email || payload.email_verified !== 'true') return null;
+    return payload.email.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
 async function handleApi(request, env, url) {
   if (url.pathname === '/api/check-username' && request.method === 'GET') {
     const username = (url.searchParams.get('u') || '').toLowerCase();
@@ -140,26 +162,32 @@ async function handleApi(request, env, url) {
     }
 
     const username = String(body.username || '').toLowerCase().trim();
-    const token = String(body.token || '').trim();
     const html = String(body.html || '');
+    // Signed in: verified Google email ties this username to an
+    // account, so it can be updated later from any device by signing
+    // in again. Signed out: published anonymously — same as before,
+    // except there's no publish key to lose; an anonymous publish just
+    // can't be reclaimed/updated except from the same site's future
+    // publishes with a matching (or no) owner.
+    const ownerEmail = await verifyGoogleCredential(body.googleCredential);
 
     if (!USERNAME_RE.test(username) || RESERVED.has(username)) {
       return json({ ok: false, error: 'Username must be 3-30 lowercase letters, numbers, or hyphens.' }, 400);
-    }
-    if (!token || token.length < 8) {
-      return json({ ok: false, error: 'Missing publish token.' }, 400);
     }
     if (!html || html.length > 2_000_000) {
       return json({ ok: false, error: 'Missing page content, or content too large (2MB limit).' }, 400);
     }
 
     const existing = await env.SITES.get(`site:${username}`, 'json');
-    if (existing && existing.token !== token) {
-      return json({ ok: false, error: 'That username is already taken.' }, 409);
+    if (existing) {
+      const ownedByRequester = existing.ownerEmail && ownerEmail && existing.ownerEmail === ownerEmail;
+      if (!ownedByRequester) {
+        return json({ ok: false, error: 'That username is already taken.' }, 409);
+      }
     }
 
     await env.SITES.put(`site:${username}`, JSON.stringify({
-      token,
+      ownerEmail: ownerEmail || (existing ? existing.ownerEmail : null) || null,
       html,
       updatedAt: new Date().toISOString()
     }));
@@ -176,11 +204,13 @@ async function handleApi(request, env, url) {
     }
 
     const username = String(body.username || '').toLowerCase().trim();
-    const token = String(body.token || '').trim();
+    const ownerEmail = await verifyGoogleCredential(body.googleCredential);
 
     const existing = await env.SITES.get(`site:${username}`, 'json');
     if (!existing) return json({ ok: true });
-    if (existing.token !== token) return json({ ok: false, error: 'Not authorized to unpublish this username.' }, 403);
+    if (!existing.ownerEmail || existing.ownerEmail !== ownerEmail) {
+      return json({ ok: false, error: 'Not authorized to unpublish this username — sign in with the Google account that published it.' }, 403);
+    }
 
     await env.SITES.delete(`site:${username}`);
     return json({ ok: true });

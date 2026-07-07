@@ -65,18 +65,33 @@ subdomain.
 
 ## How ownership works (and its current limitation)
 
-There's no login system in this app yet, so usernames are claimed on a
-first-come basis using a random `token` the editor generates once and
-stores in the visitor's browser (`localStorage`). Publishing again
-under the same username from the same browser is allowed (token
-matches); publishing from a different browser to a taken username is
-rejected with "already taken."
+Usernames are now tied to a **Google account** instead of a copy-paste
+publish key. The editor uses Google Identity Services to get a signed
+ID token from the person's browser, sends it along with the publish
+request, and this Worker verifies that token server-side (via Google's
+`tokeninfo` endpoint) before trusting the email it contains. A username
+already owned by one verified email can only be republished/updated by
+signing in with that same Google account again — from any browser or
+device.
 
-This is enough to stop accidental squatting between different visitors,
-but it is **not real authentication** — clearing browser storage means
-losing the ability to update that username. If/when you add real user
-accounts, swap the `token` check in `worker/src/index.js` for a
-verified session/user ID instead.
+Publishing while signed out still works (`googleCredential` omitted),
+same as before — first-come, first-served, with no way to reclaim or
+update it later except by publishing again from a browser that still
+considers it "already yours" via the locally-saved username. If you
+want anonymous publishes to be updatable too, you'd need to bring back
+some kind of per-browser secret for that path specifically; as shipped,
+signing in with Google is the only durable way to keep publish rights
+across devices.
+
+**Before this works, you must:**
+1. Create an OAuth 2.0 Client ID (type "Web application") in
+   [Google Cloud Console](https://console.cloud.google.com/apis/credentials),
+   with your editor's origin(s) added under "Authorized JavaScript origins."
+2. Paste that Client ID into **both**:
+   - `GOOGLE_CLIENT_ID` in `editor.js`
+   - `GOOGLE_CLIENT_ID` in `worker/src/index.js`
+   (they must match exactly — the Worker checks the token's `aud` claim
+   against this value.)
 
 ## Tightening CORS later
 
