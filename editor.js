@@ -390,6 +390,7 @@ function renderActiveCanvas() {
   } else {
     el.pfSections.innerHTML = '';
     blocks.forEach(block => el.pfSections.appendChild(createPortfolioBlock(block)));
+    initPortfolioAnimation(Store.active().design.sectionAnimation || 'none');
   }
 
   renderSidebarList(blocks);
@@ -811,6 +812,21 @@ document.addEventListener('click', function (e) {
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') document.getElementById('modalOverlay').classList.add('hidden');
 });
+(function () {
+  var root = document.getElementById('portfolioSite');
+  if (!root || root.getAttribute('data-section-anim') !== 'fade-up') return;
+  var items = root.querySelectorAll('.pf-sections > *');
+  if (!('IntersectionObserver' in window)) {
+    items.forEach(function (n) { n.classList.add('pf-revealed'); });
+    return;
+  }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting) entry.target.classList.add('pf-revealed');
+    });
+  }, { threshold: 0.15 });
+  items.forEach(function (n) { io.observe(n); });
+})();
 `;
 
 // Plain-HTML (no contenteditable, no editor chrome) render of a single
@@ -934,7 +950,7 @@ function buildPublishedSiteHTML() {
 </style>
 </head>
 <body data-viewmode="portfolio">
-  <div class="portfolio-site" id="portfolioSite" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};">
+  <div class="portfolio-site" id="portfolioSite" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};">
     <header class="pf-hero">
       ${p.photo ? `<div class="pf-hero-photo-wrap"><img src="${esc(p.photo)}" alt="${esc(fullName)}" /></div>` : ''}
       <div class="pf-hero-text">
@@ -1611,10 +1627,29 @@ function applyResumeDesign(design) {
   el.resumePaper.style.setProperty('--rp-line-height', design.lineHeight === 'compact' ? '1.25' : design.lineHeight === 'relaxed' ? '1.7' : '1.45');
 }
 
+let portfolioAnimObserver = null;
+function initPortfolioAnimation(mode) {
+  if (portfolioAnimObserver) {
+    portfolioAnimObserver.disconnect();
+    portfolioAnimObserver = null;
+  }
+  el.portfolioSite.querySelectorAll('.pf-sections > *').forEach(n => n.classList.remove('pf-revealed'));
+  if (mode !== 'fade-up') return;
+  portfolioAnimObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) entry.target.classList.add('pf-revealed');
+    });
+  }, { threshold: 0.15 });
+  el.portfolioSite.querySelectorAll('.pf-sections > *').forEach(n => portfolioAnimObserver.observe(n));
+}
+
 function applyPortfolioDesign(design) {
   el.portfolioSite.style.setProperty('--pf-accent', design.accent);
   el.portfolioSite.style.setProperty('--pf-heading-font', FONT_STACKS[design.headingFont] || FONT_STACKS.modern);
   el.portfolioSite.style.setProperty('--pf-body-font', FONT_STACKS[design.bodyFont] || FONT_STACKS.sans);
+  el.portfolioSite.setAttribute('data-header-style', design.headerStyle || 'scroll');
+  el.portfolioSite.setAttribute('data-section-anim', design.sectionAnimation || 'none');
+  initPortfolioAnimation(design.sectionAnimation || 'none');
 }
 
 function applyActiveDesign() {

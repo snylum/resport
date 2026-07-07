@@ -141,12 +141,12 @@ function renderList() {
   el.adminSitesList.innerHTML = filtered.map(s => `
     <div class="admin-site-row" data-username="${esc(s.username)}">
       <div class="admin-site-main">
-        <div class="admin-site-username">${esc(s.username)}.proves.work</div>
+        <div class="admin-site-username">${esc(s.username)}.proves.work${(s.status === 'live' && s.ownerEmail) ? ` <span class="admin-owner-chip">${esc(s.ownerEmail)}</span>` : ''}</div>
         <div class="admin-site-meta">${s.ownerEmail ? esc(s.ownerEmail) : 'anonymous'} · updated ${s.updatedAt ? new Date(s.updatedAt).toLocaleString() : '—'}</div>
       </div>
       <span class="admin-status-pill ${s.status}">${s.status}</span>
       <div class="admin-site-actions">
-        <button class="btn btn-ghost btn-sm" data-action="view" type="button">View</button>
+        <button class="btn btn-ghost btn-sm admin-view-btn" data-action="view" type="button">View</button>
         ${s.status === 'pending' ? `<button class="btn btn-secondary btn-sm" data-action="approve" type="button">Approve</button>
           <button class="btn btn-ghost btn-sm" data-action="reject" type="button">Reject</button>` : ''}
         ${s.status === 'live' ? `<button class="btn btn-ghost btn-sm" data-action="reject" type="button">Unpublish</button>` : ''}

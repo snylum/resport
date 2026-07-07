@@ -84,7 +84,7 @@ export const FONT_OPTIONS = [
 
 // Default design for the portfolio site (independent of résumé templates —
 // the portfolio has one flowing layout, but still themeable via color/font).
-export const PORTFOLIO_DEFAULT_DESIGN = { accent: '#7C4DFF', headingFont: 'modern', bodyFont: 'sans' };
+export const PORTFOLIO_DEFAULT_DESIGN = { accent: '#7C4DFF', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'none' };
 
 const defaultDesign = { ...TEMPLATES[0].design };
 

@@ -100,7 +100,51 @@
   min-height: 1.2em;
 }
 
-/* ── Section stack ────────────────────────────────────────── */
+/* ── Header behavior ─────────────────────────────────────────
+   "scroll" (default) is just normal document flow. "pinned" sticks
+   the hero to the top of whatever scrolls it — the browser viewport
+   on a real published page, or an internally-scrolling container. */
+.portfolio-site[data-header-style="pinned"] .pf-hero {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+/* ── Section animation: fade-up ──────────────────────────────
+   Each direct child of .pf-sections starts hidden/offset and is
+   revealed (via the .pf-revealed class, added by an IntersectionObserver
+   in editor.js / the published page's own inline script) as it
+   scrolls into view. */
+.portfolio-site[data-section-anim="fade-up"] .pf-sections > * {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.portfolio-site[data-section-anim="fade-up"] .pf-sections > *.pf-revealed {
+  opacity: 1;
+  transform: none;
+}
+
+/* ── Section animation: horizontal scroll ────────────────────
+   Sections lay out left-to-right with scroll-snap, like the
+   proves.work homepage, instead of stacking vertically. */
+.portfolio-site[data-section-anim="horizontal"] .pf-sections {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 1.5rem;
+}
+
+.portfolio-site[data-section-anim="horizontal"] .pf-sections > * {
+  flex: 0 0 min(560px, 82vw);
+  scroll-snap-align: start;
+}
+
+
 .pf-sections {
   padding: 2.25rem 2.75rem 3rem;
   display: flex;

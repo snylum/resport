@@ -601,6 +601,11 @@ body {
 .canvas-container {
   position: relative;
   flex-shrink: 0;
+  /* Animates the scaled footprint (set from JS on every zoom/refit)
+     so dragging the sidebar resizer or scaling down to keep the
+     document fully visible reads as a smooth zoom-out, not an
+     instant jump straight to the new percentage. */
+  transition: width 0.16s ease-out, height 0.16s ease-out;
 }
 
 /* THE FIX: this element is scaled + translated(-50%,-50%) from JS on
@@ -615,6 +620,10 @@ body {
   top: 50%;
   left: 50%;
   transform-origin: center center;
+  /* Same reasoning as .canvas-container above: animate the scale
+     itself so manual/fit zoom changes visibly ease between
+     percentages instead of snapping straight to the new value. */
+  transition: transform 0.16s ease-out;
 }
 
 .resume-paper {
