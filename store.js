@@ -227,6 +227,34 @@ export const PORTFOLIO_TEMPLATES = [
     icon: '📚',
     design: { accent: '#22314A', headingFont: 'serif', bodyFont: 'serif', headerStyle: 'pinned', sectionAnimation: 'none', contentWidth: 'contained', heroAlign: 'left' }
   }
+].map(t => ({ category: 'style', ...t }));
+
+// ── Structural portfolio layouts ──────────────────────────────
+// Unlike the templates above (which only re-theme color/font/motion
+// on the same adaptive block layout), these change the actual page
+// structure — e.g. adding a photo gallery grid — while still being a
+// normal, editable portfolio underneath. Kept in a separate list so
+// the Customize gallery can show "Templates" (style) and "Layouts"
+// (structure) as distinct groups.
+export const PORTFOLIO_STRUCTURAL_TEMPLATES = [
+  {
+    id: 'photo-gallery',
+    name: 'Photo Gallery',
+    tagline: 'Adds a visual grid of work samples',
+    icon: '🖼️',
+    category: 'structural',
+    addsBlockTypes: ['gallery'],
+    design: { accent: '#111111', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'none', contentWidth: 'wide', heroAlign: 'center' }
+  },
+  {
+    id: 'gallery-slideshow',
+    name: 'Gallery Slideshow',
+    tagline: 'Photo grid inside a horizontal slide deck',
+    icon: '🎞️',
+    category: 'structural',
+    addsBlockTypes: ['gallery'],
+    design: { accent: '#7C4DFF', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'horizontal', contentWidth: 'full', heroAlign: 'center' }
+  }
 ];
 
 const defaultDesign = { ...TEMPLATES[0].design };
@@ -247,7 +275,8 @@ export const BLOCK_LIBRARY = [
   { type: 'skills', label: 'Skills', makeData: () => ({ items: ['Skill One', 'Skill Two', 'Skill Three'] }) },
   { type: 'certifications', label: 'Certifications', makeData: () => ({ items: [{ name: 'Certification Name', issuer: 'Issuing Body', date: 'Year' }] }) },
   { type: 'languages', label: 'Languages', makeData: () => ({ items: [{ name: 'English', level: 'Fluent' }] }) },
-  { type: 'custom', label: 'Custom Text Block', makeData: () => ({ title: 'Custom Section', text: 'Add any additional information here.' }) }
+  { type: 'custom', label: 'Custom Text Block', makeData: () => ({ title: 'Custom Section', text: 'Add any additional information here.' }) },
+  { type: 'gallery', label: 'Photo Gallery', makeData: () => ({ photos: [] }) }
 ];
 
 const defaultBlocks = [
@@ -600,12 +629,26 @@ class EditorStore {
   // field instead of a structural layout.
   setPortfolioTemplate(id) {
     if (this.state.viewMode !== 'portfolio') return;
-    const t = PORTFOLIO_TEMPLATES.find(x => x.id === id);
+    const t = PORTFOLIO_TEMPLATES.find(x => x.id === id) || PORTFOLIO_STRUCTURAL_TEMPLATES.find(x => x.id === id);
     if (!t) return;
     this.state.portfolio.template = id;
     this.state.portfolio.design = { ...t.design };
+    // Structural layouts (e.g. Photo Gallery) add a block type that
+    // isn't part of the adaptive default layout — only append it if
+    // one isn't already present, so re-picking the layout never
+    // duplicates it.
+    (t.addsBlockTypes || []).forEach(blockType => {
+      const alreadyHas = this.state.portfolio.blocks.some(b => b.type === blockType);
+      if (!alreadyHas) {
+        const lib = BLOCK_LIBRARY.find(b => b.type === blockType);
+        if (lib) {
+          this.state.portfolio.blocks.push({ id: uid(), type: blockType, col: 'main', data: lib.makeData() });
+        }
+      }
+    });
     this.emit('template_changed', id);
     this.emit('design_changed', this.state.portfolio.design);
+    this.emit('blocks_changed');
   }
 
   setDesign(key, value) {

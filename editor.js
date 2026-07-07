@@ -1,4 +1,4 @@
-import { Store, esc, uid, TEMPLATES, PORTFOLIO_TEMPLATES, FONT_STACKS, FONT_OPTIONS, BLOCK_LIBRARY } from './store.js';
+import { Store, esc, uid, TEMPLATES, PORTFOLIO_TEMPLATES, PORTFOLIO_STRUCTURAL_TEMPLATES, FONT_STACKS, FONT_OPTIONS, BLOCK_LIBRARY } from './store.js';
 // (SAMPLE_PROFILES/SAMPLE_STYLES live entirely inside Store.randomizeContent()
 // in store.js — nothing in editor.js needs to reach into them directly.)
 
@@ -227,6 +227,7 @@ function blockSummaryLine(block) {
     case 'skills': return (d.items || []).join(', ') || 'Skills';
     case 'certifications': return (d.items || []).map(i => i.name).filter(Boolean).join(', ') || 'Certifications';
     case 'languages': return (d.items || []).map(i => i.name).filter(Boolean).join(', ') || 'Languages';
+    case 'gallery': return (d.photos || []).length ? `${d.photos.length} photo${d.photos.length === 1 ? '' : 's'}` : 'Photo gallery (empty)';
     default: return 'Section';
   }
 }
@@ -275,6 +276,19 @@ function blockEditFieldsHTML(block) {
       return field('Languages', renderEntryList(d.items, block.id, 'items', [
         { key: 'name', cls: 'ce-strong' }, { key: 'level', cls: 'ce-muted' }
       ]));
+    case 'gallery': {
+      const thumbs = (d.photos || []).map((src, i) => `
+        <div class="sd-gallery-thumb">
+          <img src="${esc(src)}" alt="" />
+          <button class="sd-gallery-thumb-remove" data-action="remove-item" data-block="${block.id}" data-field="photos" data-index="${i}" type="button" title="Remove photo">✕</button>
+        </div>`).join('');
+      return field('Photos', `
+        <div class="sd-gallery-grid">${thumbs}</div>
+        <label class="add-item-btn sd-gallery-add">
+          + Add photo
+          <input type="file" accept="image/*" class="sd-gallery-file-input" data-block="${block.id}" hidden />
+        </label>`);
+    }
     default:
       return '';
   }
@@ -370,6 +384,12 @@ function createPortfolioBlock(block) {
     case 'languages':
       baseClass = 'pf-card';
       innerHTML = `<div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.level || '')}</span></div>`).join('')}</div>`;
+      break;
+    case 'gallery':
+      baseClass = 'pf-card pf-gallery-card';
+      innerHTML = (block.data.photos || []).length
+        ? `<div class="pf-gallery-grid">${(block.data.photos || []).map(src => `<div class="pf-gallery-item"><img src="${esc(src)}" alt="" /></div>`).join('')}</div>`
+        : `<div class="pf-gallery-empty">No photos yet — add some from the sidebar.</div>`;
       break;
     default:
       break;
@@ -1141,6 +1161,10 @@ function renderStaticPortfolioBlock(block) {
       return `<div class="pf-card"><div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.issuer || '')}</span><span class="ce-muted">${esc(it.date || '')}</span></div>`).join('')}</div></div>`;
     case 'languages':
       return `<div class="pf-card"><div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.level || '')}</span></div>`).join('')}</div></div>`;
+    case 'gallery':
+      return (block.data.photos || []).length
+        ? `<div class="pf-card pf-gallery-card"><div class="pf-gallery-grid">${(block.data.photos || []).map(src => `<div class="pf-gallery-item"><img src="${esc(src)}" alt="" /></div>`).join('')}</div></div>`
+        : '';
     default:
       return '';
   }
@@ -1175,7 +1199,7 @@ function buildHorizontalSectionsHTML(blocks) {
   const dotsHTML = slides.length > 1
     ? `<nav class="pf-slide-dots" aria-label="Portfolio sections">${slides.map((_, i) => `<button class="pf-dot${i === 0 ? ' active' : ''}" data-pf-slide="${i}" aria-label="Section ${i + 1}"></button>`).join('')}</nav>`
     : '';
-  return `${dotsHTML}<div class="pf-sections">${slidesHTML}</div>`;
+  return `<div class="pf-sections">${slidesHTML}</div>${dotsHTML}`;
 }
 
 // Builds a complete, standalone HTML document for the published site.
@@ -1486,6 +1510,15 @@ function confirmDeleteSection(id) {
 }
 
 function initSidebarActions() {
+  el.sidebarSectionsList.addEventListener('change', (e) => {
+    const input = e.target.closest('.sd-gallery-file-input');
+    if (!input || !input.files[0]) return;
+    const blockId = input.dataset.block;
+    const reader = new FileReader();
+    reader.onload = (ev) => Store.addListItem(blockId, 'photos', ev.target.result);
+    reader.readAsDataURL(input.files[0]);
+  });
+
   el.sidebarSectionsList.addEventListener('click', (e) => {
     const actionBtn = e.target.closest('[data-action]');
     if (actionBtn) {
@@ -1900,7 +1933,7 @@ function populateFontSelects() {
 // of truth in PORTFOLIO_TEMPLATES instead of keeping markup in sync.
 function populatePortfolioTemplateGallery() {
   if (!el.portfolioTemplateGallery) return;
-  el.portfolioTemplateGallery.innerHTML = PORTFOLIO_TEMPLATES.map(t => `
+  const cardHTML = t => `
     <button class="template-card" data-portfolio-template="${t.id}" type="button">
       <div class="tpl-preview" style="align-items:center;justify-content:center;background:color-mix(in srgb, ${t.design.accent} 12%, white);">
         <span style="font-size:1.4rem;line-height:1;">${t.icon}</span>
@@ -1910,7 +1943,19 @@ function populatePortfolioTemplateGallery() {
       <div class="tpl-card-name">${esc(t.name)}</div>
       <div class="tpl-card-tag">${esc(t.tagline)}</div>
     </button>
-  `).join('');
+  `;
+  el.portfolioTemplateGallery.innerHTML = `
+    <div class="tpl-group">
+      <div class="tpl-group-title">Templates</div>
+      <div class="tpl-group-hint">Color, font & motion — same adaptive layout</div>
+      <div class="template-gallery">${PORTFOLIO_TEMPLATES.map(cardHTML).join('')}</div>
+    </div>
+    <div class="tpl-group">
+      <div class="tpl-group-title">Layouts</div>
+      <div class="tpl-group-hint">Structural variations, like a photo gallery grid</div>
+      <div class="template-gallery">${PORTFOLIO_STRUCTURAL_TEMPLATES.map(cardHTML).join('')}</div>
+    </div>
+  `;
 }
 
 function applyResumeDesign(design) {
