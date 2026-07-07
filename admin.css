@@ -1,0 +1,141 @@
+.admin-main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+}
+
+.admin-heading {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin: 0 0 0.5rem;
+}
+
+.admin-gate {
+  max-width: 420px;
+  margin: 3rem auto 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-panel.hidden,
+.admin-gate.hidden {
+  display: none;
+}
+
+.admin-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.admin-toolbar-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.admin-toolbar-actions input[type="search"] {
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  padding: 0.45rem 0.7rem;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  min-width: 220px;
+}
+
+.admin-tabs {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid var(--color-border);
+  padding-bottom: 0.75rem;
+}
+
+.admin-tab {
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+}
+
+.admin-tab:hover {
+  background: var(--color-surface-alt);
+}
+
+.admin-tab.active {
+  background: var(--rp-accent, var(--color-secondary));
+  border-color: var(--rp-accent, var(--color-secondary));
+  color: #fff;
+}
+
+.admin-sites-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.admin-site-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  padding: 0.75rem 0.9rem;
+}
+
+.admin-site-main {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.admin-site-username {
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.admin-site-meta {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  margin-top: 0.15rem;
+  word-break: break-all;
+}
+
+.admin-status-pill {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.2rem 0.55rem;
+  border: 1.5px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.admin-status-pill.pending { color: #a15c00; border-color: #a15c00; }
+.admin-status-pill.live { color: var(--color-success); border-color: var(--color-success); }
+.admin-status-pill.rejected,
+.admin-status-pill.deleted { color: var(--color-danger); border-color: var(--color-danger); }
+
+.admin-site-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.admin-empty {
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+  padding: 2rem 0;
+  text-align: center;
+}

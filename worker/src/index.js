@@ -73,6 +73,28 @@ function escapeHtml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// Shown at <username>.proves.work while a site is saved but not yet
+// approved (pending review) — the site is never public until an admin
+// approves it, so this page (not the person's real content) is what
+// the public sees at that address in the meantime.
+function pendingPage(username) {
+  return `<!DOCTYPE html><html><head><meta charset="utf-8" />
+<title>Not yet published — ${APP_HOST}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+  body{font-family:-apple-system,'Inter',system-ui,sans-serif;background:#FDF7FA;color:#1A1A1A;
+       display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;}
+  a{color:#7C4DFF;font-weight:700;text-decoration:none;}
+  h1{font-size:1.4rem;}
+</style></head>
+<body>
+  <div>
+    <h1>@${escapeHtml(username)}'s portfolio is awaiting approval</h1>
+    <p><a href="https://${APP_HOST}">Build yours at ${APP_HOST} →</a></p>
+  </div>
+</body></html>`;
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -106,8 +128,17 @@ async function serveSite(username, env) {
   }
 
   const record = await env.SITES.get(`site:${username}`, 'json');
-  if (!record) {
+  if (!record || record.status === 'deleted') {
     return new Response(notFoundPage(username), { status: 404, headers: { 'content-type': 'text/html;charset=UTF-8' } });
+  }
+
+  // Not public until an admin has manually approved it — pending and
+  // rejected sites never serve their real HTML to visitors. Records
+  // saved before this status field existed have no `status` at all;
+  // treat those as already-live so old published sites don't vanish.
+  const status = record.status || 'live';
+  if (status !== 'live') {
+    return new Response(pendingPage(username), { status: 200, headers: { 'content-type': 'text/html;charset=UTF-8' } });
   }
 
   return new Response(record.html, {
@@ -121,8 +152,12 @@ async function serveSite(username, env) {
   });
 }
 
-// Must match GOOGLE_CLIENT_ID in editor.js exactly.
+// Must match GOOGLE_CLIENT_ID in editor.js / admin.js exactly.
 const GOOGLE_CLIENT_ID = '41010460965-oti1phnr8kdbij312qijrg82bc2japj7.apps.googleusercontent.com';
+
+// Only this account can approve/reject/restore sites from the admin
+// dashboard. Add more addresses here if more admins are needed.
+const ADMIN_EMAILS = new Set(['snylumagbas@gmail.com']);
 
 // Verifies a Google ID token (JWT) server-side via Google's tokeninfo
 // endpoint — this is the real trust boundary; the editor's own decode
@@ -141,6 +176,14 @@ async function verifyGoogleCredential(credential) {
   } catch {
     return null;
   }
+}
+
+// Same verification, but also requires the email to be on the admin
+// allowlist. Used to gate every /api/admin/* route.
+async function verifyAdminCredential(credential) {
+  const email = await verifyGoogleCredential(credential);
+  if (!email || !ADMIN_EMAILS.has(email)) return null;
+  return email;
 }
 
 async function handleApi(request, env, url) {
@@ -179,20 +222,27 @@ async function handleApi(request, env, url) {
     }
 
     const existing = await env.SITES.get(`site:${username}`, 'json');
-    if (existing) {
+    if (existing && existing.status !== 'deleted') {
       const ownedByRequester = existing.ownerEmail && ownerEmail && existing.ownerEmail === ownerEmail;
       if (!ownedByRequester) {
         return json({ ok: false, error: 'That username is already taken.' }, 409);
       }
     }
 
+    // Publishing never goes live immediately — it's saved as "pending"
+    // and only becomes publicly visible once an admin approves it from
+    // the admin dashboard (manual, paywalled verification). Re-saving
+    // an already-approved site while editing further keeps it hidden
+    // again until it's re-approved, so edits can't sneak past review.
     await env.SITES.put(`site:${username}`, JSON.stringify({
       ownerEmail: ownerEmail || (existing ? existing.ownerEmail : null) || null,
       html,
-      updatedAt: new Date().toISOString()
+      status: 'pending',
+      updatedAt: new Date().toISOString(),
+      createdAt: (existing && existing.createdAt) || new Date().toISOString()
     }));
 
-    return json({ ok: true, url: `https://${username}.${APP_HOST}` });
+    return json({ ok: true, pending: true, url: `https://${username}.${APP_HOST}` });
   }
 
   if (url.pathname === '/api/publish' && request.method === 'DELETE') {
@@ -212,7 +262,71 @@ async function handleApi(request, env, url) {
       return json({ ok: false, error: 'Not authorized to unpublish this username — sign in with the Google account that published it.' }, 403);
     }
 
-    await env.SITES.delete(`site:${username}`);
+    // Soft-delete: keep the record (marked "deleted") instead of
+    // erasing it, so it can be recovered from the admin dashboard if
+    // someone unpublishes by mistake. serveSite() already treats
+    // status "deleted" the same as not-found for visitors.
+    await env.SITES.put(`site:${username}`, JSON.stringify({
+      ...existing,
+      status: 'deleted',
+      deletedAt: new Date().toISOString()
+    }));
+    return json({ ok: true });
+  }
+
+  // ── Admin routes (dashboard at /admin) ───────────────────────
+  // Every route below requires a verified Google ID token belonging to
+  // an address in ADMIN_EMAILS. Sites are never public until 'approve'
+  // is called here, and can always be recovered ('restore') even after
+  // being unpublished or rejected, since nothing is ever hard-deleted.
+
+  if (url.pathname === '/api/admin/sites' && request.method === 'POST') {
+    let body;
+    try { body = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON body.' }, 400); }
+    const adminEmail = await verifyAdminCredential(body.googleCredential);
+    if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
+
+    const list = await env.SITES.list({ prefix: 'site:' });
+    const sites = await Promise.all(list.keys.map(async (k) => {
+      const record = await env.SITES.get(k.name, 'json');
+      const username = k.name.slice('site:'.length);
+      return record ? { username, ownerEmail: record.ownerEmail, status: record.status || 'live', updatedAt: record.updatedAt, createdAt: record.createdAt, deletedAt: record.deletedAt || null } : null;
+    }));
+    return json({ ok: true, sites: sites.filter(Boolean) });
+  }
+
+  if (url.pathname === '/api/admin/site-html' && request.method === 'POST') {
+    let body;
+    try { body = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON body.' }, 400); }
+    const adminEmail = await verifyAdminCredential(body.googleCredential);
+    if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
+    const username = String(body.username || '').toLowerCase().trim();
+    const record = await env.SITES.get(`site:${username}`, 'json');
+    if (!record) return json({ ok: false, error: 'Not found.' }, 404);
+    return json({ ok: true, html: record.html });
+  }
+
+  if (url.pathname === '/api/admin/set-status' && request.method === 'POST') {
+    let body;
+    try { body = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON body.' }, 400); }
+    const adminEmail = await verifyAdminCredential(body.googleCredential);
+    if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
+
+    const username = String(body.username || '').toLowerCase().trim();
+    const nextStatus = String(body.status || '');
+    if (!['live', 'pending', 'rejected', 'deleted'].includes(nextStatus)) {
+      return json({ ok: false, error: 'Invalid status.' }, 400);
+    }
+    const existing = await env.SITES.get(`site:${username}`, 'json');
+    if (!existing) return json({ ok: false, error: 'Not found.' }, 404);
+
+    await env.SITES.put(`site:${username}`, JSON.stringify({
+      ...existing,
+      status: nextStatus,
+      reviewedAt: new Date().toISOString(),
+      reviewedBy: adminEmail,
+      ...(nextStatus === 'deleted' ? { deletedAt: new Date().toISOString() } : {})
+    }));
     return json({ ok: true });
   }
 

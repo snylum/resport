@@ -488,6 +488,23 @@
 .username-status.ok { color: var(--color-success); font-weight: 600; }
 .username-status.warn { color: var(--color-danger); font-weight: 600; }
 
+/* Account box at the top of the Publish modal: center the "Signed in
+   as..."/sign-out row and the Google Sign-In button itself, instead of
+   the default left-aligned block layout. */
+#publishAccountBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+#publishAccountBox #googleSignInSlot {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
 .publish-url {
   font-family: var(--font-mono);
   font-size: 1.05rem;

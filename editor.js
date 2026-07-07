@@ -188,9 +188,9 @@ function renderEntryList(items, blockId, field, cols) {
 function verifyControlHTML(block) {
   const v = block.data.verify || { type: 'none' };
   if (v.type !== 'none') {
-    const labelText = v.label || (v.type === 'photo' ? 'View proof' : 'View link');
+    const labelHTML = v.label ? `<span class="pf-verify-label">${esc(v.label)}</span>` : '';
     return `
-      <button class="pf-verify-badge" data-action="view-verify" data-block="${block.id}" type="button">✓ Verified <span class="pf-verify-label">${esc(labelText)}</span></button>
+      <button class="pf-verify-badge" data-action="view-verify" data-block="${block.id}" type="button">✓ Verified${labelHTML}</button>
       <button class="pf-verify-edit" data-action="edit-verify" data-block="${block.id}" title="Edit verification" type="button">✎</button>`;
   }
   return `<button class="pf-verify-add" data-action="edit-verify" data-block="${block.id}" type="button">+ Add proof</button>`;
@@ -282,8 +282,8 @@ function blockEditFieldsHTML(block) {
 function canvasVerifyBadge(block) {
   const v = block.data.verify || { type: 'none' };
   if (v.type === 'none') return '';
-  const labelText = v.label || (v.type === 'photo' ? 'View proof' : 'View link');
-  return `<div class="pf-verify"><button class="pf-verify-badge" data-action="view-verify" data-block="${block.id}" type="button">✓ Verified <span class="pf-verify-label">${esc(labelText)}</span></button></div>`;
+  const labelHTML = v.label ? `<span class="pf-verify-label">${esc(v.label)}</span>` : '';
+  return `<div class="pf-verify"><button class="pf-verify-badge" data-action="view-verify" data-block="${block.id}" type="button">✓ Verified${labelHTML}</button></div>`;
 }
 
 function createResumeBlock(block) {
@@ -444,10 +444,36 @@ function handleTrackClick(e) {
   if (blockEl) Store.setSelectedBlock(blockEl.dataset.id);
 }
 
+// Double-clicking a section on the canvas jumps straight to editing it:
+// select it, open its sidebar accordion (if not already open), and
+// scroll the sidebar so the edit fields are in view.
+function openBlockEditFromCanvas(blockId) {
+  if (!blockId) return;
+  Store.setSelectedBlock(blockId);
+  if (!expandedBlocks.has(blockId)) {
+    expandedBlocks.add(blockId);
+    renderSidebarList(Store.active().blocks);
+  }
+  requestAnimationFrame(() => {
+    const item = document.querySelector(`.sd-section-item[data-id="${blockId}"]`);
+    if (item) {
+      item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      item.querySelector('.sd-edit-body .ce-field')?.focus();
+    }
+  });
+}
+
+function handleTrackDblClick(e) {
+  if (e.target.closest('[data-action]')) return;
+  const blockEl = e.target.closest('.resume-block, .pf-card, .pf-block-section-title');
+  if (blockEl) openBlockEditFromCanvas(blockEl.dataset.id);
+}
+
 function initCanvasDelegation() {
   [el.mainTrack, el.sideTrack, el.pfSections].forEach(track => {
     track.addEventListener('focusout', handleFieldSync);
     track.addEventListener('click', handleTrackClick);
+    track.addEventListener('dblclick', handleTrackDblClick);
   });
 }
 
@@ -683,7 +709,7 @@ function renderPublishAccountBox() {
   const account = getSavedGoogleAccount();
   if (account) {
     box.innerHTML = `
-      <p class="username-status ok">Signed in as ${esc(account.email)} — your progress can sync across devices.</p>
+      <p class="username-status ok">Signed in as ${esc(account.email)}</p>
       <button class="btn btn-ghost btn-sm" id="googleSignOutBtn" type="button">Sign out</button>
     `;
     box.querySelector('#googleSignOutBtn').addEventListener('click', () => {
@@ -692,7 +718,7 @@ function renderPublishAccountBox() {
     });
   } else {
     box.innerHTML = `
-      <p class="modal-sub">Sign in with Google to save your progress and publish rights across devices (optional — you can still publish anonymously below).</p>
+      <p class="modal-sub">Sign in with Google to save your progress.</p>
       <div id="googleSignInSlot"></div>
     `;
     renderGoogleSignInButton(box.querySelector('#googleSignInSlot'));
@@ -844,10 +870,12 @@ function renderStaticPortfolioBlock(block) {
       const v = block.data.verify || { type: 'none' };
       let verifyHTML = '';
       if (v.type === 'photo' && v.photo) {
-        verifyHTML = `<button class="pf-verify-badge" data-verify-type="photo" data-verify-photo="${esc(v.photo)}" data-verify-label="${esc(v.label || 'View proof')}" type="button">✓ Verified <span class="pf-verify-label">${esc(v.label || 'View proof')}</span></button>`;
+        const labelHTML = v.label ? `<span class="pf-verify-label">${esc(v.label)}</span>` : '';
+        verifyHTML = `<button class="pf-verify-badge" data-verify-type="photo" data-verify-photo="${esc(v.photo)}" data-verify-label="${esc(v.label || '')}" type="button">✓ Verified${labelHTML}</button>`;
       } else if (v.type === 'link' && v.link) {
         const safeHref = /^https?:\/\//i.test(v.link) ? v.link : `https://${v.link}`;
-        verifyHTML = `<button class="pf-verify-badge" data-verify-type="link" data-verify-link="${esc(safeHref)}" data-verify-label="${esc(v.label || 'View link')}" type="button">✓ Verified <span class="pf-verify-label">${esc(v.label || 'View link')}</span></button>`;
+        const labelHTML = v.label ? `<span class="pf-verify-label">${esc(v.label)}</span>` : '';
+        verifyHTML = `<button class="pf-verify-badge" data-verify-type="link" data-verify-link="${esc(safeHref)}" data-verify-label="${esc(v.label || '')}" type="button">✓ Verified${labelHTML}</button>`;
       }
       return `<div class="pf-card">
         <div class="pf-exp-top-row"><span class="pf-exp-company">${esc(block.data.company)}</span><span class="pf-exp-dates">${esc(block.data.dates)}</span></div>
@@ -939,7 +967,6 @@ function openPublishModal() {
   const html = `
     <h3 class="modal-title" id="modalTitle">Publish your portfolio</h3>
     <div class="field-box full-width" id="publishAccountBox"></div>
-    <p class="modal-sub">Pick the address where your portfolio will live. You can change this later — this only affects your portfolio, never your résumé/PDF document.</p>
     <div class="field-box full-width">
       <span>Your ${PUBLISH_APEX} address</span>
       <div class="username-input-row">
@@ -948,6 +975,7 @@ function openPublishModal() {
       </div>
       <p class="username-status" id="publishUsernameStatus"></p>
     </div>
+    <p class="modal-sub">Publishing is manually reviewed before it goes live and requires an active plan.</p>
     <div class="modal-actions">
       <button class="btn btn-secondary btn-sm" id="publishConfirmBtn" type="button" disabled>Publish</button>
     </div>
@@ -1043,7 +1071,7 @@ function openPublishModal() {
           return;
         }
         saveUsername(username);
-        openPublishSuccessModal(data.url);
+        openPublishSuccessModal(data.url, 'pending');
       } catch (err) {
         // No live worker to publish to from here — generate a real,
         // fully-working local preview instead of dead-ending on a
@@ -1054,19 +1082,21 @@ function openPublishModal() {
         const blobUrl = URL.createObjectURL(blob);
         confirmBtn.disabled = false;
         confirmBtn.textContent = 'Publish';
-        openPublishSuccessModal(blobUrl, true);
+        openPublishSuccessModal(blobUrl, 'local');
       }
     });
   });
 }
 
-function openPublishSuccessModal(url, isLocalPreview = false) {
-  const title = isLocalPreview ? '👀 Local preview ready' : '🎉 You\'re live!';
-  const sub = isLocalPreview
-    ? `The live publish backend isn't reachable from here, so this is a real, fully-rendered local preview instead of a hosted address — open it any time in this browser:`
-    : 'Your portfolio is published at:';
-  const linkLabel = isLocalPreview ? 'Open preview ↗' : 'Visit site ↗';
-  const showCopy = !isLocalPreview;
+function openPublishSuccessModal(url, mode = 'pending') {
+  // mode: 'pending' (real backend, awaiting admin review + paywall),
+  // or 'local' (no backend reachable — a local-only preview blob).
+  const title = mode === 'local' ? '👀 Local preview ready' : '✓ Submitted for review';
+  const sub = mode === 'local'
+    ? `No live backend reachable from here — this is a local preview only, nothing was published.`
+    : `Your address is reserved. It'll go live once payment and admin review are complete.`;
+  const linkLabel = mode === 'local' ? 'Open preview ↗' : 'Preview address ↗';
+  const showCopy = mode !== 'local';
 
   openModal(`
     <h3 class="modal-title" id="modalTitle">${title}</h3>
@@ -1200,6 +1230,16 @@ function initSidebarActions() {
   // Same field-sync used by the (now read-only) canvas — writes a
   // ce-field's text back into the Store the moment it loses focus.
   el.sidebarSectionsList.addEventListener('focusout', handleFieldSync);
+
+  // Double-clicking a collapsed sidebar item's header opens it straight
+  // into edit mode, same as double-clicking the section on the canvas.
+  el.sidebarSectionsList.addEventListener('dblclick', (e) => {
+    if (e.target.closest('.ce-field, [data-action]')) return;
+    const item = e.target.closest('.sd-section-item');
+    if (item && !expandedBlocks.has(item.dataset.id)) {
+      toggleBlockExpand(item.dataset.id);
+    }
+  });
 }
 
 function initAddSectionMenu() {
@@ -1488,6 +1528,10 @@ function initToolbar() {
   });
 
   document.getElementById('btnPublishShowcase').addEventListener('click', openPublishModal);
+  document.getElementById('btnPreviewShowcase').addEventListener('click', () => {
+    const blob = new Blob([buildPublishedSiteHTML()], { type: 'text/html' });
+    window.open(URL.createObjectURL(blob), '_blank', 'noopener');
+  });
 
   el.btnResetResume.addEventListener('click', () => {
     openModal(`

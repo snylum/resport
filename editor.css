@@ -574,7 +574,17 @@ body {
   flex: 1 1 auto;
   min-width: 360px;
   background: #f0f0f0;
-  overflow: auto;
+  /* Deliberately NOT overflow:auto. The zoom/refit logic in editor.js
+     always scales the document down to fit this box, so a scrollbar
+     should never be structurally needed — and if one appeared, its
+     own width would shrink this box's clientWidth, which the
+     ResizeObserver watching this element would see as "space changed",
+     triggering another refit, which resizes the canvas, which removes
+     the scrollbar, which triggers another refit... an infinite
+     feedback loop that showed up as the preview glitching/flickering
+     during ctrl+wheel zoom and sidebar-width dragging. overflow:hidden
+     breaks that loop at the source. */
+  overflow: hidden;
   padding: 2rem;
   display: flex;
   justify-content: center;
@@ -938,12 +948,14 @@ body {
 .sd-field .rb-skill-tag .ce-field,
 .sd-field .rb-bullets .ce-field,
 .sd-field .rb-entry-row .ce-field {
-  display: inline;
+  display: inline-block;
   min-height: 0;
-  padding: 0;
+  padding: 0.1rem 0.15rem;
   border: none;
   background: none;
-  border-radius: 0;
+  border-radius: 2px;
+  min-width: 1.5em;
+  cursor: text;
 }
 
 /* ── Editable text affordances ──────────────────────────────── */

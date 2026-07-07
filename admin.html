@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dazed">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>proves.work — Admin</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="stylesheet" href="dazed.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="portfolio.css" />
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body>
+  <nav class="site-nav">
+    <div class="nav-logo">proves.work <span style="opacity:.55;font-weight:600;">/ admin</span></div>
+    <ul class="nav-links">
+      <li id="adminAccountSlot"></li>
+    </ul>
+  </nav>
+
+  <main class="admin-main">
+    <div id="adminGate" class="admin-gate">
+      <h1 class="admin-heading">Admin dashboard</h1>
+      <p class="modal-sub">Sign in with the admin Google account to manage published sites and recover lost ones.</p>
+      <div id="adminSignInSlot"></div>
+      <p class="username-status" id="adminGateStatus"></p>
+    </div>
+
+    <div id="adminPanel" class="admin-panel hidden">
+      <div class="admin-toolbar">
+        <h1 class="admin-heading">Published sites</h1>
+        <div class="admin-toolbar-actions">
+          <input type="search" id="adminSearch" placeholder="Filter by username or owner email…" autocomplete="off" spellcheck="false" />
+          <button class="btn btn-ghost btn-sm" id="adminRefreshBtn" type="button">↻ Refresh</button>
+        </div>
+      </div>
+
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-filter="pending" type="button">Pending review</button>
+        <button class="admin-tab" data-filter="live" type="button">Live</button>
+        <button class="admin-tab" data-filter="rejected" type="button">Rejected</button>
+        <button class="admin-tab" data-filter="deleted" type="button">Deleted / lost</button>
+        <button class="admin-tab" data-filter="all" type="button">All</button>
+      </div>
+
+      <p class="username-status" id="adminListStatus"></p>
+      <div id="adminSitesList" class="admin-sites-list"></div>
+    </div>
+  </main>
+
+  <div class="modal-overlay hidden" id="modalOverlay">
+    <div class="modal-box" role="dialog" aria-modal="true">
+      <button class="modal-close" id="modalCloseBtn" type="button" aria-label="Close">✕</button>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script type="module" src="admin.js"></script>
+</body>
+</html>
