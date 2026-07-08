@@ -61,6 +61,11 @@
   --pf-line-height: 1.5;
   --pf-section-gap: 1.75rem;
   --pf-card-pad: 1.25rem 1.4rem;
+  /* Matches .pf-footer's real rendered height (1.75rem padding on
+     each side + one line of 0.8rem text + its 2px top border) so
+     anything that needs to sit "above the footer" can reference one
+     source of truth instead of guessing a rem value. */
+  --pf-footer-height: 4.5rem;
 }
 
 .pf-hero {
@@ -82,7 +87,16 @@
      literal scroll bar can never appear on the header. The padding
      above (including --pf-text-pad) keeps that clipped edge away
      from the text itself. */
-  max-height: calc(var(--pf-header-pct) * 1vh);
+  /* The cap is a max(), not a flat vh value: at very low header-pct
+     settings, a straight vh cap could shrink the band down past the
+     point where even the smallest scaled photo/text can fit,
+     hard-clipping (and visually overlapping) the header's own bottom
+     edge instead of shrinking cleanly. --pf-hero-min keeps a floor
+     under that cap so the header is always at least tall enough for
+     its own (already-shrunk) content, while still respecting the
+     slider's chosen height whenever that's larger than the floor. */
+  --pf-hero-min: 108px;
+  max-height: max(calc(var(--pf-header-pct) * 1vh), var(--pf-hero-min));
   overflow: hidden;
   box-sizing: border-box;
   transition: max-height 0.15s ease, padding 0.15s ease;
@@ -94,8 +108,8 @@
      (smaller, scaled) preview box, so cap against the canvas's own
      fixed reference height (640px — see the horizontal/vertical
      shell override below) instead of the true viewport. 6.4px per
-     percentage point == 640px / 100. */
-  max-height: calc(var(--pf-header-pct) * 6.4px);
+     percentage point == 640px / 100. Same min-height floor applies. */
+  max-height: max(calc(var(--pf-header-pct) * 6.4px), var(--pf-hero-min));
 }
 
 .pf-hero-photo-wrap {
@@ -405,13 +419,32 @@
   gap: 0.5rem;
   padding: 0.4rem 0.7rem;
 }
+/* "top" must clear the *actual* header band, which is a user-
+   adjustable percentage (--pf-header-pct) of the viewport — not a
+   fixed offset. Using a flat rem value here meant the dots sat
+   correctly only at the default header height and drifted under
+   (or floated awkwardly above) the header at every other setting.
+   Mirroring the same --pf-header-pct math the header itself uses
+   (see .pf-hero above) keeps the rail glued just under the header's
+   real bottom edge, with ample breathing room added on top. */
 .portfolio-site[data-section-anim="horizontal"][data-dots-pos="top"] .pf-slide-dots,
 .portfolio-site[data-section-anim="vertical"][data-dots-pos="top"] .pf-slide-dots {
-  top: 3.25rem;
+  top: calc(var(--pf-header-pct) * 1vh + 1.5rem);
 }
+#canvasZoomTarget .portfolio-site[data-section-anim="horizontal"][data-dots-pos="top"] .pf-slide-dots,
+#canvasZoomTarget .portfolio-site[data-section-anim="vertical"][data-dots-pos="top"] .pf-slide-dots {
+  /* Same 6.4px-per-percent conversion the header uses inside the
+     editor canvas (see #canvasZoomTarget .pf-hero above). */
+  top: calc(var(--pf-header-pct) * 6.4px + 1.5rem);
+}
+
+/* "bottom" must clear the footer, which has a fixed, predictable
+   height (padding + one line of text — see .pf-footer). The old
+   3.25rem offset was shorter than the footer itself, so the dot
+   rail actually sat on top of the footer instead of above it. */
 .portfolio-site[data-section-anim="horizontal"][data-dots-pos="bottom"] .pf-slide-dots,
 .portfolio-site[data-section-anim="vertical"][data-dots-pos="bottom"] .pf-slide-dots {
-  bottom: 3.25rem;
+  bottom: calc(var(--pf-footer-height, 4.5rem) + 1.5rem);
 }
 
 .pf-dot {

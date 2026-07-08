@@ -465,7 +465,7 @@ const defaultBlocks = [
 ];
 
 const defaultProfile = {
-  jobTitle: '', firstName: 'Juan', lastName: 'Lala',
+  jobTitle: '', firstName: '', lastName: '',
   email: '', phone: '', address: '', photo: null,
   tagline: 'I build things for the web and like proving it.'
 };
@@ -475,7 +475,7 @@ const defaultProfile = {
 // other widely-known changemakers, reshaped as resume/portfolio
 // content purely as inspiring placeholder/demo data. Every "Randomize"
 // click picks one at random (plus a random accent/font pairing) so
-// people never stare at the same blank "Juan Lala" starter twice.
+// people never stare at the same blank starter twice.
 export const SAMPLE_PROFILES = [
   {
     profile: { jobTitle: 'Education Activist & Author', firstName: 'Malala', lastName: 'Yousafzai', email: 'malala@example.com', phone: '', address: 'Birmingham, UK', photo: null, tagline: 'Fighting for every girl\'s right to 12 years of free, safe, quality education.' },
@@ -968,7 +968,7 @@ class EditorStore {
     return sample.profile.firstName + ' ' + sample.profile.lastName;
   }
 
-  // Restores the original "Juan Lala" starter content on whichever
+  // Restores the original blank starter content on whichever
   // document is active — a clean, known-good baseline to get back to.
   resetContent() {
     const vm = this.state.viewMode;
