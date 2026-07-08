@@ -43,6 +43,8 @@ const el = {
   pfPhotoImg: document.getElementById('pfPhotoImg'),
   pfSections: document.getElementById('pfSections'),
   pfSlideDots: document.getElementById('pfSlideDots'),
+  pfSlideArrowTop: document.getElementById('pfSlideArrowTop'),
+  pfSlideArrowBottom: document.getElementById('pfSlideArrowBottom'),
   pfFooterName: document.getElementById('pfFooterName'),
 
   sidebarSectionsList: document.getElementById('sidebarSectionsList'),
@@ -481,6 +483,8 @@ function renderPortfolioCanvasBlocks(blocks, mode) {
   if (mode !== 'horizontal' && mode !== 'vertical') {
     el.pfSlideDots.innerHTML = '';
     el.pfSlideDots.classList.add('hidden');
+    el.pfSlideArrowTop.classList.add('hidden');
+    el.pfSlideArrowBottom.classList.add('hidden');
     pfSlideEls = [];
     pfDotEls = [];
     el.pfSections.innerHTML = '';
@@ -507,6 +511,16 @@ function renderPortfolioCanvasBlocks(blocks, mode) {
 
   el.pfSlideDots.innerHTML = '';
   el.pfSlideDots.classList.toggle('hidden', slides.length <= 1);
+  const showArrows = slides.length > 1;
+  el.pfSlideArrowTop.classList.toggle('hidden', !showArrows);
+  el.pfSlideArrowBottom.classList.toggle('hidden', !showArrows);
+  // Arrows always sit top/bottom, but their glyph and meaning flip
+  // with the scroll axis: up/down = prev/next when stacking
+  // vertically, left/right when paging horizontally.
+  el.pfSlideArrowTop.innerHTML = axis === 'y' ? '&#9650;' : '&#9664;';
+  el.pfSlideArrowBottom.innerHTML = axis === 'y' ? '&#9660;' : '&#9654;';
+  el.pfSlideArrowTop.setAttribute('aria-label', 'Previous section');
+  el.pfSlideArrowBottom.setAttribute('aria-label', 'Next section');
   pfDotEls = slides.map((_, i) => {
     const dot = document.createElement('button');
     dot.type = 'button';
@@ -530,6 +544,8 @@ function renderPortfolioCanvasBlocks(blocks, mode) {
 
 function pfSetActiveDot(i) {
   pfDotEls.forEach((d, di) => d.classList.toggle('active', di === i));
+  el.pfSlideArrowTop.toggleAttribute('disabled', i <= 0);
+  el.pfSlideArrowBottom.toggleAttribute('disabled', i >= pfSlideEls.length - 1);
 }
 
 function pfCurrentAxis() {
@@ -562,6 +578,9 @@ function initPortfolioHorizontalNav() {
     if (!dot) return;
     pfGoToSlide(parseInt(dot.dataset.pfSlide, 10));
   });
+
+  el.pfSlideArrowTop.addEventListener('click', () => pfGoToSlide(pfCurrentSlide - 1));
+  el.pfSlideArrowBottom.addEventListener('click', () => pfGoToSlide(pfCurrentSlide + 1));
 
   el.pfSections.addEventListener('scroll', () => {
     if (pfIsProgrammaticScroll || !pfSlideEls.length) return;

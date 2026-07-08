@@ -106,6 +106,7 @@ export const PORTFOLIO_TEMPLATES = [
     name: 'Tech / Developer',
     tagline: 'Monospace accents, pinned header',
     icon: '💻',
+    sectionOrder: ['intro', 'project', 'skill', 'experience', 'education'],
     design: { accent: '#7C4DFF', headingFont: 'modern', bodyFont: 'mono', headerStyle: 'pinned', sectionAnimation: 'fade-up', contentWidth: 'wide' }
   },
   {
@@ -113,6 +114,7 @@ export const PORTFOLIO_TEMPLATES = [
     name: 'Engineering',
     tagline: 'Precise, structured, no-frills',
     icon: '⚙️',
+    sectionOrder: ['intro', 'experience', 'project', 'skill', 'education'],
     design: { accent: '#33475B', headingFont: 'mono', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'none', contentWidth: 'wide' }
   },
   {
@@ -120,6 +122,7 @@ export const PORTFOLIO_TEMPLATES = [
     name: 'Educator',
     tagline: 'Warm serif, academic feel',
     icon: '🎓',
+    sectionOrder: ['intro', 'experience', 'education', 'skill'],
     design: { accent: '#1E3A5F', headingFont: 'serif', bodyFont: 'serif', headerStyle: 'scroll', sectionAnimation: 'fade-up', contentWidth: 'contained' }
   },
   {
@@ -127,6 +130,7 @@ export const PORTFOLIO_TEMPLATES = [
     name: 'Virtual Assistant',
     tagline: 'Friendly, approachable, tidy',
     icon: '🗂️',
+    sectionOrder: ['intro', 'skill', 'experience', 'education'],
     design: { accent: '#00A896', headingFont: 'sans', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'contained' }
   },
   {
@@ -134,6 +138,7 @@ export const PORTFOLIO_TEMPLATES = [
     name: 'Customer Service',
     tagline: 'Warm coral, easy to read',
     icon: '🎧',
+    sectionOrder: ['intro', 'skill', 'experience', 'education'],
     design: { accent: '#FF6F59', headingFont: 'sans', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'fade-up', contentWidth: 'contained' }
   },
   {
@@ -141,6 +146,7 @@ export const PORTFOLIO_TEMPLATES = [
     name: 'Arts & Design',
     tagline: 'Full-bleed gallery slides',
     icon: '🎨',
+    sectionOrder: ['gallery', 'intro', 'project', 'experience', 'education', 'skill'],
     design: { accent: '#C0392B', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'horizontal', contentWidth: 'full' }
   },
   {
@@ -148,6 +154,7 @@ export const PORTFOLIO_TEMPLATES = [
     name: 'Marketing / Creative',
     tagline: 'Gold accent, horizontal story',
     icon: '📣',
+    sectionOrder: ['intro', 'gallery', 'project', 'experience', 'skill', 'education'],
     design: { accent: '#B8860B', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'horizontal', contentWidth: 'wide' }
   },
   {
@@ -155,6 +162,7 @@ export const PORTFOLIO_TEMPLATES = [
     name: 'Corporate / Consulting',
     tagline: 'Minimal ink, serif headings',
     icon: '💼',
+    sectionOrder: ['intro', 'experience', 'education', 'skill'],
     design: { accent: '#1A1A1A', headingFont: 'serif', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'contained', heroAlign: 'left' }
   },
   {
@@ -162,6 +170,7 @@ export const PORTFOLIO_TEMPLATES = [
     name: 'Photography / Visual Arts',
     tagline: 'Centered hero, full-bleed slides',
     icon: '📷',
+    sectionOrder: ['gallery', 'intro', 'experience', 'education'],
     design: { accent: '#111111', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'horizontal', contentWidth: 'full', heroAlign: 'center' }
   },
   {
@@ -169,6 +178,7 @@ export const PORTFOLIO_TEMPLATES = [
     name: 'Legal',
     tagline: 'Formal serif, centered letterhead',
     icon: '⚖️',
+    sectionOrder: ['intro', 'experience', 'education', 'certificat', 'skill'],
     design: { accent: '#0B2545', headingFont: 'serif', bodyFont: 'serif', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'contained', heroAlign: 'center' }
   },
   {
@@ -176,6 +186,7 @@ export const PORTFOLIO_TEMPLATES = [
     name: 'Healthcare / Medical',
     tagline: 'Calm teal, clean and legible',
     icon: '⚕️',
+    sectionOrder: ['intro', 'certificat', 'experience', 'education', 'skill'],
     design: { accent: '#2A9D8F', headingFont: 'sans', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'fade-up', contentWidth: 'contained', heroAlign: 'left' }
   },
   {
@@ -183,6 +194,7 @@ export const PORTFOLIO_TEMPLATES = [
     name: 'Finance / Banking',
     tagline: 'Deep green, right-aligned card',
     icon: '📊',
+    sectionOrder: ['intro', 'experience', 'certificat', 'education', 'skill'],
     design: { accent: '#14532D', headingFont: 'serif', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'wide', heroAlign: 'right' }
   },
   {
@@ -190,6 +202,7 @@ export const PORTFOLIO_TEMPLATES = [
     name: 'Writer / Journalist',
     tagline: 'Editorial serif, narrow column',
     icon: '✍️',
+    sectionOrder: ['intro', 'project', 'experience', 'education', 'skill'],
     design: { accent: '#7A1F2B', headingFont: 'serif', bodyFont: 'serif', headerStyle: 'scroll', sectionAnimation: 'fade-up', contentWidth: 'contained', heroAlign: 'center' }
   },
   {
@@ -197,6 +210,7 @@ export const PORTFOLIO_TEMPLATES = [
     name: 'Music / Performing Arts',
     tagline: 'Bold accent, full-bleed slide deck',
     icon: '🎤',
+    sectionOrder: ['video', 'intro', 'experience', 'education', 'skill'],
     design: { accent: '#D62839', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'horizontal', contentWidth: 'full', heroAlign: 'center' }
   },
   {
@@ -204,6 +218,7 @@ export const PORTFOLIO_TEMPLATES = [
     name: 'Real Estate / Sales',
     tagline: 'Confident gold, pinned header',
     icon: '🏡',
+    sectionOrder: ['intro', 'certificat', 'experience', 'skill', 'education'],
     design: { accent: '#A47148', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'none', contentWidth: 'wide', heroAlign: 'right' }
   },
   {
@@ -211,6 +226,7 @@ export const PORTFOLIO_TEMPLATES = [
     name: 'Fitness / Coaching',
     tagline: 'High-energy orange, slide story',
     icon: '💪',
+    sectionOrder: ['intro', 'gallery', 'certificat', 'experience', 'skill', 'education'],
     design: { accent: '#E85D04', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'horizontal', contentWidth: 'full', heroAlign: 'left' }
   },
   {
@@ -218,6 +234,7 @@ export const PORTFOLIO_TEMPLATES = [
     name: 'Nonprofit / Social Impact',
     tagline: 'Earthy green, warm and grounded',
     icon: '🌱',
+    sectionOrder: ['intro', 'experience', 'education', 'skill'],
     design: { accent: '#4C7A3F', headingFont: 'serif', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'fade-up', contentWidth: 'contained', heroAlign: 'center' }
   },
   {
@@ -225,6 +242,7 @@ export const PORTFOLIO_TEMPLATES = [
     name: 'Academic / Research',
     tagline: 'Understated navy, dense reading column',
     icon: '📚',
+    sectionOrder: ['intro', 'education', 'experience', 'certificat', 'skill'],
     design: { accent: '#22314A', headingFont: 'serif', bodyFont: 'serif', headerStyle: 'pinned', sectionAnimation: 'none', contentWidth: 'contained', heroAlign: 'left' }
   }
 ].map(t => ({ category: 'style', ...t }));
@@ -244,6 +262,7 @@ export const PORTFOLIO_STRUCTURAL_TEMPLATES = [
     icon: '🖼️',
     category: 'structural',
     addsBlockTypes: ['gallery'],
+    sectionOrder: ['intro', 'gallery', 'experience', 'education', 'skill'],
     design: { accent: '#111111', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'none', contentWidth: 'wide', heroAlign: 'center' }
   },
   {
@@ -253,6 +272,7 @@ export const PORTFOLIO_STRUCTURAL_TEMPLATES = [
     icon: '🎞️',
     category: 'structural',
     addsBlockTypes: ['gallery'],
+    sectionOrder: ['gallery', 'intro', 'experience', 'education', 'skill'],
     design: { accent: '#7C4DFF', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'horizontal', contentWidth: 'full', heroAlign: 'center' }
   },
   {
@@ -262,6 +282,7 @@ export const PORTFOLIO_STRUCTURAL_TEMPLATES = [
     icon: '🎬',
     category: 'structural',
     addsBlockTypes: ['video'],
+    sectionOrder: ['video', 'intro', 'experience', 'education', 'skill'],
     design: { accent: '#111111', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'fade-up', contentWidth: 'wide', heroAlign: 'center' }
   },
   {
@@ -271,6 +292,7 @@ export const PORTFOLIO_STRUCTURAL_TEMPLATES = [
     icon: '🧩',
     category: 'structural',
     addsBlockTypes: ['gallery', 'links'],
+    sectionOrder: ['intro', 'gallery', 'links', 'experience', 'education', 'skill'],
     design: { accent: '#3D5A80', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'fade-up', contentWidth: 'contained', heroAlign: 'left' }
   },
   {
@@ -280,6 +302,7 @@ export const PORTFOLIO_STRUCTURAL_TEMPLATES = [
     icon: '🎙️',
     category: 'structural',
     addsBlockTypes: ['video', 'links'],
+    sectionOrder: ['video', 'links', 'intro', 'experience', 'education', 'skill'],
     design: { accent: '#D62839', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'horizontal', contentWidth: 'full', heroAlign: 'center' }
   },
   {
@@ -289,6 +312,7 @@ export const PORTFOLIO_STRUCTURAL_TEMPLATES = [
     icon: '🎯',
     category: 'structural',
     addsBlockTypes: ['video', 'links'],
+    sectionOrder: ['video', 'intro', 'links', 'experience', 'education', 'skill'],
     design: { accent: '#E85D04', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'fade-up', contentWidth: 'contained', heroAlign: 'left' }
   },
   {
@@ -298,6 +322,7 @@ export const PORTFOLIO_STRUCTURAL_TEMPLATES = [
     icon: '📱',
     category: 'structural',
     addsBlockTypes: ['gallery', 'links'],
+    sectionOrder: ['gallery', 'links', 'intro', 'experience', 'education', 'skill'],
     design: { accent: '#C0392B', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'horizontal', contentWidth: 'full', heroAlign: 'center' }
   },
   {
@@ -307,6 +332,7 @@ export const PORTFOLIO_STRUCTURAL_TEMPLATES = [
     icon: '🏛️',
     category: 'structural',
     addsBlockTypes: ['gallery', 'links'],
+    sectionOrder: ['gallery', 'links', 'intro', 'experience', 'education', 'skill'],
     design: { accent: '#33475B', headingFont: 'serif', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'wide', heroAlign: 'left' }
   },
   {
@@ -316,6 +342,7 @@ export const PORTFOLIO_STRUCTURAL_TEMPLATES = [
     icon: '💾',
     category: 'structural',
     addsBlockTypes: ['video', 'links'],
+    sectionOrder: ['video', 'intro', 'links', 'experience', 'education', 'skill'],
     design: { accent: '#7C4DFF', headingFont: 'mono', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'fade-up', contentWidth: 'wide', heroAlign: 'left' }
   },
   {
@@ -325,6 +352,7 @@ export const PORTFOLIO_STRUCTURAL_TEMPLATES = [
     icon: '🎤',
     category: 'structural',
     addsBlockTypes: ['video', 'links'],
+    sectionOrder: ['video', 'intro', 'links', 'experience', 'education', 'skill'],
     design: { accent: '#0B2545', headingFont: 'serif', bodyFont: 'serif', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'contained', heroAlign: 'center' }
   },
   {
@@ -334,6 +362,7 @@ export const PORTFOLIO_STRUCTURAL_TEMPLATES = [
     icon: '👨‍🍳',
     category: 'structural',
     addsBlockTypes: ['gallery', 'video'],
+    sectionOrder: ['gallery', 'video', 'intro', 'experience', 'education', 'skill'],
     design: { accent: '#B8860B', headingFont: 'serif', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'fade-up', contentWidth: 'wide', heroAlign: 'center' }
   },
   {
@@ -343,11 +372,65 @@ export const PORTFOLIO_STRUCTURAL_TEMPLATES = [
     icon: '🌍',
     category: 'structural',
     addsBlockTypes: ['gallery', 'video', 'links'],
+    sectionOrder: ['gallery', 'video', 'intro', 'links', 'experience', 'education', 'skill'],
     design: { accent: '#4C7A3F', headingFont: 'serif', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'fade-up', contentWidth: 'contained', heroAlign: 'center' }
   }
 ];
 
 const defaultDesign = { ...TEMPLATES[0].design };
+
+// ── Per-template section arrangement ──────────────────────────
+// Templates don't just re-theme color/font anymore — each one also
+// has a preferred *order* the sections should read in (e.g. a
+// Photographer leads with the gallery; an Academic leads with
+// Education), so switching templates genuinely rearranges the page
+// instead of just recoloring the same fixed stack.
+//
+// Blocks are grouped before sorting, not sorted individually, so a
+// section heading always travels together with the content under
+// it: a group is either (a) a 'section' heading block plus every
+// block that follows until the next heading, (b) a standalone
+// gallery/video/links block (these get pushed onto the end of the
+// array with no heading of their own — see addsBlockTypes above —
+// so each is its own single-block group keyed by its type), or (c)
+// the leading run of content before the first heading (e.g. the
+// intro Summary), keyed 'intro'.
+//
+// `order` is a list of loose hint strings matched against each
+// group's key by substring, so a heading titled "Work Experience"
+// still matches the hint "experience". Groups that match nothing
+// keep their original relative order, appended after every group
+// that did match.
+function reorderBlocksForTemplate(blocks, order) {
+  if (!order || !order.length) return blocks;
+  const standaloneTypes = ['gallery', 'video', 'links'];
+  const groups = [];
+  let current = null;
+  blocks.forEach(b => {
+    if (b.type === 'section') {
+      current = { key: (b.data.title || '').toLowerCase(), blocks: [b] };
+      groups.push(current);
+      return;
+    }
+    if (standaloneTypes.includes(b.type)) {
+      groups.push({ key: b.type, blocks: [b] });
+      return;
+    }
+    if (!current) {
+      current = { key: 'intro', blocks: [] };
+      groups.push(current);
+    }
+    current.blocks.push(b);
+  });
+  const rank = (g, i) => {
+    const idx = order.findIndex(hint => g.key.includes(hint));
+    return idx === -1 ? order.length + i : idx;
+  };
+  return groups
+    .map((g, i) => ({ g, rank: rank(g, i), i }))
+    .sort((a, b) => a.rank - b.rank || a.i - b.i)
+    .flatMap(x => x.g.blocks);
+}
 
 // Shape of a "verification" attachment on an experience block.
 // type: 'none' | 'photo' | 'link'
@@ -781,17 +864,23 @@ class EditorStore {
     });
     // Media blocks (gallery/video/links) that this layout doesn't call
     // for get hidden — not deleted — since e.g. a plain "Video Reel"
-    // layout isn't built around a photo grid. Blocks the layout DOES
-    // call for are un-hidden in case a previous layout switch hid them.
-    // Non-media block types (experience, skills, etc.) are never
-    // touched here.
-    if (t.category === 'structural') {
+    // layout isn't built around a photo grid, and a text-first style
+    // template (Legal, Academic, etc.) isn't built around any of them.
+    // Blocks the layout DOES call for are un-hidden in case a previous
+    // layout switch hid them. Non-media block types (experience,
+    // skills, etc.) are never touched here.
+    {
       const structuralTypes = ['gallery', 'video', 'links'];
       const wanted = new Set(t.addsBlockTypes || []);
       this.state.portfolio.blocks.forEach(b => {
         if (structuralTypes.includes(b.type)) b.hidden = !wanted.has(b.type);
       });
     }
+    // Rearrange the page to match this template's preferred reading
+    // order (see reorderBlocksForTemplate above) — this is what makes
+    // switching templates feel like a genuinely different layout, not
+    // just a different color/font on the same fixed stack.
+    this.state.portfolio.blocks = reorderBlocksForTemplate(this.state.portfolio.blocks, t.sectionOrder);
     this.emit('template_changed', id);
     this.emit('design_changed', this.state.portfolio.design);
     this.emit('blocks_changed');

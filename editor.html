@@ -607,8 +607,10 @@
                 <div class="option-pill-row" data-target="dotsPosition">
                   <button class="option-pill" data-value="left">Left</button>
                   <button class="option-pill" data-value="right">Right</button>
+                  <button class="option-pill" data-value="top">Top</button>
+                  <button class="option-pill" data-value="bottom">Bottom</button>
                 </div>
-                <p class="customize-hint">Only shows up in Horizontal or Vertical scroll mode.</p>
+                <p class="customize-hint">Left/Right show a vertical dot rail down the side. Top/Bottom show a horizontal row instead. Only shows up in Horizontal or Vertical scroll mode.</p>
               </div>
             </div>
           </div>
@@ -665,8 +667,12 @@
                 </div>
               </header>
 
+              <button type="button" class="pf-slide-arrow pf-slide-arrow-top hidden" id="pfSlideArrowTop" aria-label="Previous section">&#9650;</button>
+
               <div class="pf-sections" id="pfSections" tabindex="0"></div>
               <nav class="pf-slide-dots hidden" id="pfSlideDots" aria-label="Portfolio sections"></nav>
+
+              <button type="button" class="pf-slide-arrow pf-slide-arrow-bottom hidden" id="pfSlideArrowBottom" aria-label="Next section">&#9660;</button>
 
               <footer class="pf-footer">
                 <span id="pfFooterName">Juan Lala</span> · built with <a href="index.html">proves.work</a>
