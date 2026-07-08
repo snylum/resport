@@ -67,6 +67,8 @@ const el = {
   accentSwatchCustom: document.getElementById('accentSwatchCustom'),
   selHeadingFont: document.getElementById('selHeadingFont'),
   selBodyFont: document.getElementById('selBodyFont'),
+  inHeaderHeight: document.getElementById('inHeaderHeight'),
+  headerHeightLabel: document.getElementById('headerHeightLabel'),
   templateGallery: document.getElementById('templateGallery'),
   portfolioTemplateGallery: document.getElementById('portfolioTemplateGallery'),
 
@@ -1483,7 +1485,7 @@ function buildPublishedSiteHTML() {
 </style>
 </head>
 <body data-viewmode="portfolio">
-  <div class="portfolio-site" id="portfolioSite" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-dots-pos="${esc(design.dotsPosition || 'right')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" data-hero-photo-shape="${esc(design.heroPhotoShape || 'circle')}" data-hero-photo-size="${esc(design.heroPhotoSize || 'md')}" data-hero-size="${esc(design.heroSize || 'normal')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};">
+  <div class="portfolio-site" id="portfolioSite" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-dots-pos="${esc(design.dotsPosition || 'right')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" data-hero-photo-shape="${esc(design.heroPhotoShape || 'circle')}" data-hero-photo-size="${esc(design.heroPhotoSize || 'md')}" data-hero-size="${esc(design.heroSize || 'normal')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};--pf-header-pct:${esc(design.headerHeightPct || 30)};">
     <header class="pf-hero">
       ${p.photo ? `<div class="pf-hero-photo-wrap"><img src="${esc(p.photo)}" alt="${esc(fullName)}" /></div>` : ''}
       <div class="pf-hero-text">
@@ -2311,6 +2313,7 @@ function applyPortfolioDesign(design) {
   el.portfolioSite.setAttribute('data-hero-photo-shape', design.heroPhotoShape || 'circle');
   el.portfolioSite.setAttribute('data-hero-photo-size', design.heroPhotoSize || 'md');
   el.portfolioSite.setAttribute('data-hero-size', design.heroSize || 'normal');
+  el.portfolioSite.style.setProperty('--pf-header-pct', design.headerHeightPct || 30);
   initPortfolioAnimation(design.sectionAnimation || 'none');
 }
 
@@ -2329,6 +2332,12 @@ function syncCustomizeControls(design) {
       p.classList.toggle('active', String(p.dataset.value) === String(design[key]));
     });
   });
+
+  if (el.inHeaderHeight) {
+    const pct = Number(design.headerHeightPct) || 30;
+    el.inHeaderHeight.value = pct;
+    if (el.headerHeightLabel) el.headerHeightLabel.textContent = pct + '%';
+  }
 
   const knownSwatches = Array.from(document.querySelectorAll('#optAccentColor .color-swatch[data-value]'));
   let matched = false;
@@ -2370,6 +2379,14 @@ function initCustomizePanel() {
 
   el.selHeadingFont.addEventListener('change', (e) => Store.setDesign('headingFont', e.target.value));
   el.selBodyFont.addEventListener('change', (e) => Store.setDesign('bodyFont', e.target.value));
+
+  if (el.inHeaderHeight) {
+    el.inHeaderHeight.addEventListener('input', (e) => {
+      const pct = Math.min(50, Math.max(1, Number(e.target.value) || 30));
+      if (el.headerHeightLabel) el.headerHeightLabel.textContent = pct + '%';
+      Store.setDesign('headerHeightPct', pct);
+    });
+  }
 
   document.querySelectorAll('.template-card[data-template]').forEach(card => {
     card.addEventListener('click', () => Store.setTemplate(card.dataset.template));

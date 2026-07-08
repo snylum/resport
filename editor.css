@@ -300,6 +300,44 @@ body {
   line-height: 1.4;
 }
 
+.customize-label-value {
+  font-weight: 400;
+  color: var(--color-text-muted);
+  float: right;
+}
+
+.customize-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-border);
+  outline: none;
+  cursor: pointer;
+  margin: 0.4rem 0 0;
+}
+.customize-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-primary, #7C4DFF);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  cursor: pointer;
+}
+.customize-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-primary, #7C4DFF);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  cursor: pointer;
+}
+
 .option-pill-row {
   display: flex;
   gap: 0.5rem;

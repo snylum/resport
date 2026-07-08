@@ -34,43 +34,63 @@
 }
 
 /* ── Hero ─────────────────────────────────────────────────── */
+/* Header height is user-adjustable (1%–50% of the display) via
+   --pf-header-pct, set inline on .portfolio-site by the editor
+   (Store design.headerHeightPct). The fallback of 30 keeps a sane
+   default anywhere the variable isn't set (e.g. an older saved
+   design from before this control existed).
+   --pf-hero-scale derives a continuous (not stepped) multiplier from
+   that same percentage, relative to the 30% "normal" baseline, and
+   drives font-size/padding/photo-size below so the header's content
+   shrinks or grows smoothly with the slider instead of overflowing
+   or looking empty. It's clamped so extreme ends of the 1–50 range
+   stay legible/usable rather than vanishing or ballooning. */
+.portfolio-site {
+  --pf-header-pct: 30;
+  --pf-hero-scale: clamp(0.45, calc(var(--pf-header-pct) / 30), 1.6);
+}
+
 .pf-hero {
   display: flex;
   align-items: center;
-  gap: 1.75rem;
-  padding: 3rem 2.75rem;
+  gap: calc(1.75rem * var(--pf-hero-scale));
+  padding: calc(3rem * var(--pf-hero-scale)) calc(2.75rem * var(--pf-hero-scale));
   background: var(--pf-accent, var(--color-secondary));
   background-image: linear-gradient(135deg, color-mix(in srgb, var(--pf-accent, var(--color-secondary)) 85%, white), var(--pf-accent, var(--color-secondary)));
   color: #fff;
   border-bottom: 3px solid var(--color-border);
-  /* Hard cap: whatever hero size/photo/tall setting is chosen, the
-     header band itself can never eat more than half the visible
-     page — the rest of the content should always be reachable
-     without the header dominating the fold. Scrolls internally in
-     the rare case its own content (long tagline, tall photo) would
-     otherwise overflow this cap. */
-  max-height: 50vh;
+  /* Hard cap: whatever the header-height slider is set to, the
+     header band itself can never eat more than that share of the
+     visible page (max 50%) — the rest of the content should always
+     be reachable without the header dominating the fold. Scrolls
+     internally in the rare case its own content (long tagline, tall
+     photo) would otherwise overflow this cap. */
+  max-height: calc(var(--pf-header-pct) * 1vh);
   overflow-y: auto;
   box-sizing: border-box;
+  transition: max-height 0.15s ease;
 }
 
 #canvasZoomTarget .pf-hero {
   /* Mirrors the horizontal/vertical-mode fix above: vh inside the
      editor canvas resolves against the real browser window, not the
      (smaller, scaled) preview box, so cap against the canvas's own
-     fixed reference height instead of the true viewport. */
-  max-height: 320px;
+     fixed reference height (640px — see the horizontal/vertical
+     shell override below) instead of the true viewport. 6.4px per
+     percentage point == 640px / 100. */
+  max-height: calc(var(--pf-header-pct) * 6.4px);
 }
 
 .pf-hero-photo-wrap {
   flex-shrink: 0;
-  width: 112px;
-  height: 112px;
+  width: calc(112px * var(--pf-hero-scale));
+  height: calc(112px * var(--pf-hero-scale));
   border-radius: 50%;
   overflow: hidden;
   border: 4px solid #fff;
   box-shadow: 0 6px 0 0 rgba(0,0,0,0.25);
   background: rgba(255,255,255,0.25);
+  transition: width 0.15s ease, height 0.15s ease;
 }
 
 /* ── Photo shape ─────────────────────────────────────────── */
@@ -78,16 +98,15 @@
 .portfolio-site[data-hero-photo-shape="square"] .pf-hero-photo-wrap { border-radius: 4px; }
 
 /* ── Photo size ──────────────────────────────────────────── */
-.portfolio-site[data-hero-photo-size="sm"] .pf-hero-photo-wrap { width: 76px; height: 76px; }
-.portfolio-site[data-hero-photo-size="lg"] .pf-hero-photo-wrap { width: 152px; height: 152px; }
+.portfolio-site[data-hero-photo-size="sm"] .pf-hero-photo-wrap { width: calc(76px * var(--pf-hero-scale)); height: calc(76px * var(--pf-hero-scale)); }
+.portfolio-site[data-hero-photo-size="lg"] .pf-hero-photo-wrap { width: calc(152px * var(--pf-hero-scale)); height: calc(152px * var(--pf-hero-scale)); }
 
-/* ── Header (hero band) size ────────────────────────────────
-   Controls overall header padding/name size — independent of the
-   photo's own size/shape settings above. */
-.portfolio-site[data-hero-size="compact"] .pf-hero { padding: 1.75rem 2.25rem; gap: 1.25rem; }
-.portfolio-site[data-hero-size="compact"] .pf-name { font-size: 1.6rem; }
-.portfolio-site[data-hero-size="tall"] .pf-hero { padding: 4.5rem 2.75rem; }
-.portfolio-site[data-hero-size="tall"] .pf-name { font-size: 2.7rem; }
+/* ── Header (hero band) height ──────────────────────────────
+   Height itself (--pf-header-pct, 1–50) and the text/photo scale
+   derived from it (--pf-hero-scale) are set above on .portfolio-site
+   and drive .pf-hero/.pf-hero-photo-wrap/.pf-name/etc. directly, so
+   every size in between the old compact/normal/tall presets is a
+   real, continuous option instead of three fixed steps. */
 
 .pf-hero-photo-wrap img {
   width: 100%;
@@ -102,7 +121,7 @@
 
 .pf-name {
   font-family: var(--pf-heading-font, var(--font-display));
-  font-size: 2.2rem;
+  font-size: calc(2.2rem * var(--pf-hero-scale));
   font-weight: 800;
   line-height: 1.1;
   margin: 0 0 0.15rem;
@@ -111,7 +130,7 @@
 
 .pf-jobtitle {
   font-family: var(--pf-heading-font, var(--font-display));
-  font-size: 1.05rem;
+  font-size: calc(1.05rem * var(--pf-hero-scale));
   font-weight: 600;
   opacity: 0.95;
   margin-bottom: 0.5rem;
@@ -120,7 +139,7 @@
 
 .pf-tagline {
   font-family: var(--pf-body-font, var(--font-sans));
-  font-size: 0.95rem;
+  font-size: calc(0.95rem * var(--pf-hero-scale));
   opacity: 0.92;
   margin: 0 0 0.6rem;
   max-width: 46ch;
@@ -128,7 +147,7 @@
 
 .pf-contact-line {
   font-family: var(--pf-body-font, var(--font-sans));
-  font-size: 0.85rem;
+  font-size: calc(0.85rem * var(--pf-hero-scale));
   opacity: 0.9;
   min-height: 1.2em;
 }
