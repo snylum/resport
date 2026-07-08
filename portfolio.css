@@ -187,6 +187,22 @@
   position: relative;
 }
 
+/* Inside the editor canvas, `height: 100vh` above resolves against the
+   real browser window — not the (much smaller, already-scaled) box the
+   preview lives in — since vh units always measure the true viewport
+   regardless of ancestors. That gave the in-editor preview a natural
+   size wildly out of proportion with the space available for it, so
+   the zoom-to-fit math shrank the whole document down far more than
+   it needed to, making horizontal/vertical mode look like a tiny,
+   cramped, "stacked" strip instead of a normal-looking slide. Give the
+   editor's own instance (scoped via its container, which only exists
+   in the editor — not in the published static page) a fixed, sensibly
+   proportioned natural height instead. */
+#canvasZoomTarget .portfolio-site[data-section-anim="horizontal"],
+#canvasZoomTarget .portfolio-site[data-section-anim="vertical"] {
+  height: 640px;
+}
+
 .portfolio-site[data-section-anim="horizontal"] .pf-hero,
 .portfolio-site[data-section-anim="horizontal"] .pf-footer,
 .portfolio-site[data-section-anim="vertical"] .pf-hero,
@@ -779,18 +795,34 @@
   text-align: center;
 }
 
-.verify-edit-fields .field-box {
-  margin-bottom: 0.9rem;
+.verify-edit-fields .field-box,
+.modal-box .field-box {
+  margin-bottom: 1.1rem;
 }
 
-.verify-edit-fields .field-box span {
+.verify-edit-fields .field-box span,
+.modal-box .field-box > span {
   display: block;
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--color-text-muted);
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.4rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+}
+
+.modal-box .field-box:last-of-type {
+  margin-bottom: 0;
+}
+
+/* The account box (Google sign-in) and the address field sit stacked
+   inside the Publish modal — give them consistent breathing room
+   whether the account box currently shows the sign-in button or the
+   signed-in state. */
+#publishAccountBox {
+  margin-bottom: 1.3rem;
+  padding-bottom: 1.3rem;
+  border-bottom: 2px solid var(--color-border);
 }
 
 .verify-edit-fields input[type="text"],
@@ -848,20 +880,6 @@
 
 .username-status.ok { color: var(--color-success); font-weight: 600; }
 .username-status.warn { color: var(--color-danger); font-weight: 600; }
-
-/* Shown in place of a real address when publishing is locked behind
-   Google sign-in — deliberately styled as "not a real, working
-   address" (red, italic) rather than a normal hint. */
-.username-locked-hint {
-  font-size: 0.82rem;
-  margin: 0.5rem 0 0;
-  color: var(--color-danger);
-  font-style: italic;
-}
-.username-locked-hint em {
-  font-style: italic;
-  font-weight: 700;
-}
 
 .username-input-row:has(input:disabled) {
   opacity: 0.55;

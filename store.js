@@ -508,6 +508,36 @@ export const SAMPLE_PROFILES = [
   }
 ];
 
+// Placeholder media used by randomExtraBlocks() below — real,
+// working images/video so "Randomize" never leaves the gallery,
+// video, or links sections looking empty or broken.
+const RANDOM_GALLERY_SEEDS = ['studio', 'workshop', 'field', 'lab', 'campus', 'stage'];
+const RANDOM_YOUTUBE_URLS = [
+  { url: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', caption: 'Big Buck Bunny — Blender Foundation (sample embed)' },
+  { url: 'https://www.youtube.com/watch?v=YE7VzlLtp-4', caption: 'Big Buck Bunny trailer — Blender Foundation (sample embed)' }
+];
+const RANDOM_LINK_SETS = [
+  [{ label: 'Portfolio site', url: 'https://example.com' }, { label: 'GitHub', url: 'https://github.com/example' }, { label: 'LinkedIn', url: 'https://linkedin.com/in/example' }],
+  [{ label: 'Personal site', url: 'https://example.org' }, { label: 'Twitter / X', url: 'https://x.com/example' }, { label: 'Press feature', url: 'https://example.com/press' }]
+];
+
+// Every remaining block type (gallery, video, links) filled with
+// placeholder content — appended to whichever sample profile
+// Randomize picks, each under its own section heading.
+function randomExtraBlocks() {
+  const seed = RANDOM_GALLERY_SEEDS[Math.floor(Math.random() * RANDOM_GALLERY_SEEDS.length)];
+  const video = RANDOM_YOUTUBE_URLS[Math.floor(Math.random() * RANDOM_YOUTUBE_URLS.length)];
+  const links = RANDOM_LINK_SETS[Math.floor(Math.random() * RANDOM_LINK_SETS.length)];
+  return [
+    { id: uid(), type: 'section', col: 'main', data: { title: 'Gallery' } },
+    { id: uid(), type: 'gallery', col: 'main', data: { photos: [1, 2, 3].map(n => `https://picsum.photos/seed/${seed}${n}/600/400`) } },
+    { id: uid(), type: 'section', col: 'main', data: { title: 'Video' } },
+    { id: uid(), type: 'video', col: 'main', data: { url: video.url, caption: video.caption } },
+    { id: uid(), type: 'section', col: 'main', data: { title: 'Links' } },
+    { id: uid(), type: 'links', col: 'main', data: { items: deepClone(links) } }
+  ];
+}
+
 // A curated set of accent/font pairings drawn from the résumé
 // templates above, used to randomize the look alongside the content.
 export const SAMPLE_STYLES = [
@@ -759,12 +789,26 @@ class EditorStore {
     const doc = this.active();
 
     doc.profile = deepClone(sample.profile);
-    doc.blocks = ensureVerifyShape(sample.blocks.map(b => ({
-      id: uid(),
-      type: b.type,
-      col: 'main',
-      data: deepClone(b.data)
-    })));
+    // Sample profiles don't carry a real uploaded photo — drop in a
+    // placeholder avatar so "Randomize" never leaves the photo slot
+    // looking broken/empty either.
+    if (!doc.profile.photo) {
+      doc.profile.photo = `https://picsum.photos/seed/${encodeURIComponent(doc.profile.firstName + doc.profile.lastName)}/400/400`;
+    }
+    doc.blocks = ensureVerifyShape([
+      ...sample.blocks.map(b => ({
+        id: uid(),
+        type: b.type,
+        col: 'main',
+        data: deepClone(b.data)
+      })),
+      // The curated samples only demonstrate the text-based block
+      // types. Append one of every remaining block type — gallery,
+      // video (with a working YouTube embed), and links — filled with
+      // placeholder content, so Randomize always shows off every
+      // feature/section instead of leaving them empty.
+      ...randomExtraBlocks()
+    ]);
 
     if (this.state.viewMode === 'resume') {
       doc.design = { ...doc.design, accent: style.accent, headingFont: style.headingFont, bodyFont: style.bodyFont };

@@ -917,6 +917,7 @@ function handleGoogleCredential(response) {
   const payload = decodeGoogleCredential(response.credential);
   saveGoogleAccount({ email: payload.email, name: payload.name, credential: response.credential });
   renderPublishAccountBox();
+  refreshNavUsername();
 }
 
 function renderGoogleSignInButton(container) {
@@ -946,6 +947,7 @@ function renderPublishAccountBox() {
       clearGoogleAccount();
       renderPublishAccountBox();
       lockPublishUsernameField();
+      refreshNavUsername();
     });
   } else {
     box.innerHTML = `
@@ -957,18 +959,18 @@ function renderPublishAccountBox() {
   unlockOrLockPublishUsernameField();
 }
 
-// Keeps the username field's locked/unlocked state (and its red italic
-// "sign in first" hint) in sync with Google sign-in status, live —
-// so signing in inside the Publish modal doesn't require reopening it.
+// Keeps the username field's locked/unlocked state in sync with
+// Google sign-in status, live — so signing in inside the Publish
+// modal doesn't require reopening it.
 function unlockOrLockPublishUsernameField() {
   const input = document.getElementById('publishUsernameInput');
   if (!input) return; // modal not open / different modal on screen
   if (getSavedGoogleAccount()) {
     input.disabled = false;
+    input.placeholder = 'yourname';
     const suffix = document.getElementById('publishUsernameSuffix');
     if (suffix) suffix.textContent = `.${PUBLISH_APEX}`;
-    const hint = document.querySelector('.username-locked-hint');
-    if (hint) hint.remove();
+    if (!input.value) input.value = getSavedUsername() || '';
     input.dispatchEvent(new Event('input'));
   } else {
     lockPublishUsernameField();
@@ -979,21 +981,14 @@ function lockPublishUsernameField() {
   const input = document.getElementById('publishUsernameInput');
   if (!input) return;
   input.disabled = true;
+  input.value = '';
+  input.placeholder = 'a-sign-up';
   const suffix = document.getElementById('publishUsernameSuffix');
   if (suffix) suffix.textContent = '';
   const status = document.getElementById('publishUsernameStatus');
   if (status) status.textContent = '';
   const confirmBtn = document.getElementById('publishConfirmBtn');
   if (confirmBtn) confirmBtn.disabled = true;
-  if (!document.querySelector('.username-locked-hint')) {
-    const fieldBox = input.closest('.field-box');
-    if (fieldBox) {
-      const hint = document.createElement('p');
-      hint.className = 'username-locked-hint';
-      hint.innerHTML = `<em>a-sign-up.${PUBLISH_APEX}</em> — sign in with Google above to claim a real username.${PUBLISH_APEX} address.`;
-      fieldBox.appendChild(hint);
-    }
-  }
 }
 
 function getSavedUsername() {
@@ -1024,6 +1019,7 @@ async function refreshSiteStatusBadge() {
     el.siteStatusBadge.className = 'site-status-badge status-draft';
     el.siteStatusBadge.textContent = SITE_STATUS_LABELS.draft;
     el.siteStatusBadge.classList.remove('hidden');
+    refreshNavUsername();
     return;
   }
   try {
@@ -1039,45 +1035,41 @@ async function refreshSiteStatusBadge() {
     // verify.
     el.siteStatusBadge.classList.add('hidden');
   }
+  refreshNavUsername();
 }
 
-// Lets people set their proves.work username right from the logo in
-// the toolbar (instead of only inside the Publish modal). Shares the
-// same localStorage key so whatever's set here is what Publish defaults to.
+// Reflects the logo in the toolbar as either the placeholder
+// "a-sign-up.proves.work" (in red italics) or the person's actual,
+// paid-and-admin-approved address. This is intentionally NOT
+// contenteditable — typing a name into the toolbar used to "reserve"
+// it for free, with no sign-in, no payment, and no review. A real
+// username.proves.work address now only exists once someone has
+// signed in with Google, paid the publishing fee, and an admin has
+// approved the site under /admin (see doPublish / SITE_STATUS_LABELS).
 function initUsernameEditor() {
-  const p = Store.state.portfolio.profile;
-  const current = getSavedUsername() || slugifyUsername(`${p.firstName}${p.lastName}`) || 'me';
-  el.navUsername.textContent = current;
+  refreshNavUsername();
+}
 
-  const commit = () => {
-    const clean = slugifyUsername(el.navUsername.textContent) || 'me';
-    el.navUsername.textContent = clean;
-    saveUsername(clean);
-  };
+// Call this whenever sign-in state, saved username, or site status
+// changes, so the toolbar logo never implies an address is claimed
+// when it isn't.
+function refreshNavUsername() {
+  if (!el.navUsername) return;
+  const saved = getSavedUsername();
+  const signedIn = !!getSavedGoogleAccount();
+  const approvedLive = el.siteStatusBadge && el.siteStatusBadge.classList.contains('status-live');
 
-  el.navUsername.addEventListener('focus', () => {
-    const range = document.createRange();
-    range.selectNodeContents(el.navUsername);
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
-  });
-
-  el.navUsername.addEventListener('blur', commit);
-
-  el.navUsername.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      el.navUsername.blur();
-    } else if (e.key === 'Escape') {
-      el.navUsername.textContent = current;
-      el.navUsername.blur();
-    }
-  });
-
-  // Don't let clicking into the username field bubble up to the
-  // .nav-logo-suffix link next to it and navigate away.
-  el.navUsername.addEventListener('click', (e) => e.stopPropagation());
+  if (signedIn && saved && approvedLive) {
+    el.navUsername.textContent = saved;
+    el.navUsername.classList.remove('is-unclaimed');
+    el.navUsername.classList.add('is-claimed');
+    el.navUsername.title = `${saved}.${PUBLISH_APEX} — live`;
+  } else {
+    el.navUsername.textContent = 'a-sign-up';
+    el.navUsername.classList.remove('is-claimed');
+    el.navUsername.classList.add('is-unclaimed');
+    el.navUsername.title = 'Sign in with Google and publish to claim a real username — subject to admin approval';
+  }
 }
 
 function slugifyUsername(str) {
@@ -1403,9 +1395,12 @@ function buildPublishedSiteHTML() {
 }
 
 function openPublishModal() {
-  const p = Store.state.portfolio.profile;
-  const defaultUsername = getSavedUsername() || slugifyUsername(`${p.firstName}${p.lastName}`) || 'me';
   const signedIn = !!getSavedGoogleAccount();
+  // Blank by default — no guessed name is pre-filled and nothing is
+  // reserved just by opening this dialog. A real address only exists
+  // once it's typed in, checked, signed in, paid for, and approved
+  // under /admin.
+  const defaultUsername = signedIn ? (getSavedUsername() || '') : '';
 
   const html = `
     <h3 class="modal-title" id="modalTitle">Publish your portfolio</h3>
@@ -1413,11 +1408,10 @@ function openPublishModal() {
     <div class="field-box full-width">
       <span>Your ${PUBLISH_APEX} address</span>
       <div class="username-input-row">
-        <input type="text" id="publishUsernameInput" value="${esc(defaultUsername)}" maxlength="30" autocomplete="off" spellcheck="false" ${signedIn ? '' : 'disabled'} />
+        <input type="text" id="publishUsernameInput" value="${esc(defaultUsername)}" placeholder="${signedIn ? 'yourname' : 'a-sign-up'}" maxlength="30" autocomplete="off" spellcheck="false" ${signedIn ? '' : 'disabled'} />
         <span class="username-suffix" id="publishUsernameSuffix">${signedIn ? `.${PUBLISH_APEX}` : ''}</span>
       </div>
       <p class="username-status" id="publishUsernameStatus"></p>
-      ${signedIn ? '' : `<p class="username-locked-hint"><em>a-sign-up.${PUBLISH_APEX}</em> — sign in with Google above to claim a real username.${PUBLISH_APEX} address.</p>`}
     </div>
     <p class="modal-sub">Publishing is manually reviewed before it goes live and requires an active plan.</p>
     <div class="modal-actions">
@@ -2220,7 +2214,21 @@ function initCustomizePanel() {
     card.addEventListener('click', () => Store.setPortfolioTemplate(card.dataset.portfolioTemplate));
   });
 
-  Store.on('design_changed', applyActiveDesign);
+  Store.on('design_changed', (design) => {
+    applyActiveDesign();
+    // Section-animation mode changes the *shape* of the DOM the canvas
+    // needs (blocks grouped into full-panel .pf-slide wrappers for
+    // horizontal/vertical, flat otherwise) — applyActiveDesign only
+    // updates attributes/CSS vars, so without this, switching into
+    // Horizontal/Vertical scroll left the old flat block markup in
+    // place: the CSS then laid those un-sliced cards out in a single
+    // cramped row instead of real full-width slides.
+    if (Store.state.viewMode === 'portfolio') {
+      const mode = Store.active().design.sectionAnimation || 'none';
+      renderPortfolioCanvasBlocks(Store.active().blocks, mode);
+      initPortfolioAnimation(mode);
+    }
+  });
 }
 
 // ── 9. Zoom controls (applies to whichever canvas is showing) ──

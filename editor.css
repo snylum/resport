@@ -406,7 +406,7 @@ body {
 
 .template-gallery {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
   gap: 0.75rem;
   padding: 1rem;
 }
@@ -419,6 +419,7 @@ body {
   text-align: left;
   font-family: var(--font-sans);
   transition: background 0.15s, box-shadow 0.15s;
+  min-width: 0;
 }
 
 .template-card:hover {
@@ -1320,4 +1321,23 @@ body.is-printing-resume #resumePaper {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+}
+
+/* ── Nav logo username: unclaimed vs claimed ─────────────────
+   Nobody can "reserve" a real <name>.proves.work address just by
+   typing into the toolbar anymore — that's why this is no longer
+   contenteditable. Until a username has actually been paid for and
+   approved under /admin, the logo shows the placeholder address in
+   red italics so it's clear the site isn't claimed yet. */
+.nav-username {
+  cursor: default;
+  transition: color 0.15s ease;
+}
+.nav-username.is-unclaimed {
+  color: var(--color-danger);
+  font-style: italic;
+}
+.nav-username.is-claimed {
+  color: var(--color-text);
+  font-style: normal;
 }
