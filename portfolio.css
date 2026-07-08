@@ -48,13 +48,26 @@
 .portfolio-site {
   --pf-header-pct: 30;
   --pf-hero-scale: clamp(0.45, calc(var(--pf-header-pct) / 30), 1.6);
+  /* ── Spacing customization ──────────────────────────────────
+     User-adjustable via the "Spacing" controls (Store design.
+     textPaddingRem / lineSpacing / sectionSpacing / cardPadding).
+     Fallbacks below apply to any design saved before these controls
+     existed. --pf-text-pad is *added on top of* the automatic
+     scale-based hero padding (not a replacement for it) so text
+     always keeps breathing room from the edge — including at small
+     header heights or with a scroll/no-scroll header — instead of
+     ever spilling out or touching the border. */
+  --pf-text-pad: 0rem;
+  --pf-line-height: 1.5;
+  --pf-section-gap: 1.75rem;
+  --pf-card-pad: 1.25rem 1.4rem;
 }
 
 .pf-hero {
   display: flex;
   align-items: center;
   gap: calc(1.75rem * var(--pf-hero-scale));
-  padding: calc(3rem * var(--pf-hero-scale)) calc(2.75rem * var(--pf-hero-scale));
+  padding: calc((3rem * var(--pf-hero-scale)) + var(--pf-text-pad)) calc((2.75rem * var(--pf-hero-scale)) + var(--pf-text-pad));
   background: var(--pf-accent, var(--color-secondary));
   background-image: linear-gradient(135deg, color-mix(in srgb, var(--pf-accent, var(--color-secondary)) 85%, white), var(--pf-accent, var(--color-secondary)));
   color: #fff;
@@ -62,13 +75,17 @@
   /* Hard cap: whatever the header-height slider is set to, the
      header band itself can never eat more than that share of the
      visible page (max 50%) — the rest of the content should always
-     be reachable without the header dominating the fold. Scrolls
-     internally in the rare case its own content (long tagline, tall
-     photo) would otherwise overflow this cap. */
+     be reachable without the header dominating the fold. No internal
+     scrollbar is ever shown here — if content would overflow this
+     cap, --pf-hero-scale (above) already shrinks the photo/text to
+     fit instead, and any leftover overflow is simply clipped so a
+     literal scroll bar can never appear on the header. The padding
+     above (including --pf-text-pad) keeps that clipped edge away
+     from the text itself. */
   max-height: calc(var(--pf-header-pct) * 1vh);
-  overflow-y: auto;
+  overflow: hidden;
   box-sizing: border-box;
-  transition: max-height 0.15s ease;
+  transition: max-height 0.15s ease, padding 0.15s ease;
 }
 
 #canvasZoomTarget .pf-hero {
@@ -123,6 +140,9 @@
   font-family: var(--pf-heading-font, var(--font-display));
   font-size: calc(2.2rem * var(--pf-hero-scale));
   font-weight: 800;
+  /* Name keeps a tight, near-fixed line-height regardless of the
+     Text Line Spacing control — headline type reads best snug, and
+     the multi-line cap below still guards against spill either way. */
   line-height: 1.1;
   margin: 0 0 0.15rem;
   outline: none;
@@ -132,6 +152,7 @@
   font-family: var(--pf-heading-font, var(--font-display));
   font-size: calc(1.05rem * var(--pf-hero-scale));
   font-weight: 600;
+  line-height: var(--pf-line-height);
   opacity: 0.95;
   margin-bottom: 0.5rem;
   min-height: 1.3em;
@@ -140,6 +161,7 @@
 .pf-tagline {
   font-family: var(--pf-body-font, var(--font-sans));
   font-size: calc(0.95rem * var(--pf-hero-scale));
+  line-height: var(--pf-line-height);
   opacity: 0.92;
   margin: 0 0 0.6rem;
   max-width: 46ch;
@@ -148,6 +170,7 @@
 .pf-contact-line {
   font-family: var(--pf-body-font, var(--font-sans));
   font-size: calc(0.85rem * var(--pf-hero-scale));
+  line-height: var(--pf-line-height);
   opacity: 0.9;
   min-height: 1.2em;
 }
@@ -322,10 +345,11 @@
   /* Internal scroll is a per-slide fallback, not the default look —
      only kicks in when that slide's own content genuinely doesn't
      fit the space it's given. */
-  padding: 2.25rem 2.75rem 3.25rem;
+  padding: calc(2.25rem + var(--pf-text-pad)) calc(2.75rem + var(--pf-text-pad)) calc(3.25rem + var(--pf-text-pad));
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: var(--pf-section-gap);
+  line-height: var(--pf-line-height);
   scrollbar-width: thin;
 }
 
@@ -474,12 +498,13 @@
 }
 
 .pf-sections {
-  padding: 2.5rem 2.75rem 4rem;
+  padding: calc(2.5rem + var(--pf-text-pad)) calc(2.75rem + var(--pf-text-pad)) calc(4rem + var(--pf-text-pad));
   display: flex;
   flex-direction: column;
-  gap: 1.75rem;
+  gap: var(--pf-section-gap);
   font-family: var(--pf-body-font, var(--font-sans));
   color: var(--color-text);
+  line-height: var(--pf-line-height);
 }
 
 /* ── Content width ────────────────────────────────────────────
@@ -535,7 +560,7 @@
   background: var(--color-surface);
   border: 2.5px solid var(--color-border);
   box-shadow: 5px 5px 0 0 var(--color-border);
-  padding: 1.25rem 1.4rem;
+  padding: var(--pf-card-pad);
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 
@@ -550,7 +575,7 @@
 
 .pf-summary-card {
   font-size: 1.02rem;
-  line-height: 1.6;
+  line-height: var(--pf-line-height);
   border-left: 6px solid var(--pf-accent, var(--color-secondary));
 }
 
@@ -591,7 +616,7 @@
 
 .pf-card ul.rb-bullets li {
   margin-bottom: 0.3rem;
-  line-height: 1.5;
+  line-height: var(--pf-line-height);
 }
 
 .pf-edu-card .pf-exp-company { font-weight: 700; }
@@ -724,6 +749,7 @@
 
 /* ── Embedded links card ───────────────────────────────────── */
 .pf-links-card { background: transparent; box-shadow: none; border: none; padding: 0; }
+.pf-links-card:hover { box-shadow: none; transform: none; }
 .pf-links-list {
   display: flex;
   flex-wrap: wrap;

@@ -84,7 +84,7 @@ export const FONT_OPTIONS = [
 
 // Default design for the portfolio site (independent of résumé templates —
 // the portfolio has one flowing layout, but still themeable via color/font).
-export const PORTFOLIO_DEFAULT_DESIGN = { accent: '#7C4DFF', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'contained', heroAlign: 'left', dotsPosition: 'right', heroPhotoShape: 'circle', heroPhotoSize: 'md', heroSize: 'normal', headerHeightPct: 30 };
+export const PORTFOLIO_DEFAULT_DESIGN = { accent: '#7C4DFF', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'contained', heroAlign: 'left', dotsPosition: 'right', heroPhotoShape: 'circle', heroPhotoSize: 'md', heroSize: 'normal', headerHeightPct: 30, textPaddingRem: 0, lineSpacing: 'normal', sectionSpacing: 'normal', cardPadding: 'normal' };
 
 // Portfolio templates: unlike résumé templates (which change structural
 // layout — columns, alignment), the portfolio has one adaptive layout,

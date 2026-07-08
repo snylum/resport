@@ -569,7 +569,48 @@
               <div class="customize-group">
                 <p class="customize-label">Header Height <span id="headerHeightLabel" class="customize-label-value">30%</span></p>
                 <input type="range" id="inHeaderHeight" class="customize-range" min="1" max="50" step="1" value="30" />
-                <p class="customize-hint">How tall the header band is, as a share of the page (1%–50%). Name, tagline and photo scale to match, and stay reachable via internal scrolling if the header ever gets too small to show everything.</p>
+                <p class="customize-hint">How tall the header band is, as a share of the page (1%–50%). Name, tagline and photo scale to match, so nothing is ever cut off.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section active" data-viewmode-only="portfolio">
+            <button class="form-section-toggle" type="button">
+              <span class="fs-title">Spacing</span>
+              <span class="fs-chevron">▼</span>
+            </button>
+            <div class="form-section-content">
+              <div class="customize-group">
+                <p class="customize-label">Text Padding <span id="textPaddingLabel" class="customize-label-value">0rem</span></p>
+                <input type="range" id="inTextPadding" class="customize-range" min="0" max="2" step="0.25" value="0" />
+                <p class="customize-hint">Extra breathing room between your text and the edge of the header, cards, and page — on top of the automatic sizing, so text never touches an edge or spills out.</p>
+              </div>
+              <div class="customize-group">
+                <p class="customize-label">Text Line Spacing</p>
+                <div class="option-pill-row" data-target="lineSpacing">
+                  <button class="option-pill" data-value="compact">Compact</button>
+                  <button class="option-pill" data-value="normal">Normal</button>
+                  <button class="option-pill" data-value="relaxed">Relaxed</button>
+                </div>
+                <p class="customize-hint">Space between lines within a paragraph, tagline, or bullet.</p>
+              </div>
+              <div class="customize-group">
+                <p class="customize-label">Section Spacing</p>
+                <div class="option-pill-row" data-target="sectionSpacing">
+                  <button class="option-pill" data-value="compact">Compact</button>
+                  <button class="option-pill" data-value="normal">Normal</button>
+                  <button class="option-pill" data-value="relaxed">Relaxed</button>
+                </div>
+                <p class="customize-hint">Gap between section titles and cards down the page (or between slides' content, in scroll modes).</p>
+              </div>
+              <div class="customize-group">
+                <p class="customize-label">Card Padding</p>
+                <div class="option-pill-row" data-target="cardPadding">
+                  <button class="option-pill" data-value="compact">Compact</button>
+                  <button class="option-pill" data-value="normal">Normal</button>
+                  <button class="option-pill" data-value="relaxed">Relaxed</button>
+                </div>
+                <p class="customize-hint">Inner padding inside each card, so text sits comfortably away from its border.</p>
               </div>
             </div>
           </div>

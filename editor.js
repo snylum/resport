@@ -69,6 +69,8 @@ const el = {
   selBodyFont: document.getElementById('selBodyFont'),
   inHeaderHeight: document.getElementById('inHeaderHeight'),
   headerHeightLabel: document.getElementById('headerHeightLabel'),
+  inTextPadding: document.getElementById('inTextPadding'),
+  textPaddingLabel: document.getElementById('textPaddingLabel'),
   templateGallery: document.getElementById('templateGallery'),
   portfolioTemplateGallery: document.getElementById('portfolioTemplateGallery'),
 
@@ -1295,6 +1297,33 @@ document.addEventListener('keydown', function (e) {
 // Clean, non-editable resume block markup — used ONLY for PDF export, so
 // the exported file never contains contenteditable spans, "Edit ✎" toggles,
 // remove buttons, or any other editor chrome that leaks into the print view.
+// Drops hidden entry blocks, and also drops a 'section' heading block
+// whenever every entry under it (up to the next 'section' block, or the
+// end of the list) is hidden — an orphaned heading over an empty section
+// looks broken in the published/exported output. Only meant for final
+// render paths (published site, PDF export); the editor canvas still
+// shows hidden blocks (dimmed) so they can be toggled back on.
+function filterVisibleBlocksHidingOrphanSections(blocks) {
+  const result = [];
+  let i = 0;
+  while (i < blocks.length) {
+    const block = blocks[i];
+    if (block.type === 'section') {
+      let j = i + 1;
+      while (j < blocks.length && blocks[j].type !== 'section') j++;
+      const entries = blocks.slice(i + 1, j);
+      const hasVisibleEntry = entries.some(b => !b.hidden);
+      if (!block.hidden && hasVisibleEntry) result.push(block);
+      entries.forEach(b => { if (!b.hidden) result.push(b); });
+      i = j;
+    } else {
+      if (!block.hidden) result.push(block);
+      i++;
+    }
+  }
+  return result;
+}
+
 function renderStaticResumeBlock(block) {
   const bulletsHTML = (bullets) => `<ul class="rb-bullets">${(bullets || []).map(b => `<li>${esc(b)}</li>`).join('')}</ul>`;
   switch (block.type) {
@@ -1461,7 +1490,7 @@ function buildHorizontalSectionsHTML(blocks) {
 function buildPublishedSiteHTML() {
   const p = Store.state.portfolio.profile;
   const design = Store.state.portfolio.design;
-  const blocks = Store.state.portfolio.blocks.filter(b => !b.hidden);
+  const blocks = filterVisibleBlocksHidingOrphanSections(Store.state.portfolio.blocks);
   const fullName = `${p.firstName} ${p.lastName}`.trim() || 'Untitled Portfolio';
   const contactLine = [p.email, p.phone, p.address].filter(Boolean).join('   •   ');
   const isHorizontal = (design.sectionAnimation || 'none') === 'horizontal';
@@ -2017,8 +2046,8 @@ async function downloadResumeAsPDF() {
         </div>
       </header>
       <div class="tracks-layout-${design.layout || '1'}">
-        <div class="col-track main-track">${blocks.filter(b => b.col === 'main' && !b.hidden).map(b => `<div class="resume-block block-${b.type}">${renderStaticResumeBlock(b)}</div>`).join('')}</div>
-        <div class="col-track side-track">${blocks.filter(b => b.col === 'side' && !b.hidden).map(b => `<div class="resume-block block-${b.type}">${renderStaticResumeBlock(b)}</div>`).join('')}</div>
+        <div class="col-track main-track">${filterVisibleBlocksHidingOrphanSections(blocks.filter(b => b.col === 'main')).map(b => `<div class="resume-block block-${b.type}">${renderStaticResumeBlock(b)}</div>`).join('')}</div>
+        <div class="col-track side-track">${filterVisibleBlocksHidingOrphanSections(blocks.filter(b => b.col === 'side')).map(b => `<div class="resume-block block-${b.type}">${renderStaticResumeBlock(b)}</div>`).join('')}</div>
       </div>`;
 
     // Render off-screen (not display:none — html2canvas needs real layout).
@@ -2301,6 +2330,13 @@ function initPortfolioAnimation(mode) {
   el.portfolioSite.querySelectorAll('.pf-sections > *').forEach(n => portfolioAnimObserver.observe(n));
 }
 
+// Named presets, not raw numbers, so the panel stays simple (three
+// clear choices) while the underlying CSS vars can still be tuned
+// centrally here without touching markup.
+const LINE_SPACING_PRESETS = { compact: 1.25, normal: 1.5, relaxed: 1.85 };
+const SECTION_SPACING_PRESETS = { compact: '1rem', normal: '1.75rem', relaxed: '2.75rem' };
+const CARD_PADDING_PRESETS = { compact: '0.85rem 1rem', normal: '1.25rem 1.4rem', relaxed: '1.75rem 2rem' };
+
 function applyPortfolioDesign(design) {
   el.portfolioSite.style.setProperty('--pf-accent', design.accent);
   el.portfolioSite.style.setProperty('--pf-heading-font', FONT_STACKS[design.headingFont] || FONT_STACKS.modern);
@@ -2314,6 +2350,10 @@ function applyPortfolioDesign(design) {
   el.portfolioSite.setAttribute('data-hero-photo-size', design.heroPhotoSize || 'md');
   el.portfolioSite.setAttribute('data-hero-size', design.heroSize || 'normal');
   el.portfolioSite.style.setProperty('--pf-header-pct', design.headerHeightPct || 30);
+  el.portfolioSite.style.setProperty('--pf-text-pad', (Number(design.textPaddingRem) || 0) + 'rem');
+  el.portfolioSite.style.setProperty('--pf-line-height', LINE_SPACING_PRESETS[design.lineSpacing] || LINE_SPACING_PRESETS.normal);
+  el.portfolioSite.style.setProperty('--pf-section-gap', SECTION_SPACING_PRESETS[design.sectionSpacing] || SECTION_SPACING_PRESETS.normal);
+  el.portfolioSite.style.setProperty('--pf-card-pad', CARD_PADDING_PRESETS[design.cardPadding] || CARD_PADDING_PRESETS.normal);
   initPortfolioAnimation(design.sectionAnimation || 'none');
 }
 
@@ -2337,6 +2377,12 @@ function syncCustomizeControls(design) {
     const pct = Number(design.headerHeightPct) || 30;
     el.inHeaderHeight.value = pct;
     if (el.headerHeightLabel) el.headerHeightLabel.textContent = pct + '%';
+  }
+
+  if (el.inTextPadding) {
+    const pad = Number(design.textPaddingRem) || 0;
+    el.inTextPadding.value = pad;
+    if (el.textPaddingLabel) el.textPaddingLabel.textContent = pad + 'rem';
   }
 
   const knownSwatches = Array.from(document.querySelectorAll('#optAccentColor .color-swatch[data-value]'));
@@ -2385,6 +2431,14 @@ function initCustomizePanel() {
       const pct = Math.min(50, Math.max(1, Number(e.target.value) || 30));
       if (el.headerHeightLabel) el.headerHeightLabel.textContent = pct + '%';
       Store.setDesign('headerHeightPct', pct);
+    });
+  }
+
+  if (el.inTextPadding) {
+    el.inTextPadding.addEventListener('input', (e) => {
+      const pad = Math.min(2, Math.max(0, Number(e.target.value) || 0));
+      if (el.textPaddingLabel) el.textPaddingLabel.textContent = pad + 'rem';
+      Store.setDesign('textPaddingRem', pad);
     });
   }
 
