@@ -2277,10 +2277,7 @@ function populatePortfolioTemplateGallery() {
   const cardHTML = t => `
     <button class="tpl-mini" data-portfolio-template="${t.id}" type="button" title="${esc(t.name)} — ${esc(t.tagline)}">
       <span class="tpl-mini-icon" style="background:color-mix(in srgb, ${t.design.accent} 16%, white);">${t.icon}</span>
-      <span class="tpl-mini-meta">
-        <span class="tpl-mini-name">${esc(t.name)}</span>
-        <span class="tpl-mini-font" style="font-family:${esc(FONT_STACKS[t.design.headingFont] || FONT_STACKS.modern)};">Aa</span>
-      </span>
+      <span class="tpl-mini-font" style="font-family:${esc(FONT_STACKS[t.design.headingFont] || FONT_STACKS.modern)};">Aa</span>
       <span class="tpl-mini-swatch" style="background:${t.design.accent};"></span>
     </button>
   `;
