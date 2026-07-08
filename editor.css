@@ -898,6 +898,32 @@ body {
   border-style: solid;
 }
 
+/* Sections toggled "hidden" stay visible but dimmed in-editor — they
+   are excluded only from exports/publishing, never from the editor
+   canvas, so it's always clear the content is still there. */
+.resume-block.section-hidden-preview,
+.section-hidden-preview {
+  opacity: 0.4;
+  filter: grayscale(0.6);
+  position: relative;
+}
+
+.resume-block.section-hidden-preview::after,
+.section-hidden-preview::after {
+  content: "Hidden — won't appear in your résumé/portfolio";
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  background: var(--color-text);
+  color: var(--color-surface);
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 2;
+}
+
 /* ── Expandable section accordion (left sidebar — the ONLY place ── */
 /* content is directly editable; the canvas is a plain preview now).  */
 .sd-summary-line {
@@ -919,7 +945,38 @@ body {
 
 .sd-section-item.expanded .sd-expand-btn {
   border-color: var(--rp-accent, var(--color-secondary));
-  color: var(--rp-accent, var(--color-secondary));
+  color: #fff;
+  background: var(--rp-accent, var(--color-secondary));
+  font-size: 0.85em;
+  font-weight: 800;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--rp-accent, var(--color-secondary)) 25%, transparent);
+}
+
+/* ── Hide/show section toggle ─────────────────────────────── */
+.sd-hide-btn.is-hidden {
+  background: var(--color-text-muted);
+  color: #fff;
+  border-color: var(--color-text-muted);
+}
+
+.sd-hidden-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 0.05rem 0.35rem;
+  margin-left: 0.35rem;
+}
+
+.sd-section-item.section-hidden {
+  opacity: 0.55;
+}
+
+.sd-section-item.section-hidden .sd-title-text {
+  font-style: italic;
 }
 
 .sd-edit-body {
@@ -942,6 +999,13 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--color-text-muted);
+}
+
+.sd-field-hint {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  margin: -0.35rem 0 0.5rem;
+  line-height: 1.4;
 }
 
 .sd-field > .ce-field {

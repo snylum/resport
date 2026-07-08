@@ -56,6 +56,22 @@
   background: rgba(255,255,255,0.25);
 }
 
+/* ── Photo shape ─────────────────────────────────────────── */
+.portfolio-site[data-hero-photo-shape="rounded"] .pf-hero-photo-wrap { border-radius: 16px; }
+.portfolio-site[data-hero-photo-shape="square"] .pf-hero-photo-wrap { border-radius: 4px; }
+
+/* ── Photo size ──────────────────────────────────────────── */
+.portfolio-site[data-hero-photo-size="sm"] .pf-hero-photo-wrap { width: 76px; height: 76px; }
+.portfolio-site[data-hero-photo-size="lg"] .pf-hero-photo-wrap { width: 152px; height: 152px; }
+
+/* ── Header (hero band) size ────────────────────────────────
+   Controls overall header padding/name size — independent of the
+   photo's own size/shape settings above. */
+.portfolio-site[data-hero-size="compact"] .pf-hero { padding: 1.75rem 2.25rem; gap: 1.25rem; }
+.portfolio-site[data-hero-size="compact"] .pf-name { font-size: 1.6rem; }
+.portfolio-site[data-hero-size="tall"] .pf-hero { padding: 4.5rem 2.75rem; }
+.portfolio-site[data-hero-size="tall"] .pf-name { font-size: 2.7rem; }
+
 .pf-hero-photo-wrap img {
   width: 100%;
   height: 100%;
@@ -487,7 +503,7 @@
 }
 
 /* ── Photo gallery card ────────────────────────────────────── */
-.pf-gallery-card { padding: 0; overflow: hidden; background: transparent; box-shadow: none; border: none; }
+.pf-gallery-card { padding: 0; overflow: hidden; background: transparent; box-shadow: none !important; border: none !important; }
 .pf-gallery-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -498,6 +514,30 @@
   overflow: hidden;
   border-radius: 8px;
   background: color-mix(in srgb, var(--pf-accent, var(--color-secondary)) 8%, white);
+  box-shadow: none !important;
+  cursor: zoom-in;
+  display: block;
+  position: relative;
+  transition: transform 0.15s ease;
+}
+.pf-gallery-item:hover {
+  transform: scale(1.02);
+}
+.pf-gallery-item:hover::after {
+  content: "🔍";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  background: rgba(0,0,0,0.15);
+}
+.pf-gallery-item[href] {
+  cursor: pointer;
+}
+.pf-gallery-item[href]:hover::after {
+  content: "↗";
 }
 .pf-gallery-item img {
   width: 100%;
@@ -514,8 +554,17 @@
   border-radius: 8px;
 }
 
+.pf-zoom-modal-body { text-align: center; }
+.pf-zoom-img {
+  max-width: 100%;
+  max-height: 80vh;
+  border-radius: 6px;
+  box-shadow: none;
+  object-fit: contain;
+}
+
 /* ── Embedded video card ───────────────────────────────────── */
-.pf-video-card { padding: 0; overflow: hidden; background: transparent; box-shadow: none; border: none; }
+.pf-video-card { padding: 0; overflow: hidden; background: transparent; box-shadow: none !important; border: none !important; }
 .pf-video-frame {
   position: relative;
   width: 100%;
@@ -523,6 +572,7 @@
   border-radius: 10px;
   overflow: hidden;
   background: #000;
+  box-shadow: none !important;
 }
 .pf-video-frame iframe {
   position: absolute;

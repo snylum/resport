@@ -320,7 +320,9 @@ function blockEditFieldsHTML(block) {
         <label class="add-item-btn sd-gallery-add">
           + Add photo
           <input type="file" accept="image/*" class="sd-gallery-file-input" data-block="${block.id}" hidden />
-        </label>`);
+        </label>`)
+        + field('Verification (optional)', `<div class="pf-verify">${verifyControlHTML(block)}</div>`)
+        + `<p class="sd-field-hint">Add a link here to make photos open that link in a new tab instead of zooming in.</p>`;
     }
     case 'video':
       return field('Video URL (YouTube, Vimeo, Loom)', ceField(d.url, 'url', block.id))
@@ -348,6 +350,7 @@ function createResumeBlock(block) {
   wrapper.className = `resume-block block-${block.type}`;
   wrapper.dataset.id = block.id;
   if (Store.state.selectedBlockId === block.id) wrapper.classList.add('selected');
+  if (block.hidden) wrapper.classList.add('section-hidden-preview');
   wrapper.innerHTML = renderStaticResumeBlock(block);
   return wrapper;
 }
@@ -358,6 +361,7 @@ function createPortfolioBlock(block) {
   const wrapper = document.createElement('div');
   wrapper.dataset.id = block.id;
   if (Store.state.selectedBlockId === block.id) wrapper.classList.add('selected');
+  if (block.hidden) wrapper.classList.add('section-hidden-preview');
 
   let baseClass = '';
   let innerHTML = '';
@@ -425,18 +429,23 @@ function createPortfolioBlock(block) {
       baseClass = 'pf-card';
       innerHTML = `<div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.level || '')}</span></div>`).join('')}</div>`;
       break;
-    case 'gallery':
+    case 'gallery': {
+      const v = block.data.verify || { type: 'none' };
+      const galleryHref = v.type === 'link' && v.link ? (/^https?:\/\//i.test(v.link) ? v.link : `https://${v.link}`) : null;
       baseClass = 'pf-card pf-gallery-card';
       innerHTML = (block.data.photos || []).length
-        ? `<div class="pf-gallery-grid">${(block.data.photos || []).map(src => `<div class="pf-gallery-item"><img src="${esc(src)}" alt="" /></div>`).join('')}</div>`
+        ? `<div class="pf-gallery-grid">${(block.data.photos || []).map(src => galleryHref
+            ? `<a class="pf-gallery-item" href="${esc(galleryHref)}" target="_blank" rel="noopener noreferrer" title="Open verification link"><img src="${esc(src)}" alt="" /></a>`
+            : `<div class="pf-gallery-item" data-action="zoom-photo" data-src="${esc(src)}" title="Click to zoom"><img src="${esc(src)}" alt="" /></div>`).join('')}</div>${canvasVerifyBadge(block)}`
         : `<div class="pf-gallery-empty">No photos yet — add some from the sidebar.</div>`;
       break;
+    }
     case 'video': {
       baseClass = 'pf-card pf-video-card';
       const embedSrc = videoEmbedSrc(block.data.url);
       innerHTML = block.data.url
         ? (embedSrc
-          ? `<div class="pf-video-frame"><iframe src="${esc(embedSrc)}" title="Embedded video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`
+          ? `<div class="pf-video-frame"><iframe src="${esc(embedSrc)}" title="Embedded video" referrerpolicy="strict-origin-when-cross-origin" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`
           : `<a class="pf-video-fallback" href="${esc(/^https?:\/\//i.test(block.data.url) ? block.data.url : `https://${block.data.url}`)}" target="_blank" rel="noopener noreferrer">▶ Watch video</a>`)
         : `<div class="pf-gallery-empty">No video yet — add a URL from the sidebar.</div>`;
       innerHTML += block.data.caption ? `<p class="pf-video-caption">${esc(block.data.caption)}</p>` : '';
@@ -659,6 +668,8 @@ function handleTrackClick(e) {
       openVerifyEditModal(blockId);
     } else if (action === 'toggle-expand') {
       toggleBlockExpand(blockId);
+    } else if (action === 'zoom-photo') {
+      openPhotoZoomModal(actionBtn.dataset.src);
     }
     return;
   }
@@ -740,6 +751,12 @@ function openInfoModal(title, message) {
     <p class="modal-sub">${esc(message)}</p>
     <div class="modal-actions"><button class="btn btn-secondary btn-sm" id="infoOkBtn" type="button">Got it</button></div>
   `, (root) => root.querySelector('#infoOkBtn').addEventListener('click', closeModal));
+}
+
+// ── 4a-i. Gallery photo zoom (lightbox) ────────────────────────
+function openPhotoZoomModal(src) {
+  if (!src) return;
+  openModal(`<div class="verify-modal-body pf-zoom-modal-body"><img src="${esc(src)}" alt="" class="pf-zoom-img" /></div>`);
 }
 
 // ── 4a. Verification: view proof ──────────────────────────────
@@ -1086,6 +1103,15 @@ function slugifyUsername(str) {
 // whole editor. No dependency on Store/editor.js.
 const PUBLISHED_PAGE_SCRIPT = `
 document.addEventListener('click', function (e) {
+  var zoomEl = e.target.closest('[data-action="zoom-photo"]');
+  if (zoomEl) {
+    var overlay = document.getElementById('modalOverlay');
+    var content = document.getElementById('modalContent');
+    var src = zoomEl.getAttribute('data-src');
+    content.innerHTML = '<div class="verify-modal-body pf-zoom-modal-body"><img src="' + src + '" class="pf-zoom-img" alt=""/></div>';
+    overlay.classList.remove('hidden');
+    return;
+  }
   var btn = e.target.closest('[data-verify-type]');
   if (btn) {
     var overlay = document.getElementById('modalOverlay');
@@ -1278,16 +1304,30 @@ function renderStaticPortfolioBlock(block) {
       return `<div class="pf-card"><div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.issuer || '')}</span><span class="ce-muted">${esc(it.date || '')}</span></div>`).join('')}</div></div>`;
     case 'languages':
       return `<div class="pf-card"><div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.level || '')}</span></div>`).join('')}</div></div>`;
-    case 'gallery':
-      return (block.data.photos || []).length
-        ? `<div class="pf-card pf-gallery-card"><div class="pf-gallery-grid">${(block.data.photos || []).map(src => `<div class="pf-gallery-item"><img src="${esc(src)}" alt="" /></div>`).join('')}</div></div>`
-        : '';
+    case 'gallery': {
+      if (!(block.data.photos || []).length) return '';
+      const v = block.data.verify || { type: 'none' };
+      let verifyHTML = '';
+      if (v.type === 'photo' && v.photo) {
+        const labelHTML = v.label ? `<span class="pf-verify-label">${esc(v.label)}</span>` : '';
+        verifyHTML = `<div class="pf-verify"><button class="pf-verify-badge" data-verify-type="photo" data-verify-photo="${esc(v.photo)}" data-verify-label="${esc(v.label || '')}" type="button">✓ Verified${labelHTML}</button></div>`;
+      } else if (v.type === 'link' && v.link) {
+        const safeHref = /^https?:\/\//i.test(v.link) ? v.link : `https://${v.link}`;
+        const labelHTML = v.label ? `<span class="pf-verify-label">${esc(v.label)}</span>` : '';
+        verifyHTML = `<div class="pf-verify"><button class="pf-verify-badge" data-verify-type="link" data-verify-link="${esc(safeHref)}" data-verify-label="${esc(v.label || '')}" type="button">✓ Verified${labelHTML}</button></div>`;
+      }
+      const galleryHref = v.type === 'link' && v.link ? (/^https?:\/\//i.test(v.link) ? v.link : `https://${v.link}`) : null;
+      const itemsHTML = block.data.photos.map(src => galleryHref
+        ? `<a class="pf-gallery-item" href="${esc(galleryHref)}" target="_blank" rel="noopener noreferrer"><img src="${esc(src)}" alt="" /></a>`
+        : `<div class="pf-gallery-item" data-action="zoom-photo" data-src="${esc(src)}"><img src="${esc(src)}" alt="" /></div>`).join('');
+      return `<div class="pf-card pf-gallery-card"><div class="pf-gallery-grid">${itemsHTML}</div></div>${verifyHTML}`;
+    }
     case 'video': {
       if (!block.data.url) return '';
       const embedSrc = videoEmbedSrc(block.data.url);
       const href = /^https?:\/\//i.test(block.data.url) ? block.data.url : `https://${block.data.url}`;
       const bodyHTML = embedSrc
-        ? `<div class="pf-video-frame"><iframe src="${esc(embedSrc)}" title="Embedded video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`
+        ? `<div class="pf-video-frame"><iframe src="${esc(embedSrc)}" title="Embedded video" referrerpolicy="strict-origin-when-cross-origin" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`
         : `<a class="pf-video-fallback" href="${esc(href)}" target="_blank" rel="noopener noreferrer">▶ Watch video</a>`;
       const captionHTML = block.data.caption ? `<p class="pf-video-caption">${esc(block.data.caption)}</p>` : '';
       return `<div class="pf-card pf-video-card">${bodyHTML}${captionHTML}</div>`;
@@ -1344,7 +1384,7 @@ function buildHorizontalSectionsHTML(blocks) {
 function buildPublishedSiteHTML() {
   const p = Store.state.portfolio.profile;
   const design = Store.state.portfolio.design;
-  const blocks = Store.state.portfolio.blocks;
+  const blocks = Store.state.portfolio.blocks.filter(b => !b.hidden);
   const fullName = `${p.firstName} ${p.lastName}`.trim() || 'Untitled Portfolio';
   const contactLine = [p.email, p.phone, p.address].filter(Boolean).join('   •   ');
   const isHorizontal = (design.sectionAnimation || 'none') === 'horizontal';
@@ -1368,7 +1408,7 @@ function buildPublishedSiteHTML() {
 </style>
 </head>
 <body data-viewmode="portfolio">
-  <div class="portfolio-site" id="portfolioSite" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-dots-pos="${esc(design.dotsPosition || 'right')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};">
+  <div class="portfolio-site" id="portfolioSite" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-dots-pos="${esc(design.dotsPosition || 'right')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" data-hero-photo-shape="${esc(design.heroPhotoShape || 'circle')}" data-hero-photo-size="${esc(design.heroPhotoSize || 'md')}" data-hero-size="${esc(design.heroSize || 'normal')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};">
     <header class="pf-hero">
       ${p.photo ? `<div class="pf-hero-photo-wrap"><img src="${esc(p.photo)}" alt="${esc(fullName)}" /></div>` : ''}
       <div class="pf-hero-text">
@@ -1600,6 +1640,7 @@ function renderSidebarList(blocks) {
     item.className = 'sd-section-item';
     item.dataset.id = block.id;
     if (Store.state.selectedBlockId === block.id) item.classList.add('selected');
+    if (block.hidden) item.classList.add('section-hidden');
     item.draggable = true;
 
     let titleText = block.type.toUpperCase();
@@ -1613,7 +1654,7 @@ function renderSidebarList(blocks) {
     else if (block.type === 'languages') titleText = 'Languages';
     else if (block.type === 'custom') titleText = block.data.title || 'Custom Block';
 
-    const verifyBadge = (block.type === 'experience' && block.data.verify && block.data.verify.type !== 'none')
+    const verifyBadge = ((block.type === 'experience' || block.type === 'gallery') && block.data.verify && block.data.verify.type !== 'none')
       ? `<span class="sd-verify-dot" title="Has verification proof">✓</span>` : '';
 
     const swapBtn = twoCol
@@ -1623,12 +1664,16 @@ function renderSidebarList(blocks) {
     const isExpanded = expandedBlocks.has(block.id);
     if (isExpanded) item.classList.add('expanded');
 
+    const hideBtn = `<button class="sd-icon-btn sd-hide-btn ${block.hidden ? 'is-hidden' : ''}" data-action="toggle-hidden" data-id="${block.id}" title="${block.hidden ? 'Show this section' : 'Hide this section (keeps its content)'}" type="button">${block.hidden ? '🚫' : '👁'}</button>`;
+    const hiddenTag = block.hidden ? `<span class="sd-hidden-tag">Hidden</span>` : '';
+
     item.innerHTML = `
       <div class="sd-item-header">
         <span class="sd-drag-handle">☰</span>
-        <span class="sd-title-text">${esc(titleText)} ${verifyBadge}</span>
+        <span class="sd-title-text">${esc(titleText)} ${verifyBadge}${hiddenTag}</span>
         <span class="sd-item-actions">
           ${swapBtn}
+          ${hideBtn}
           <button class="sd-icon-btn sd-expand-btn" data-action="toggle-expand" data-block="${block.id}" title="${isExpanded ? 'Done editing' : 'Edit this section'}" type="button">${isExpanded ? '✓' : '✎'}</button>
           <button class="sd-icon-btn sd-delete-btn" data-action="delete" data-id="${block.id}" title="Delete section" type="button">✕</button>
         </span>
@@ -1685,6 +1730,8 @@ function initSidebarActions() {
         const id = actionBtn.dataset.id;
         const block = Store.active().blocks.find(b => b.id === id);
         if (block) Store.setBlockColumn(id, block.col === 'side' ? 'main' : 'side');
+      } else if (action === 'toggle-hidden') {
+        Store.toggleBlockHidden(actionBtn.dataset.id);
       } else if (action === 'toggle-expand') {
         toggleBlockExpand(actionBtn.dataset.block);
       } else if (action === 'add-item') {
@@ -1720,10 +1767,24 @@ function initSidebarActions() {
   });
 }
 
-function initAddSectionMenu() {
-  el.addSectionMenu.innerHTML = BLOCK_LIBRARY.map(item =>
+// Media blocks (photo gallery, embedded video) only render on the
+// portfolio site — the plain-text resume silently drops them (see
+// renderStaticResumeBlock's default case). Rather than let people add
+// a section that then appears to do nothing, the résumé's "add
+// section" menu excludes them; switching to the portfolio tab brings
+// them back. Nothing is deleted either way — this only affects which
+// options are offered, never existing content.
+function renderAddSectionMenu() {
+  const library = Store.state.viewMode === 'resume'
+    ? BLOCK_LIBRARY.filter(item => !item.mediaOnly)
+    : BLOCK_LIBRARY;
+  el.addSectionMenu.innerHTML = library.map(item =>
     `<button class="add-section-item" data-type="${item.type}" type="button">${esc(item.label)}</button>`
   ).join('');
+}
+
+function initAddSectionMenu() {
+  renderAddSectionMenu();
 
   el.btnAddSection.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -1854,8 +1915,8 @@ async function downloadResumeAsPDF() {
         </div>
       </header>
       <div class="tracks-layout-${design.layout || '1'}">
-        <div class="col-track main-track">${blocks.filter(b => b.col === 'main').map(b => `<div class="resume-block block-${b.type}">${renderStaticResumeBlock(b)}</div>`).join('')}</div>
-        <div class="col-track side-track">${blocks.filter(b => b.col === 'side').map(b => `<div class="resume-block block-${b.type}">${renderStaticResumeBlock(b)}</div>`).join('')}</div>
+        <div class="col-track main-track">${blocks.filter(b => b.col === 'main' && !b.hidden).map(b => `<div class="resume-block block-${b.type}">${renderStaticResumeBlock(b)}</div>`).join('')}</div>
+        <div class="col-track side-track">${blocks.filter(b => b.col === 'side' && !b.hidden).map(b => `<div class="resume-block block-${b.type}">${renderStaticResumeBlock(b)}</div>`).join('')}</div>
       </div>`;
 
     // Render off-screen (not display:none — html2canvas needs real layout).
@@ -2040,6 +2101,7 @@ Store.on('viewmode_changed', (vm) => {
   refreshHeader();
   renderActiveCanvas();
   applyActiveDesign();
+  renderAddSectionMenu();
 });
 
 Store.on('resume_reset', () => {
@@ -2146,6 +2208,9 @@ function applyPortfolioDesign(design) {
   el.portfolioSite.setAttribute('data-dots-pos', design.dotsPosition || 'right');
   el.portfolioSite.setAttribute('data-content-width', design.contentWidth || 'contained');
   el.portfolioSite.setAttribute('data-hero-align', design.heroAlign || 'left');
+  el.portfolioSite.setAttribute('data-hero-photo-shape', design.heroPhotoShape || 'circle');
+  el.portfolioSite.setAttribute('data-hero-photo-size', design.heroPhotoSize || 'md');
+  el.portfolioSite.setAttribute('data-hero-size', design.heroSize || 'normal');
   initPortfolioAnimation(design.sectionAnimation || 'none');
 }
 

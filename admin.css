@@ -1,3 +1,18 @@
+/* This page reuses the site's global button/card styles, which default
+   to a harsh, hard-edged "neobrutalist" offset shadow (--shadow /
+   --shadow-lg from dazed.css). That look doesn't fit a data-dense
+   admin dashboard, so it's softened to a normal, subtle drop shadow
+   here only — nothing else on the public site/editor is affected. */
+:root[data-theme="dazed"] {
+  --shadow: 0 2px 6px rgba(0,0,0,0.12);
+  --shadow-lg: 0 6px 16px rgba(0,0,0,0.16);
+}
+
+.btn:hover,
+.btn:active {
+  transform: none !important;
+}
+
 .admin-main {
   max-width: 960px;
   margin: 0 auto;

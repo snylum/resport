@@ -84,7 +84,7 @@ export const FONT_OPTIONS = [
 
 // Default design for the portfolio site (independent of résumé templates —
 // the portfolio has one flowing layout, but still themeable via color/font).
-export const PORTFOLIO_DEFAULT_DESIGN = { accent: '#7C4DFF', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'contained', heroAlign: 'left', dotsPosition: 'right' };
+export const PORTFOLIO_DEFAULT_DESIGN = { accent: '#7C4DFF', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'contained', heroAlign: 'left', dotsPosition: 'right', heroPhotoShape: 'circle', heroPhotoSize: 'md', heroSize: 'normal' };
 
 // Portfolio templates: unlike résumé templates (which change structural
 // layout — columns, alignment), the portfolio has one adaptive layout,
@@ -366,8 +366,8 @@ export const BLOCK_LIBRARY = [
   { type: 'certifications', label: 'Certifications', makeData: () => ({ items: [{ name: 'Certification Name', issuer: 'Issuing Body', date: 'Year' }] }) },
   { type: 'languages', label: 'Languages', makeData: () => ({ items: [{ name: 'English', level: 'Fluent' }] }) },
   { type: 'custom', label: 'Custom Text Block', makeData: () => ({ title: 'Custom Section', text: 'Add any additional information here.' }) },
-  { type: 'gallery', label: 'Photo Gallery', makeData: () => ({ photos: [] }) },
-  { type: 'video', label: 'Embedded Video', makeData: () => ({ url: '', caption: '' }) },
+  { type: 'gallery', label: 'Photo Gallery', makeData: () => ({ photos: [], verify: emptyVerify() }), mediaOnly: true },
+  { type: 'video', label: 'Embedded Video', makeData: () => ({ url: '', caption: '' }), mediaOnly: true },
   { type: 'links', label: 'Embedded Links', makeData: () => ({ items: [{ label: 'Website', url: '' }] }) }
 ];
 
@@ -724,6 +724,17 @@ class EditorStore {
     const block = this.active().blocks.find(b => b.id === id);
     if (!block) return;
     block.col = col;
+    this.emit('blocks_changed', this.active().blocks);
+  }
+
+  // Hiding a section keeps it (and its content) fully intact in the
+  // document — it's simply excluded from whatever gets rendered
+  // (canvas preview, static export, published site) until shown again.
+  // This is deliberately separate from removeBlock(), which deletes data.
+  toggleBlockHidden(id) {
+    const block = this.active().blocks.find(b => b.id === id);
+    if (!block) return;
+    block.hidden = !block.hidden;
     this.emit('blocks_changed', this.active().blocks);
   }
 
