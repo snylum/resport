@@ -593,17 +593,21 @@ body {
   flex: 1 1 auto;
   min-width: 360px;
   background: #f0f0f0;
-  /* Deliberately NOT overflow:auto. The zoom/refit logic in editor.js
-     always scales the document down to fit this box, so a scrollbar
-     should never be structurally needed — and if one appeared, its
-     own width would shrink this box's clientWidth, which the
-     ResizeObserver watching this element would see as "space changed",
-     triggering another refit, which resizes the canvas, which removes
-     the scrollbar, which triggers another refit... an infinite
-     feedback loop that showed up as the preview glitching/flickering
-     during ctrl+wheel zoom and sidebar-width dragging. overflow:hidden
-     breaks that loop at the source. */
-  overflow: hidden;
+  /* Fit-mode zoom always scales the document down to exactly match
+     this box, so no scrollbar is structurally needed there. Manual
+     zoom-in, however, can make the document taller/wider than this
+     box on purpose — and someone needs to be able to scroll down to
+     see the rest of it. overflow-y: auto (not hidden) allows that.
+     scrollbar-gutter: stable reserves the scrollbar's width whether
+     or not it's actually showing, so toggling the scrollbar on/off
+     never changes this element's clientWidth — which is what caused
+     the old ResizeObserver feedback loop (scrollbar appears → width
+     shrinks → "space changed" → refit → scrollbar disappears → width
+     grows → refit again → flicker). With the gutter reserved, the
+     loop's trigger condition never fires. */
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
   padding: 2rem;
   display: flex;
   justify-content: center;

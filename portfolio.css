@@ -238,6 +238,7 @@
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   flex: 1;
@@ -254,6 +255,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   flex: 1;
@@ -288,6 +290,7 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  scrollbar-width: thin;
 }
 
 /* Dot rail, positioned like the homepage's .slide-dots but scoped
@@ -302,14 +305,20 @@
 
 /* In horizontal/vertical slide-deck mode, the dot rail becomes a
    fixed side column (left or right, per the user's choice) rather
-   than a row under the hero — the classic slideshow-indicator look. */
+   than a row under the hero — the classic slideshow-indicator look.
+   It gets its own soft pill background so the dots stay legible
+   regardless of what's showing behind them on the current slide. */
 .portfolio-site[data-section-anim="horizontal"] .pf-slide-dots,
 .portfolio-site[data-section-anim="vertical"] .pf-slide-dots {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
   flex-direction: column;
-  padding: 0;
+  gap: 0.6rem;
+  padding: 0.6rem 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-surface) 70%, transparent);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
   z-index: 5;
 }
 .portfolio-site[data-section-anim="horizontal"][data-dots-pos="left"] .pf-slide-dots,
@@ -322,13 +331,17 @@
 }
 
 .pf-dot {
-  width: 8px; height: 8px;
+  width: 9px; height: 9px;
   border-radius: 50%;
   border: 2px solid var(--color-border);
-  background: transparent;
+  background: var(--color-surface);
   cursor: pointer;
   padding: 0;
-  transition: background 0.2s, transform 0.2s;
+  transition: background 0.2s, transform 0.2s, border-color 0.2s;
+}
+
+.pf-dot:hover {
+  border-color: var(--pf-accent, var(--color-primary));
 }
 
 .pf-dot.active {
@@ -524,20 +537,13 @@
   transform: scale(1.02);
 }
 .pf-gallery-item:hover::after {
-  content: "🔍";
+  content: "";
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.4rem;
-  background: rgba(0,0,0,0.15);
+  background: rgba(0,0,0,0.12);
 }
 .pf-gallery-item[href] {
   cursor: pointer;
-}
-.pf-gallery-item[href]:hover::after {
-  content: "↗";
 }
 .pf-gallery-item img {
   width: 100%;

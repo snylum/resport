@@ -779,6 +779,19 @@ class EditorStore {
         }
       }
     });
+    // Media blocks (gallery/video/links) that this layout doesn't call
+    // for get hidden — not deleted — since e.g. a plain "Video Reel"
+    // layout isn't built around a photo grid. Blocks the layout DOES
+    // call for are un-hidden in case a previous layout switch hid them.
+    // Non-media block types (experience, skills, etc.) are never
+    // touched here.
+    if (t.category === 'structural') {
+      const structuralTypes = ['gallery', 'video', 'links'];
+      const wanted = new Set(t.addsBlockTypes || []);
+      this.state.portfolio.blocks.forEach(b => {
+        if (structuralTypes.includes(b.type)) b.hidden = !wanted.has(b.type);
+      });
+    }
     this.emit('template_changed', id);
     this.emit('design_changed', this.state.portfolio.design);
     this.emit('blocks_changed');
