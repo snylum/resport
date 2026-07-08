@@ -449,7 +449,7 @@ export const BLOCK_LIBRARY = [
   { type: 'certifications', label: 'Certifications', makeData: () => ({ items: [{ name: 'Certification Name', issuer: 'Issuing Body', date: 'Year' }] }) },
   { type: 'languages', label: 'Languages', makeData: () => ({ items: [{ name: 'English', level: 'Fluent' }] }) },
   { type: 'custom', label: 'Custom Text Block', makeData: () => ({ title: 'Custom Section', text: 'Add any additional information here.' }) },
-  { type: 'gallery', label: 'Photo Gallery', makeData: () => ({ photos: [], verify: emptyVerify() }), mediaOnly: true },
+  { type: 'gallery', label: 'Photo Gallery', makeData: () => ({ photos: [] }), mediaOnly: true },
   { type: 'video', label: 'Embedded Video', makeData: () => ({ url: '', caption: '' }), mediaOnly: true },
   { type: 'links', label: 'Embedded Links', makeData: () => ({ items: [{ label: 'Website', url: '' }] }) }
 ];
@@ -638,10 +638,28 @@ function deepClone(obj) {
 }
 
 // Make sure every experience block has a verify object, even ones
-// coming from an older save file / the resume clone.
+// coming from an older save file / the resume clone. Also migrates
+// galleries from the old shape (a flat array of photo src strings,
+// plus one `verify` for the whole gallery) to the new one — each
+// photo is its own `{ id, src, verify }` object, so proof can be
+// attached per-photo instead of once for the entire grid. Any old
+// gallery-wide verify becomes that photo's starting verify only if
+// it doesn't already have one, so nothing gets silently dropped.
 function ensureVerifyShape(blocks) {
   blocks.forEach(b => {
     if (b.type === 'experience' && !b.data.verify) b.data.verify = emptyVerify();
+    if (b.type === 'gallery') {
+      const legacyVerify = b.data.verify;
+      b.data.photos = (b.data.photos || []).map(p => {
+        if (typeof p === 'string') {
+          return { id: uid(), src: p, verify: legacyVerify && legacyVerify.type !== 'none' ? { ...legacyVerify } : emptyVerify() };
+        }
+        if (!p.verify) p.verify = emptyVerify();
+        if (!p.id) p.id = uid();
+        return p;
+      });
+      delete b.data.verify;
+    }
   });
   return blocks;
 }
@@ -752,18 +770,32 @@ class EditorStore {
 
   // Verification attachment on an experience block (portfolio-only concept,
   // but works on whichever document is active so the same UI code runs).
-  updateVerify(id, field, value) {
+  // Verification attachment. Normally on the block itself (experience
+  // entries), but for gallery blocks each *photo* carries its own proof
+  // — pass photoIndex to target `block.data.photos[photoIndex].verify`
+  // instead of `block.data.verify`.
+  updateVerify(id, field, value, photoIndex) {
     const block = this.active().blocks.find(b => b.id === id);
     if (!block) return;
-    if (!block.data.verify) block.data.verify = emptyVerify();
-    block.data.verify[field] = value;
+    if (photoIndex != null && block.data.photos && block.data.photos[photoIndex]) {
+      const photo = block.data.photos[photoIndex];
+      if (!photo.verify) photo.verify = emptyVerify();
+      photo.verify[field] = value;
+    } else {
+      if (!block.data.verify) block.data.verify = emptyVerify();
+      block.data.verify[field] = value;
+    }
     this.emit('blocks_changed', this.active().blocks);
   }
 
-  clearVerify(id) {
+  clearVerify(id, photoIndex) {
     const block = this.active().blocks.find(b => b.id === id);
     if (!block) return;
-    block.data.verify = emptyVerify();
+    if (photoIndex != null && block.data.photos && block.data.photos[photoIndex]) {
+      block.data.photos[photoIndex].verify = emptyVerify();
+    } else {
+      block.data.verify = emptyVerify();
+    }
     this.emit('blocks_changed', this.active().blocks);
   }
 

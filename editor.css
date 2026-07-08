@@ -386,10 +386,6 @@ body {
 }
 
 /* ── Template gallery (Customize > Template) ─────────────────── */
-.tpl-group + .tpl-group {
-  border-top: 1px solid var(--color-border);
-}
-
 .tpl-group-title {
   font-size: 0.8rem;
   font-weight: 700;
@@ -1199,6 +1195,27 @@ body {
   color: #fff;
   font-size: 0.6rem;
   cursor: pointer;
+}
+
+.sd-gallery-thumb-verify {
+  position: absolute;
+  left: 2px;
+  bottom: 2px;
+  padding: 0 5px;
+  height: 16px;
+  line-height: 16px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.55rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sd-gallery-thumb-verify.is-verified {
+  background: var(--color-secondary, #1a8f5c);
 }
 
 .sd-gallery-add {

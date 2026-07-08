@@ -138,17 +138,19 @@
   word-break: break-all;
 }
 
-.admin-site-link a { color: var(--color-secondary); font-weight: 600; }
-
 .admin-site-paid {
   color: var(--color-success);
   font-weight: 700;
 }
 
+.admin-paid-soon { color: #B8860B; }
+.admin-paid-expired { color: var(--color-danger, #C0392B); }
+
 .admin-modal-field {
   margin: 0.9rem 0 1.1rem;
 }
-.admin-modal-field input {
+.admin-modal-field input,
+.admin-modal-field select {
   width: 100%;
   padding: 0.6rem 0.8rem;
   border: 2px solid var(--color-border);

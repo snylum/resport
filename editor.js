@@ -312,9 +312,10 @@ function blockEditFieldsHTML(block) {
         { key: 'name', cls: 'ce-strong' }, { key: 'level', cls: 'ce-muted' }
       ]));
     case 'gallery': {
-      const thumbs = (d.photos || []).map((src, i) => `
+      const thumbs = (d.photos || []).map((p, i) => `
         <div class="sd-gallery-thumb">
-          <img src="${esc(src)}" alt="" />
+          <img src="${esc(p.src)}" alt="" />
+          <button class="sd-gallery-thumb-verify ${p.verify && p.verify.type !== 'none' ? 'is-verified' : ''}" data-action="edit-photo-verify" data-block="${block.id}" data-photo-index="${i}" type="button" title="${p.verify && p.verify.type !== 'none' ? 'Edit proof for this photo' : 'Add proof for this photo'}">${p.verify && p.verify.type !== 'none' ? '✓' : '+ proof'}</button>
           <button class="sd-gallery-thumb-remove" data-action="remove-item" data-block="${block.id}" data-field="photos" data-index="${i}" type="button" title="Remove photo">✕</button>
         </div>`).join('');
       return field('Photos', `
@@ -323,8 +324,7 @@ function blockEditFieldsHTML(block) {
           + Add photo
           <input type="file" accept="image/*" class="sd-gallery-file-input" data-block="${block.id}" hidden />
         </label>`)
-        + field('Verification (optional)', `<div class="pf-verify">${verifyControlHTML(block)}</div>`)
-        + `<p class="sd-field-hint">Add a link here to make photos open that link in a new tab instead of zooming in.</p>`;
+        + `<p class="sd-field-hint">Click "+ proof" on a photo to attach verification (certificate, badge, ID, or link) to that specific photo.</p>`;
     }
     case 'video':
       return field('Video URL (YouTube, Vimeo, Loom)', ceField(d.url, 'url', block.id))
@@ -345,6 +345,16 @@ function canvasVerifyBadge(block) {
   if (v.type === 'none') return '';
   const labelHTML = v.label ? `<span class="pf-verify-label">${esc(v.label)}</span>` : '';
   return `<div class="pf-verify"><button class="pf-verify-badge" data-action="view-verify" data-block="${block.id}" type="button">✓ Verified${labelHTML}</button></div>`;
+}
+
+// Small "✓" pin shown in the corner of a gallery photo that has its
+// own proof attached — clicking it opens that photo's verification,
+// same view-only modal as the block-level badge above, just scoped
+// to one photo via data-photo-index instead of the whole block.
+function canvasPhotoVerifyBadge(block, photo, index) {
+  const v = photo.verify || { type: 'none' };
+  if (v.type === 'none') return '';
+  return `<button class="pf-photo-verify-badge" data-action="view-verify" data-block="${block.id}" data-photo-index="${index}" title="View proof for this photo" type="button">✓</button>`;
 }
 
 function createResumeBlock(block) {
@@ -432,13 +442,16 @@ function createPortfolioBlock(block) {
       innerHTML = `<div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.level || '')}</span></div>`).join('')}</div>`;
       break;
     case 'gallery': {
-      const v = block.data.verify || { type: 'none' };
-      const galleryHref = v.type === 'link' && v.link ? (/^https?:\/\//i.test(v.link) ? v.link : `https://${v.link}`) : null;
       baseClass = 'pf-card pf-gallery-card';
       innerHTML = (block.data.photos || []).length
-        ? `<div class="pf-gallery-grid">${(block.data.photos || []).map(src => galleryHref
-            ? `<a class="pf-gallery-item" href="${esc(galleryHref)}" target="_blank" rel="noopener noreferrer" title="Open verification link"><img src="${esc(src)}" alt="" /></a>`
-            : `<div class="pf-gallery-item" data-action="zoom-photo" data-src="${esc(src)}" title="Click to zoom"><img src="${esc(src)}" alt="" /></div>`).join('')}</div>${canvasVerifyBadge(block)}`
+        ? `<div class="pf-gallery-grid">${(block.data.photos || []).map((p, i) => {
+            const pv = p.verify || { type: 'none' };
+            const photoHref = pv.type === 'link' && pv.link ? (/^https?:\/\//i.test(pv.link) ? pv.link : `https://${pv.link}`) : null;
+            const badge = canvasPhotoVerifyBadge(block, p, i);
+            return photoHref
+              ? `<a class="pf-gallery-item" href="${esc(photoHref)}" target="_blank" rel="noopener noreferrer" title="Open verification link">${badge}<img src="${esc(p.src)}" alt="" /></a>`
+              : `<div class="pf-gallery-item" data-action="zoom-photo" data-src="${esc(p.src)}" title="Click to zoom">${badge}<img src="${esc(p.src)}" alt="" /></div>`;
+          }).join('')}</div>`
         : `<div class="pf-gallery-empty">No photos yet — add some from the sidebar.</div>`;
       break;
     }
@@ -682,7 +695,7 @@ function handleTrackClick(e) {
     } else if (action === 'remove-item') {
       Store.removeListItem(blockId, field, Number(actionBtn.dataset.index));
     } else if (action === 'view-verify') {
-      openVerifyViewModal(blockId);
+      openVerifyViewModal(blockId, actionBtn.dataset.photoIndex !== undefined ? Number(actionBtn.dataset.photoIndex) : undefined);
     } else if (action === 'edit-verify') {
       openVerifyEditModal(blockId);
     } else if (action === 'toggle-expand') {
@@ -779,10 +792,12 @@ function openPhotoZoomModal(src) {
 }
 
 // ── 4a. Verification: view proof ──────────────────────────────
-function openVerifyViewModal(blockId) {
+function openVerifyViewModal(blockId, photoIndex) {
   const block = Store.active().blocks.find(b => b.id === blockId);
   if (!block) return;
-  const v = block.data.verify || { type: 'none' };
+  const v = (photoIndex != null && block.data.photos && block.data.photos[photoIndex])
+    ? (block.data.photos[photoIndex].verify || { type: 'none' })
+    : (block.data.verify || { type: 'none' });
 
   let body;
   if (v.type === 'photo' && v.photo) {
@@ -805,17 +820,18 @@ function openVerifyViewModal(blockId) {
 }
 
 // ── 4b. Verification: add / edit / remove proof ────────────────
-function openVerifyEditModal(blockId) {
+function openVerifyEditModal(blockId, photoIndex) {
   const block = Store.active().blocks.find(b => b.id === blockId);
   if (!block) return;
-  const v = block.data.verify || { type: 'none', photo: null, link: '', label: '' };
+  const isPhotoScoped = photoIndex != null && block.data.photos && block.data.photos[photoIndex];
+  const v = isPhotoScoped ? (block.data.photos[photoIndex].verify || { type: 'none', photo: null, link: '', label: '' }) : (block.data.verify || { type: 'none', photo: null, link: '', label: '' });
 
   let currentType = v.type === 'none' ? 'photo' : v.type;
   let pendingPhoto = v.photo || null;
 
   const html = `
-    <h3 class="modal-title" id="modalTitle">Verify this experience</h3>
-    <p class="modal-sub">Attach a photo (certificate, badge, ID) or a link (LinkedIn post, reference, article) so visitors can confirm this role really happened.</p>
+    <h3 class="modal-title" id="modalTitle">${isPhotoScoped ? 'Verify this photo' : 'Verify this experience'}</h3>
+    <p class="modal-sub">${isPhotoScoped ? 'Attach a photo (certificate, badge, ID) or a link (LinkedIn post, reference, article) so visitors can confirm this specific photo is real.' : 'Attach a photo (certificate, badge, ID) or a link (LinkedIn post, reference, article) so visitors can confirm this role really happened.'}</p>
     <div class="verify-type-row">
       <button class="option-pill ${currentType === 'photo' ? 'active' : ''}" data-verify-type="photo" type="button">📷 Photo</button>
       <button class="option-pill ${currentType === 'link' ? 'active' : ''}" data-verify-type="link" type="button">🔗 Link</button>
@@ -873,7 +889,7 @@ function openVerifyEditModal(blockId) {
     const removeBtn = root.querySelector('#verifyRemoveBtn');
     if (removeBtn) {
       removeBtn.addEventListener('click', () => {
-        Store.clearVerify(blockId);
+        Store.clearVerify(blockId, photoIndex);
         closeModal();
       });
     }
@@ -893,10 +909,10 @@ function openVerifyEditModal(blockId) {
         return;
       }
 
-      Store.updateVerify(blockId, 'type', currentType);
-      if (currentType === 'photo') Store.updateVerify(blockId, 'photo', pendingPhoto);
-      else Store.updateVerify(blockId, 'link', link);
-      Store.updateVerify(blockId, 'label', label);
+      Store.updateVerify(blockId, 'type', currentType, photoIndex);
+      if (currentType === 'photo') Store.updateVerify(blockId, 'photo', pendingPhoto, photoIndex);
+      else Store.updateVerify(blockId, 'link', link, photoIndex);
+      Store.updateVerify(blockId, 'label', label, photoIndex);
       closeModal();
     });
   });
@@ -1035,6 +1051,31 @@ function saveUsername(u) {
   localStorage.setItem(PUBLISH_USERNAME_KEY, u);
 }
 
+// Claiming your first address doesn't count as a "change" — only
+// switching away from an address you already had does. Capped at 2
+// changes total, so an account can use at most 3 different addresses
+// over its lifetime (the original + 2 changes).
+const USERNAME_CHANGE_COUNT_KEY = 'proveswork_username_change_count';
+const MAX_USERNAME_CHANGES = 2;
+
+function getUsernameChangeCount() {
+  return Number(localStorage.getItem(USERNAME_CHANGE_COUNT_KEY) || '0') || 0;
+}
+
+function usernameChangesRemaining() {
+  return Math.max(0, MAX_USERNAME_CHANGES - getUsernameChangeCount());
+}
+
+// Call this right before saveUsername() when the value being published
+// is actually different from what was previously saved — that's the
+// only case that should consume one of the 2 allowed changes.
+function recordUsernameChangeIfNeeded(newUsername) {
+  const previous = getSavedUsername();
+  if (previous && previous !== newUsername) {
+    localStorage.setItem(USERNAME_CHANGE_COUNT_KEY, String(getUsernameChangeCount() + 1));
+  }
+}
+
 // ── Site status badge (toolbar) ───────────────────────────────
 // Tells you, right on /editor, whether what's saved for your address
 // is a draft that's never been submitted, awaiting admin approval,
@@ -1047,6 +1088,19 @@ const SITE_STATUS_LABELS = {
   rejected: '● Rejected by admin',
   deleted: '● Unpublished'
 };
+
+// Once an admin has marked a site paid, show how long that payment
+// covers right on the toolbar badge — e.g. "● Live · paid, 42d left" —
+// so the owner doesn't have to guess when they'll need to republish
+// and pay again.
+function paidCountdownSuffix(data) {
+  if (!data || !data.paid) return '';
+  if (!data.paidUntil) return ' · paid';
+  const msLeft = new Date(data.paidUntil).getTime() - Date.now();
+  const daysLeft = Math.ceil(msLeft / (24 * 60 * 60 * 1000));
+  if (daysLeft <= 0) return ` · paid period expired ${Math.abs(daysLeft)}d ago`;
+  return ` · paid, ${daysLeft}d left`;
+}
 
 async function refreshSiteStatusBadge() {
   if (!el.siteStatusBadge) return;
@@ -1064,7 +1118,7 @@ async function refreshSiteStatusBadge() {
     const data = await res.json();
     const status = data.status || 'draft';
     el.siteStatusBadge.className = `site-status-badge status-${status}`;
-    el.siteStatusBadge.textContent = SITE_STATUS_LABELS[status] || SITE_STATUS_LABELS.draft;
+    el.siteStatusBadge.textContent = (SITE_STATUS_LABELS[status] || SITE_STATUS_LABELS.draft) + paidCountdownSuffix(data);
     el.siteStatusBadge.classList.remove('hidden');
   } catch (err) {
     // No backend reachable from here — don't claim a status we can't
@@ -1325,21 +1379,23 @@ function renderStaticPortfolioBlock(block) {
       return `<div class="pf-card"><div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.level || '')}</span></div>`).join('')}</div></div>`;
     case 'gallery': {
       if (!(block.data.photos || []).length) return '';
-      const v = block.data.verify || { type: 'none' };
-      let verifyHTML = '';
-      if (v.type === 'photo' && v.photo) {
-        const labelHTML = v.label ? `<span class="pf-verify-label">${esc(v.label)}</span>` : '';
-        verifyHTML = `<div class="pf-verify"><button class="pf-verify-badge" data-verify-type="photo" data-verify-photo="${esc(v.photo)}" data-verify-label="${esc(v.label || '')}" type="button">✓ Verified${labelHTML}</button></div>`;
-      } else if (v.type === 'link' && v.link) {
-        const safeHref = /^https?:\/\//i.test(v.link) ? v.link : `https://${v.link}`;
-        const labelHTML = v.label ? `<span class="pf-verify-label">${esc(v.label)}</span>` : '';
-        verifyHTML = `<div class="pf-verify"><button class="pf-verify-badge" data-verify-type="link" data-verify-link="${esc(safeHref)}" data-verify-label="${esc(v.label || '')}" type="button">✓ Verified${labelHTML}</button></div>`;
-      }
-      const galleryHref = v.type === 'link' && v.link ? (/^https?:\/\//i.test(v.link) ? v.link : `https://${v.link}`) : null;
-      const itemsHTML = block.data.photos.map(src => galleryHref
-        ? `<a class="pf-gallery-item" href="${esc(galleryHref)}" target="_blank" rel="noopener noreferrer"><img src="${esc(src)}" alt="" /></a>`
-        : `<div class="pf-gallery-item" data-action="zoom-photo" data-src="${esc(src)}"><img src="${esc(src)}" alt="" /></div>`).join('');
-      return `<div class="pf-card pf-gallery-card"><div class="pf-gallery-grid">${itemsHTML}</div></div>${verifyHTML}`;
+      const itemsHTML = block.data.photos.map((p, i) => {
+        const pv = p.verify || { type: 'none' };
+        const photoHref = pv.type === 'link' && pv.link ? (/^https?:\/\//i.test(pv.link) ? pv.link : `https://${pv.link}`) : null;
+        let badge = '';
+        if (pv.type === 'photo' && pv.photo) {
+          const labelHTML = pv.label ? `<span class="pf-verify-label">${esc(pv.label)}</span>` : '';
+          badge = `<button class="pf-photo-verify-badge" data-verify-type="photo" data-verify-photo="${esc(pv.photo)}" data-verify-label="${esc(pv.label || '')}" type="button" title="View proof">✓${labelHTML}</button>`;
+        } else if (pv.type === 'link' && pv.link) {
+          const safeHref = /^https?:\/\//i.test(pv.link) ? pv.link : `https://${pv.link}`;
+          const labelHTML = pv.label ? `<span class="pf-verify-label">${esc(pv.label)}</span>` : '';
+          badge = `<button class="pf-photo-verify-badge" data-verify-type="link" data-verify-link="${esc(safeHref)}" data-verify-label="${esc(pv.label || '')}" type="button" title="View proof">✓${labelHTML}</button>`;
+        }
+        return photoHref
+          ? `<a class="pf-gallery-item" href="${esc(photoHref)}" target="_blank" rel="noopener noreferrer">${badge}<img src="${esc(p.src)}" alt="" /></a>`
+          : `<div class="pf-gallery-item" data-action="zoom-photo" data-src="${esc(p.src)}">${badge}<img src="${esc(p.src)}" alt="" /></div>`;
+      }).join('');
+      return `<div class="pf-card pf-gallery-card"><div class="pf-gallery-grid">${itemsHTML}</div></div>`;
     }
     case 'video': {
       if (!block.data.url) return '';
@@ -1473,6 +1529,7 @@ function openPublishModal() {
       <p class="username-status" id="publishUsernameStatus"></p>
     </div>
     <p class="modal-sub">Publishing is manually reviewed before it goes live and requires an active plan.</p>
+    ${signedIn && getSavedUsername() ? `<p class="modal-sub" style="font-size:0.78rem;">You can change your username ${MAX_USERNAME_CHANGES} times total. ${usernameChangesRemaining()} change${usernameChangesRemaining() === 1 ? '' : 's'} left.</p>` : ''}
     <div class="modal-actions">
       <button class="btn btn-secondary btn-sm" id="publishConfirmBtn" type="button" disabled>Publish</button>
     </div>
@@ -1512,6 +1569,16 @@ function openPublishModal() {
         status.textContent = `✓ ${value}.${PUBLISH_APEX} is already yours`;
         status.className = 'username-status ok';
         confirmBtn.disabled = false;
+        return;
+      }
+      // Changing to a different address than the one already saved
+      // consumes one of the 2 allowed username changes — block it here
+      // once they're used up, rather than letting the publish request
+      // go out and fail (or worse, silently reuse the limit).
+      if (getSavedUsername() && usernameChangesRemaining() <= 0) {
+        status.textContent = `You've already changed your username ${MAX_USERNAME_CHANGES} times — ${getSavedUsername()}.${PUBLISH_APEX} is the only address you can publish to.`;
+        status.className = 'username-status warn';
+        confirmBtn.disabled = true;
         return;
       }
       status.textContent = 'Checking availability…';
@@ -1601,9 +1668,15 @@ async function doPublish(username, confirmBtn) {
       alertModal(data.error || 'Something went wrong.');
       return;
     }
+    recordUsernameChangeIfNeeded(username);
     saveUsername(username);
     refreshSiteStatusBadge();
-    openPublishSuccessModal(data.url, 'pending');
+    // The Worker tells us whether this went straight back out as a live
+    // update to an already-approved site, or is a fresh submission that
+    // now needs manual review — the success modal should say the right
+    // thing in each case instead of always claiming "submitted for
+    // review" (which isn't true for a routine update to a live site).
+    openPublishSuccessModal(data.url, data.status === 'live' ? 'updated' : 'pending');
   } catch (err) {
     // No live worker to publish to from here — generate a real,
     // fully-working local preview instead of dead-ending on a
@@ -1617,13 +1690,18 @@ async function doPublish(username, confirmBtn) {
 }
 
 function openPublishSuccessModal(url, mode = 'pending') {
-  // mode: 'pending' (real backend, awaiting admin review + paywall),
-  // or 'local' (no backend reachable — a local-only preview blob).
-  const title = mode === 'local' ? '👀 Local preview ready' : '✓ Submitted for review';
+  // mode: 'pending' (real backend, first-time submission awaiting admin
+  // review + paywall), 'updated' (real backend, but this site was
+  // already live/approved — the edit went straight back out, no
+  // re-review needed), or 'local' (no backend reachable — a
+  // local-only preview blob).
+  const title = mode === 'local' ? '👀 Local preview ready' : (mode === 'updated' ? '✓ Live site updated' : '✓ Submitted for review');
   const sub = mode === 'local'
     ? `No live backend reachable from here — this is a local preview only, nothing was published.`
-    : `Your address is reserved. It'll go live once payment and admin review are complete.`;
-  const linkLabel = mode === 'local' ? 'Open preview ↗' : 'Preview address ↗';
+    : (mode === 'updated'
+      ? `Your changes are live now — no additional review needed since this address was already approved.`
+      : `Your address is reserved. It'll go live once payment and admin review are complete.`);
+  const linkLabel = mode === 'local' ? 'Open preview ↗' : (mode === 'updated' ? 'View live site ↗' : 'Preview address ↗');
   const showCopy = mode !== 'local';
 
   openModal(`
@@ -1673,7 +1751,8 @@ function renderSidebarList(blocks) {
     else if (block.type === 'languages') titleText = 'Languages';
     else if (block.type === 'custom') titleText = block.data.title || 'Custom Block';
 
-    const verifyBadge = ((block.type === 'experience' || block.type === 'gallery') && block.data.verify && block.data.verify.type !== 'none')
+    const hasGalleryVerify = block.type === 'gallery' && (block.data.photos || []).some(p => p.verify && p.verify.type !== 'none');
+    const verifyBadge = ((block.type === 'experience' && block.data.verify && block.data.verify.type !== 'none') || hasGalleryVerify)
       ? `<span class="sd-verify-dot" title="Has verification proof">✓</span>` : '';
 
     const swapBtn = twoCol
@@ -1729,7 +1808,7 @@ function initSidebarActions() {
     if (!input || !input.files[0]) return;
     const blockId = input.dataset.block;
     const reader = new FileReader();
-    reader.onload = (ev) => Store.addListItem(blockId, 'photos', ev.target.result);
+    reader.onload = (ev) => Store.addListItem(blockId, 'photos', { id: uid(), src: ev.target.result, verify: { type: 'none', photo: null, link: '', label: '' } });
     reader.readAsDataURL(input.files[0]);
   });
 
@@ -1761,6 +1840,8 @@ function initSidebarActions() {
         openVerifyViewModal(actionBtn.dataset.block);
       } else if (action === 'edit-verify') {
         openVerifyEditModal(actionBtn.dataset.block);
+      } else if (action === 'edit-photo-verify') {
+        openVerifyEditModal(actionBtn.dataset.block, Number(actionBtn.dataset.photoIndex));
       }
       return;
     }

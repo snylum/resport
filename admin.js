@@ -176,6 +176,19 @@ async function loadSites() {
   }
 }
 
+// Renders the little " · N days left" / " · expired" suffix shown next
+// to "✓ Paid" on a site row, based on the paidUntil date the Worker
+// computed when the admin marked it paid.
+function paidCountdownLabel(s) {
+  if (!s.paidUntil) return '';
+  const msLeft = new Date(s.paidUntil).getTime() - Date.now();
+  const daysLeft = Math.ceil(msLeft / (24 * 60 * 60 * 1000));
+  const durationLabel = s.paidDurationMonths ? ` (${s.paidDurationMonths}mo)` : '';
+  if (daysLeft <= 0) return ` · <span class="admin-paid-expired">expired ${Math.abs(daysLeft)}d ago${durationLabel}</span>`;
+  if (daysLeft <= 7) return ` · <span class="admin-paid-soon">${daysLeft}d left${durationLabel}</span>`;
+  return ` · ${daysLeft}d left${durationLabel}`;
+}
+
 function renderList() {
   const q = (el.adminSearch.value || '').trim().toLowerCase();
   const filtered = allSites.filter(s => {
@@ -194,8 +207,7 @@ function renderList() {
       <div class="admin-site-main">
         <div class="admin-site-username">${esc(s.username)}.proves.work${(s.status === 'live' && s.ownerEmail) ? ` <span class="admin-owner-chip">${esc(s.ownerEmail)}</span>` : ''}</div>
         <div class="admin-site-meta">${s.ownerEmail ? esc(s.ownerEmail) : 'anonymous'} · updated ${s.updatedAt ? new Date(s.updatedAt).toLocaleString() : '—'}</div>
-        ${s.manualLink ? `<div class="admin-site-meta admin-site-link">🔗 <a href="${esc(s.manualLink)}" target="_blank" rel="noopener noreferrer">${esc(s.manualLink)}</a></div>` : ''}
-        ${s.paid ? `<div class="admin-site-meta admin-site-paid">✓ Paid${s.referenceNumber ? ` · ref: ${esc(s.referenceNumber)}` : ''}</div>` : ''}
+        ${s.paid ? `<div class="admin-site-meta admin-site-paid">✓ Paid${s.referenceNumber ? ` · ref: ${esc(s.referenceNumber)}` : ''}${paidCountdownLabel(s)}</div>` : ''}
       </div>
       <span class="admin-status-pill ${s.status}">${s.status}</span>
       <div class="admin-site-actions">
@@ -205,7 +217,6 @@ function renderList() {
         ${s.status === 'live' ? `<button class="btn btn-ghost btn-sm" data-action="reject" type="button">Unpublish</button>` : ''}
         ${(s.status === 'rejected' || s.status === 'deleted') ? `<button class="btn btn-secondary btn-sm" data-action="restore" type="button">Restore</button>` : ''}
         <button class="btn btn-ghost btn-sm" data-action="${s.paid ? 'unmark-paid' : 'mark-paid'}" type="button">${s.paid ? 'Unmark paid' : '$ Mark paid'}</button>
-        <button class="btn btn-ghost btn-sm" data-action="edit-link" type="button">${s.manualLink ? 'Edit link' : '+ Add link'}</button>
         <button class="btn btn-danger btn-sm" data-action="hard-delete" type="button">Delete</button>
       </div>
     </div>
@@ -259,12 +270,12 @@ function confirmHardDelete(username) {
   });
 }
 
-async function setPaid(username, paid, referenceNumber) {
+async function setPaid(username, paid, referenceNumber, durationMonths) {
   const account = getSavedAdminAccount();
   const res = await fetch('/api/admin/set-paid', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ googleCredential: account.credential, username, paid, referenceNumber })
+    body: JSON.stringify({ googleCredential: account.credential, username, paid, referenceNumber, durationMonths })
   });
   const data = await res.json();
   if (!data.ok) {
@@ -277,7 +288,16 @@ async function setPaid(username, paid, referenceNumber) {
 function openMarkPaidModal(username, currentRef) {
   openModal(`
     <h3 class="modal-title" id="modalTitle">Mark @${esc(username)} as paid</h3>
-    <p class="modal-sub">Optional — add a payment reference number for your own records.</p>
+    <p class="modal-sub">Choose how long this payment covers, and optionally add a reference number for your own records.</p>
+    <div class="admin-modal-field">
+      <label for="paidDurationSelect" style="display:block;font-size:0.8rem;color:var(--color-text-muted);margin-bottom:0.3rem;">Duration</label>
+      <select id="paidDurationSelect">
+        <option value="1">1 month</option>
+        <option value="3" selected>3 months (standard)</option>
+        <option value="6">6 months</option>
+        <option value="12">12 months</option>
+      </select>
+    </div>
     <div class="admin-modal-field">
       <input type="text" id="paidRefInput" placeholder="Reference number (optional)" value="${esc(currentRef || '')}" autocomplete="off" />
     </div>
@@ -289,51 +309,8 @@ function openMarkPaidModal(username, currentRef) {
     root.querySelector('#cancelPaidBtn').addEventListener('click', closeModal);
     root.querySelector('#confirmPaidBtn').addEventListener('click', () => {
       const ref = root.querySelector('#paidRefInput').value.trim();
-      setPaid(username, true, ref);
-      closeModal();
-    });
-  });
-}
-
-async function setLink(username, link) {
-  const account = getSavedAdminAccount();
-  const res = await fetch('/api/admin/set-link', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ googleCredential: account.credential, username, link })
-  });
-  const data = await res.json();
-  if (!data.ok) {
-    alertModal(data.error || 'Something went wrong.');
-    return;
-  }
-  loadSites();
-}
-
-function openEditLinkModal(username, currentLink) {
-  openModal(`
-    <h3 class="modal-title" id="modalTitle">Manual link for @${esc(username)}</h3>
-    <p class="modal-sub">Attach a reference URL to this site (receipt, ticket, social profile, anything useful). Only visible here in admin.</p>
-    <div class="admin-modal-field">
-      <input type="url" id="manualLinkInput" placeholder="https://…" value="${esc(currentLink || '')}" autocomplete="off" />
-    </div>
-    <div class="modal-actions">
-      ${currentLink ? `<button class="btn btn-ghost btn-sm" id="removeLinkBtn" type="button">Remove link</button>` : ''}
-      <button class="btn btn-ghost btn-sm" id="cancelLinkBtn" type="button">Cancel</button>
-      <button class="btn btn-secondary btn-sm" id="confirmLinkBtn" type="button">Save link</button>
-    </div>
-  `, (root) => {
-    root.querySelector('#cancelLinkBtn').addEventListener('click', closeModal);
-    if (root.querySelector('#removeLinkBtn')) {
-      root.querySelector('#removeLinkBtn').addEventListener('click', () => {
-        setLink(username, '');
-        closeModal();
-      });
-    }
-    root.querySelector('#confirmLinkBtn').addEventListener('click', () => {
-      const link = root.querySelector('#manualLinkInput').value.trim();
-      if (!link) { alertModal('Enter a URL, or use Remove link instead.'); return; }
-      setLink(username, link);
+      const durationMonths = Number(root.querySelector('#paidDurationSelect').value) || 3;
+      setPaid(username, true, ref, durationMonths);
       closeModal();
     });
   });
@@ -383,7 +360,6 @@ el.adminSitesList.addEventListener('click', (e) => {
   else if (action === 'hard-delete') confirmHardDelete(username);
   else if (action === 'mark-paid') openMarkPaidModal(username, site && site.referenceNumber);
   else if (action === 'unmark-paid') setPaid(username, false, '');
-  else if (action === 'edit-link') openEditLinkModal(username, site && site.manualLink);
 });
 
 document.querySelectorAll('.admin-tab').forEach(tab => {

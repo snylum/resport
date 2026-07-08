@@ -214,7 +214,17 @@ async function handleApi(request, env, url) {
     if (!USERNAME_RE.test(username)) return json({ status: 'draft' });
     const record = await env.SITES.get(`site:${username}`, 'json');
     if (!record || record.status === 'deleted') return json({ status: 'draft' });
-    return json({ status: record.status || 'live', updatedAt: record.updatedAt || null });
+    return json({
+      status: record.status || 'live',
+      updatedAt: record.updatedAt || null,
+      // Lets the editor show a "paid until / countdown" readout without
+      // needing an admin session — this is just a yes/no + a date, not
+      // anything sensitive.
+      paid: !!record.paid,
+      paidAt: record.paidAt || null,
+      paidUntil: record.paidUntil || null,
+      paidDurationMonths: record.paidDurationMonths || null
+    });
   }
 
   if (url.pathname === '/api/publish' && request.method === 'POST') {
@@ -259,24 +269,32 @@ async function handleApi(request, env, url) {
       }
     }
 
-    // Publishing never goes live immediately — it's saved as "pending"
-    // and only becomes publicly visible once an admin approves it from
-    // the admin dashboard (manual, paywalled verification). Re-saving
-    // an already-approved site while editing further keeps it hidden
-    // again until it's re-approved, so edits can't sneak past review.
+    // First-time publishes (and re-publishes of a site that was never
+    // approved, was rejected, or was unpublished) go to "pending" and
+    // wait on manual admin review, same as before.
+    //
+    // But once a site has already been through review and is live, the
+    // owner editing and republishing it is treated as an *update* to an
+    // already-approved site, not a brand-new submission — it goes
+    // straight back out as liveHtml with no further review, and the
+    // editor shows "updated", not "submitted for review", for it.
+    const wasAlreadyLive = !!existing && existing.status === 'live';
+    const nextStatus = wasAlreadyLive ? 'live' : 'pending';
+
     await env.SITES.put(`site:${username}`, JSON.stringify({
       ownerEmail: ownerEmail || (existing ? existing.ownerEmail : null) || null,
       html,
-      // liveHtml is untouched here on purpose — it stays whatever was
-      // last *approved*, so this new draft can't go public on its own.
-      // It's only promoted to liveHtml by an admin 'live' approval.
-      liveHtml: (existing && existing.liveHtml) || null,
-      status: 'pending',
+      // liveHtml stays whatever was last *approved* unless this publish
+      // is itself going straight to live (see wasAlreadyLive above) — in
+      // that case this draft is that new approved snapshot.
+      liveHtml: wasAlreadyLive ? html : ((existing && existing.liveHtml) || null),
+      status: nextStatus,
       updatedAt: new Date().toISOString(),
-      createdAt: (existing && existing.createdAt) || new Date().toISOString()
+      createdAt: (existing && existing.createdAt) || new Date().toISOString(),
+      ...(wasAlreadyLive ? { reviewedAt: new Date().toISOString(), reviewedBy: 'auto (already-approved update)' } : {})
     }));
 
-    return json({ ok: true, pending: true, url: `https://${username}.${APP_HOST}` });
+    return json({ ok: true, pending: nextStatus === 'pending', status: nextStatus, url: `https://${username}.${APP_HOST}` });
   }
 
   if (url.pathname === '/api/publish' && request.method === 'DELETE') {
@@ -333,6 +351,9 @@ async function handleApi(request, env, url) {
         deletedAt: record.deletedAt || null,
         paid: !!record.paid,
         referenceNumber: record.referenceNumber || '',
+        paidAt: record.paidAt || null,
+        paidUntil: record.paidUntil || null,
+        paidDurationMonths: record.paidDurationMonths || null,
         manualLink: record.manualLink || ''
       } : null;
     }));
@@ -435,14 +456,26 @@ async function handleApi(request, env, url) {
     const username = String(body.username || '').toLowerCase().trim();
     const paid = !!body.paid;
     const referenceNumber = String(body.referenceNumber || '').trim().slice(0, 120);
+    // How long this payment covers, in months — defaults to the
+    // standard publishing-fee validity window (see PUBLISH_FEE in
+    // editor.js) but an admin can override it per-site (e.g. a promo
+    // or a partial-period renewal).
+    const durationMonths = paid ? (Number(body.durationMonths) > 0 ? Number(body.durationMonths) : 3) : null;
     const existing = await env.SITES.get(`site:${username}`, 'json');
     if (!existing) return json({ ok: false, error: 'Not found.' }, 404);
+
+    const now = new Date();
+    const paidUntil = paid
+      ? new Date(now.getFullYear(), now.getMonth() + durationMonths, now.getDate()).toISOString()
+      : (existing.paidUntil || null);
 
     await env.SITES.put(`site:${username}`, JSON.stringify({
       ...existing,
       paid,
       referenceNumber: paid ? referenceNumber : (existing.referenceNumber || ''),
-      paidAt: paid ? new Date().toISOString() : (existing.paidAt || null),
+      paidAt: paid ? now.toISOString() : (existing.paidAt || null),
+      paidDurationMonths: paid ? durationMonths : (existing.paidDurationMonths || null),
+      paidUntil,
       paidMarkedBy: adminEmail
     }));
     return json({ ok: true });
