@@ -67,8 +67,6 @@ const el = {
   accentSwatchCustom: document.getElementById('accentSwatchCustom'),
   selHeadingFont: document.getElementById('selHeadingFont'),
   selBodyFont: document.getElementById('selBodyFont'),
-  inHeaderHeight: document.getElementById('inHeaderHeight'),
-  headerHeightLabel: document.getElementById('headerHeightLabel'),
   inTextPadding: document.getElementById('inTextPadding'),
   textPaddingLabel: document.getElementById('textPaddingLabel'),
   templateGallery: document.getElementById('templateGallery'),
@@ -2277,26 +2275,25 @@ function populateFontSelects() {
 function populatePortfolioTemplateGallery() {
   if (!el.portfolioTemplateGallery) return;
   const cardHTML = t => `
-    <button class="template-card" data-portfolio-template="${t.id}" type="button">
-      <div class="tpl-preview" style="align-items:center;justify-content:center;background:color-mix(in srgb, ${t.design.accent} 12%, white);">
-        <span style="font-size:1.4rem;line-height:1;">${t.icon}</span>
-        <div class="tpl-line" style="width:55%;height:6px;margin-top:6px;background:${t.design.accent};"></div>
-        <div class="tpl-line short" style="background:#999;"></div>
-      </div>
-      <div class="tpl-card-name">${esc(t.name)}</div>
-      <div class="tpl-card-tag">${esc(t.tagline)}</div>
+    <button class="tpl-mini" data-portfolio-template="${t.id}" type="button" title="${esc(t.name)} — ${esc(t.tagline)}">
+      <span class="tpl-mini-icon" style="background:color-mix(in srgb, ${t.design.accent} 16%, white);">${t.icon}</span>
+      <span class="tpl-mini-meta">
+        <span class="tpl-mini-name">${esc(t.name)}</span>
+        <span class="tpl-mini-font" style="font-family:${esc(FONT_STACKS[t.design.headingFont] || FONT_STACKS.modern)};">Aa</span>
+      </span>
+      <span class="tpl-mini-swatch" style="background:${t.design.accent};"></span>
     </button>
   `;
   el.portfolioTemplateGallery.innerHTML = `
     <div class="tpl-group">
       <div class="tpl-group-title">Templates</div>
       <div class="tpl-group-hint">Color, font & motion — same adaptive layout</div>
-      <div class="template-gallery">${PORTFOLIO_TEMPLATES.map(cardHTML).join('')}</div>
+      <div class="template-gallery template-gallery-mini">${PORTFOLIO_TEMPLATES.map(cardHTML).join('')}</div>
     </div>
     <div class="tpl-group">
       <div class="tpl-group-title">Layouts</div>
       <div class="tpl-group-hint">Structural variations, like a photo gallery grid</div>
-      <div class="template-gallery">${PORTFOLIO_STRUCTURAL_TEMPLATES.map(cardHTML).join('')}</div>
+      <div class="template-gallery template-gallery-mini">${PORTFOLIO_STRUCTURAL_TEMPLATES.map(cardHTML).join('')}</div>
     </div>
   `;
 }
@@ -2373,11 +2370,13 @@ function syncCustomizeControls(design) {
     });
   });
 
-  if (el.inHeaderHeight) {
-    const pct = Number(design.headerHeightPct) || 30;
-    el.inHeaderHeight.value = pct;
-    if (el.headerHeightLabel) el.headerHeightLabel.textContent = pct + '%';
-  }
+  document.querySelectorAll('.ratio-pill-row[data-target]').forEach(row => {
+    const key = row.dataset.target;
+    const pct = Number(design[key]) || 30;
+    row.querySelectorAll('.ratio-pill').forEach(p => {
+      p.classList.toggle('active', Number(p.dataset.value) === pct);
+    });
+  });
 
   if (el.inTextPadding) {
     const pad = Number(design.textPaddingRem) || 0;
@@ -2402,7 +2401,7 @@ function syncCustomizeControls(design) {
     card.classList.toggle('active', Store.state.viewMode === 'resume' && card.dataset.template === Store.state.resume.template);
   });
 
-  document.querySelectorAll('.template-card[data-portfolio-template]').forEach(card => {
+  document.querySelectorAll('.tpl-mini[data-portfolio-template]').forEach(card => {
     card.classList.toggle('active', Store.state.viewMode === 'portfolio' && card.dataset.portfolioTemplate === Store.state.portfolio.template);
   });
 }
@@ -2426,13 +2425,12 @@ function initCustomizePanel() {
   el.selHeadingFont.addEventListener('change', (e) => Store.setDesign('headingFont', e.target.value));
   el.selBodyFont.addEventListener('change', (e) => Store.setDesign('bodyFont', e.target.value));
 
-  if (el.inHeaderHeight) {
-    el.inHeaderHeight.addEventListener('input', (e) => {
-      const pct = Math.min(50, Math.max(1, Number(e.target.value) || 30));
-      if (el.headerHeightLabel) el.headerHeightLabel.textContent = pct + '%';
-      Store.setDesign('headerHeightPct', pct);
+  document.querySelectorAll('.ratio-pill-row[data-target]').forEach(row => {
+    const key = row.dataset.target;
+    row.querySelectorAll('.ratio-pill').forEach(pill => {
+      pill.addEventListener('click', () => Store.setDesign(key, Number(pill.dataset.value)));
     });
-  }
+  });
 
   if (el.inTextPadding) {
     el.inTextPadding.addEventListener('input', (e) => {
@@ -2446,7 +2444,7 @@ function initCustomizePanel() {
     card.addEventListener('click', () => Store.setTemplate(card.dataset.template));
   });
 
-  document.querySelectorAll('.template-card[data-portfolio-template]').forEach(card => {
+  document.querySelectorAll('.tpl-mini[data-portfolio-template]').forEach(card => {
     card.addEventListener('click', () => Store.setPortfolioTemplate(card.dataset.portfolioTemplate));
   });
 
