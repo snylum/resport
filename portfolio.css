@@ -113,7 +113,8 @@
 /* Horizontal mode never uses sticky for the header — see the "fixed
    shell" block below, which makes the header a static flex item that's
    always fully visible instead, so there's nothing to fall out of sync. */
-.portfolio-site[data-section-anim="horizontal"][data-header-style="pinned"] .pf-hero {
+.portfolio-site[data-section-anim="horizontal"][data-header-style="pinned"] .pf-hero,
+.portfolio-site[data-section-anim="vertical"][data-header-style="pinned"] .pf-hero {
   position: static;
 }
 
@@ -177,19 +178,24 @@
    scroll; if a single slide's content is taller than the space it's
    given, THAT slide scrolls internally (see .pf-slide-inner), not
    the page. */
-.portfolio-site[data-section-anim="horizontal"] {
+.portfolio-site[data-section-anim="horizontal"],
+.portfolio-site[data-section-anim="vertical"] {
   height: 100vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
 }
 
 .portfolio-site[data-section-anim="horizontal"] .pf-hero,
-.portfolio-site[data-section-anim="horizontal"] .pf-footer {
+.portfolio-site[data-section-anim="horizontal"] .pf-footer,
+.portfolio-site[data-section-anim="vertical"] .pf-hero,
+.portfolio-site[data-section-anim="vertical"] .pf-footer {
   flex-shrink: 0;
 }
 
-.portfolio-site[data-section-anim="horizontal"] .pf-slide-dots {
+.portfolio-site[data-section-anim="horizontal"] .pf-slide-dots,
+.portfolio-site[data-section-anim="vertical"] .pf-slide-dots {
   flex-shrink: 0;
 }
 
@@ -209,8 +215,23 @@
                     viewport */
 }
 
-.portfolio-site[data-section-anim="horizontal"] .pf-sections::-webkit-scrollbar { display: none; }
-.portfolio-site[data-section-anim="horizontal"] .pf-sections { padding: 0; gap: 0; }
+.portfolio-site[data-section-anim="vertical"] .pf-sections {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  flex: 1;
+  min-height: 0;
+}
+
+.portfolio-site[data-section-anim="horizontal"] .pf-sections::-webkit-scrollbar,
+.portfolio-site[data-section-anim="vertical"] .pf-sections::-webkit-scrollbar { display: none; }
+.portfolio-site[data-section-anim="horizontal"] .pf-sections,
+.portfolio-site[data-section-anim="vertical"] .pf-sections { padding: 0; gap: 0; }
 
 .pf-slide {
   flex: 0 0 100%;
@@ -247,6 +268,27 @@
   padding: 0.6rem 0;
 }
 
+/* In horizontal/vertical slide-deck mode, the dot rail becomes a
+   fixed side column (left or right, per the user's choice) rather
+   than a row under the hero — the classic slideshow-indicator look. */
+.portfolio-site[data-section-anim="horizontal"] .pf-slide-dots,
+.portfolio-site[data-section-anim="vertical"] .pf-slide-dots {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  flex-direction: column;
+  padding: 0;
+  z-index: 5;
+}
+.portfolio-site[data-section-anim="horizontal"][data-dots-pos="left"] .pf-slide-dots,
+.portfolio-site[data-section-anim="vertical"][data-dots-pos="left"] .pf-slide-dots {
+  left: 1.25rem;
+}
+.portfolio-site[data-section-anim="horizontal"][data-dots-pos="right"] .pf-slide-dots,
+.portfolio-site[data-section-anim="vertical"][data-dots-pos="right"] .pf-slide-dots {
+  right: 1.25rem;
+}
+
 .pf-dot {
   width: 8px; height: 8px;
   border-radius: 50%;
@@ -266,11 +308,13 @@
 /* Small screens: horizontal slides revert to normal vertical
    stacking, same breakpoint behavior as the homepage. */
 @media (max-width: 768px) {
-  .portfolio-site[data-section-anim="horizontal"] {
+  .portfolio-site[data-section-anim="horizontal"],
+  .portfolio-site[data-section-anim="vertical"] {
     height: auto;
     overflow: visible;
   }
-  .portfolio-site[data-section-anim="horizontal"] .pf-sections {
+  .portfolio-site[data-section-anim="horizontal"] .pf-sections,
+  .portfolio-site[data-section-anim="vertical"] .pf-sections {
     flex-direction: column;
     overflow-x: hidden;
     overflow-y: visible;
@@ -309,17 +353,17 @@
    Doesn't apply to horizontal mode, which has its own full-bleed
    slide sizing (see .pf-slide-inner below) — that layout is already
    edge-to-edge by design. */
-.portfolio-site[data-content-width="contained"]:not([data-section-anim="horizontal"]) .pf-sections {
+.portfolio-site[data-content-width="contained"]:not([data-section-anim="horizontal"]):not([data-section-anim="vertical"]) .pf-sections {
   max-width: 780px;
   margin: 0 auto;
 }
 
-.portfolio-site[data-content-width="wide"]:not([data-section-anim="horizontal"]) .pf-sections {
+.portfolio-site[data-content-width="wide"]:not([data-section-anim="horizontal"]):not([data-section-anim="vertical"]) .pf-sections {
   max-width: 1100px;
   margin: 0 auto;
 }
 
-.portfolio-site[data-content-width="full"]:not([data-section-anim="horizontal"]) .pf-sections {
+.portfolio-site[data-content-width="full"]:not([data-section-anim="horizontal"]):not([data-section-anim="vertical"]) .pf-sections {
   max-width: 100%;
   margin: 0;
   padding-left: 4vw;
@@ -452,6 +496,68 @@
   font-size: 0.9rem;
   border: 1.5px dashed var(--color-border);
   border-radius: 8px;
+}
+
+/* ── Embedded video card ───────────────────────────────────── */
+.pf-video-card { padding: 0; overflow: hidden; background: transparent; box-shadow: none; border: none; }
+.pf-video-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+}
+.pf-video-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.pf-video-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem 1rem;
+  border-radius: 10px;
+  border: 1.5px dashed var(--color-border);
+  color: var(--pf-accent, var(--color-secondary));
+  font-weight: 600;
+  text-decoration: none;
+}
+.pf-video-caption {
+  margin-top: 0.6rem;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  padding: 0 0.1rem;
+}
+
+/* ── Embedded links card ───────────────────────────────────── */
+.pf-links-card { background: transparent; box-shadow: none; border: none; padding: 0; }
+.pf-links-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.pf-link-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  border: 2px solid var(--color-border);
+  background: color-mix(in srgb, var(--pf-accent, var(--color-secondary)) 8%, white);
+  color: var(--color-text);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.pf-link-chip:hover {
+  border-color: var(--pf-accent, var(--color-secondary));
+  transform: translateY(-1px);
 }
 
 
@@ -742,6 +848,24 @@
 
 .username-status.ok { color: var(--color-success); font-weight: 600; }
 .username-status.warn { color: var(--color-danger); font-weight: 600; }
+
+/* Shown in place of a real address when publishing is locked behind
+   Google sign-in — deliberately styled as "not a real, working
+   address" (red, italic) rather than a normal hint. */
+.username-locked-hint {
+  font-size: 0.82rem;
+  margin: 0.5rem 0 0;
+  color: var(--color-danger);
+  font-style: italic;
+}
+.username-locked-hint em {
+  font-style: italic;
+  font-weight: 700;
+}
+
+.username-input-row:has(input:disabled) {
+  opacity: 0.55;
+}
 
 /* Account box at the top of the Publish modal: center the "Signed in
    as..."/sign-out row and the Google Sign-In button itself, instead of

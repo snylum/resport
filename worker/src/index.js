@@ -197,8 +197,12 @@ async function handleApi(request, env, url) {
     if (!USERNAME_RE.test(username) || RESERVED.has(username)) {
       return json({ available: false, reason: 'invalid' });
     }
-    const existing = await env.SITES.get(`site:${username}`);
-    return json({ available: !existing });
+    const existing = await env.SITES.get(`site:${username}`, 'json');
+    // A soft-deleted record (status: 'deleted') no longer occupies the
+    // username — it's kept around only so an admin can hard-delete or
+    // restore it, not to squat the name forever.
+    const isFree = !existing || existing.status === 'deleted';
+    return json({ available: isFree });
   }
 
   // Lets the editor show "Draft / Pending approval / Live / Rejected"
@@ -230,6 +234,15 @@ async function handleApi(request, env, url) {
     // can't be reclaimed/updated except from the same site's future
     // publishes with a matching (or no) owner.
     const ownerEmail = await verifyGoogleCredential(body.googleCredential);
+
+    // A real username.proves.work address is only ever handed out to a
+    // verified Google account — anonymous publishing is no longer
+    // allowed, since an unclaimed address can't be recovered, disputed,
+    // or billed. The editor should already stop people before this
+    // point, but this is the actual trust boundary.
+    if (!ownerEmail) {
+      return json({ ok: false, error: 'Sign in with Google to publish a proves.work address.' }, 401);
+    }
 
     if (!USERNAME_RE.test(username) || RESERVED.has(username)) {
       return json({ ok: false, error: 'Username must be 3-30 lowercase letters, numbers, or hyphens.' }, 400);
@@ -311,7 +324,17 @@ async function handleApi(request, env, url) {
     const sites = await Promise.all(list.keys.map(async (k) => {
       const record = await env.SITES.get(k.name, 'json');
       const username = k.name.slice('site:'.length);
-      return record ? { username, ownerEmail: record.ownerEmail, status: record.status || 'live', updatedAt: record.updatedAt, createdAt: record.createdAt, deletedAt: record.deletedAt || null } : null;
+      return record ? {
+        username,
+        ownerEmail: record.ownerEmail,
+        status: record.status || 'live',
+        updatedAt: record.updatedAt,
+        createdAt: record.createdAt,
+        deletedAt: record.deletedAt || null,
+        paid: !!record.paid,
+        referenceNumber: record.referenceNumber || '',
+        manualLink: record.manualLink || ''
+      } : null;
     }));
     return json({ ok: true, sites: sites.filter(Boolean) });
   }
@@ -358,6 +381,69 @@ async function handleApi(request, env, url) {
       reviewedAt: new Date().toISOString(),
       reviewedBy: adminEmail,
       ...(nextStatus === 'deleted' ? { deletedAt: new Date().toISOString() } : {})
+    }));
+    return json({ ok: true });
+  }
+
+  // Hard delete: permanently erases the KV record (unlike set-status
+  // 'deleted', which only soft-deletes and can be restored). This is
+  // the "free up the username for good" action — nothing recoverable
+  // is left behind afterward.
+  if (url.pathname === '/api/admin/delete-site' && request.method === 'POST') {
+    let body;
+    try { body = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON body.' }, 400); }
+    const adminEmail = await verifyAdminCredential(body.googleCredential);
+    if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
+
+    const username = String(body.username || '').toLowerCase().trim();
+    if (!username) return json({ ok: false, error: 'Missing username.' }, 400);
+    await env.SITES.delete(`site:${username}`);
+    return json({ ok: true, freed: username });
+  }
+
+  // Lets an admin manually attach/replace an external reference link on
+  // a site's record (e.g. a payment receipt, a support ticket, a social
+  // profile) — purely informational, shown only in the admin dashboard.
+  if (url.pathname === '/api/admin/set-link' && request.method === 'POST') {
+    let body;
+    try { body = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON body.' }, 400); }
+    const adminEmail = await verifyAdminCredential(body.googleCredential);
+    if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
+
+    const username = String(body.username || '').toLowerCase().trim();
+    const link = String(body.link || '').trim().slice(0, 500);
+    const existing = await env.SITES.get(`site:${username}`, 'json');
+    if (!existing) return json({ ok: false, error: 'Not found.' }, 404);
+
+    await env.SITES.put(`site:${username}`, JSON.stringify({
+      ...existing,
+      manualLink: link,
+      linkUpdatedAt: new Date().toISOString(),
+      linkUpdatedBy: adminEmail
+    }));
+    return json({ ok: true });
+  }
+
+  // Manually label whether this person has paid, with an optional
+  // reference number (e.g. GCash/bank transfer ref) for bookkeeping.
+  if (url.pathname === '/api/admin/set-paid' && request.method === 'POST') {
+    let body;
+    try { body = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON body.' }, 400); }
+    const adminEmail = await verifyAdminCredential(body.googleCredential);
+    if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
+
+    const username = String(body.username || '').toLowerCase().trim();
+    const paid = !!body.paid;
+    const referenceNumber = String(body.referenceNumber || '').trim().slice(0, 120);
+    const existing = await env.SITES.get(`site:${username}`, 'json');
+    if (!existing) return json({ ok: false, error: 'Not found.' }, 404);
+
+    await env.SITES.put(`site:${username}`, JSON.stringify({
+      ...existing,
+      paid,
+      referenceNumber: paid ? referenceNumber : (existing.referenceNumber || ''),
+      paidAt: paid ? new Date().toISOString() : (existing.paidAt || null),
+      paidMarkedBy: adminEmail
     }));
     return json({ ok: true });
   }

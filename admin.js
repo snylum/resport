@@ -3,6 +3,11 @@ import { esc } from './store.js';
 // Same client ID as editor.js — must match the Worker's GOOGLE_CLIENT_ID.
 const GOOGLE_CLIENT_ID = '41010460965-oti1phnr8kdbij312qijrg82bc2japj7.apps.googleusercontent.com';
 const ADMIN_ACCOUNT_KEY = 'proveswork_admin_google_account';
+// Auto sign-out after this long with no mouse/keyboard/touch activity —
+// an admin dashboard that can approve/delete sites shouldn't stay
+// signed in forever on a shared or unattended machine.
+const ADMIN_IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
+const ADMIN_IDLE_CHECK_INTERVAL_MS = 30 * 1000;
 
 // This client-side check is only for UX (deciding which screen to show
 // instantly on sign-in) — it is NOT the real security boundary. Every
@@ -37,8 +42,51 @@ function getSavedAdminAccount() {
   try { return JSON.parse(localStorage.getItem(ADMIN_ACCOUNT_KEY) || 'null'); }
   catch { return null; }
 }
-function saveAdminAccount(account) { localStorage.setItem(ADMIN_ACCOUNT_KEY, JSON.stringify(account)); }
+function saveAdminAccount(account) {
+  localStorage.setItem(ADMIN_ACCOUNT_KEY, JSON.stringify({ ...account, lastActiveAt: Date.now() }));
+}
 function clearAdminAccount() { localStorage.removeItem(ADMIN_ACCOUNT_KEY); }
+
+// Bumps lastActiveAt on the stored account so the idle timer resets —
+// called from real user interaction (mouse/keyboard/touch/click), not
+// on a timer itself.
+function touchAdminActivity() {
+  const account = getSavedAdminAccount();
+  if (!account) return;
+  account.lastActiveAt = Date.now();
+  localStorage.setItem(ADMIN_ACCOUNT_KEY, JSON.stringify(account));
+}
+
+function isAdminSessionExpired(account) {
+  if (!account) return true;
+  const lastActive = account.lastActiveAt || 0;
+  return (Date.now() - lastActive) > ADMIN_IDLE_TIMEOUT_MS;
+}
+
+let idleCheckTimer = null;
+function startIdleWatch() {
+  ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'].forEach(evt => {
+    document.addEventListener(evt, touchAdminActivity, { passive: true });
+  });
+  if (idleCheckTimer) clearInterval(idleCheckTimer);
+  idleCheckTimer = setInterval(() => {
+    const account = getSavedAdminAccount();
+    if (account && isAdminSessionExpired(account)) {
+      signOutForInactivity();
+    }
+  }, ADMIN_IDLE_CHECK_INTERVAL_MS);
+}
+
+function signOutForInactivity() {
+  if (idleCheckTimer) { clearInterval(idleCheckTimer); idleCheckTimer = null; }
+  clearAdminAccount();
+  el.adminPanel.classList.add('hidden');
+  el.adminGate.classList.remove('hidden');
+  el.adminGateStatus.textContent = "You were signed out after 15 minutes of inactivity — sign in again to continue.";
+  el.adminGateStatus.className = 'username-status warn';
+  el.adminAccountSlot.innerHTML = '';
+  renderGoogleSignInButton();
+}
 
 function openModal(html, onOpen) {
   el.modalContent.innerHTML = html;
@@ -64,6 +112,7 @@ function renderAccountSlot() {
     <button class="btn btn-ghost btn-sm" id="adminSignOutBtn" type="button" style="margin-left:0.6rem;">Sign out</button>
   `;
   document.getElementById('adminSignOutBtn').addEventListener('click', () => {
+    if (idleCheckTimer) { clearInterval(idleCheckTimer); idleCheckTimer = null; }
     clearAdminAccount();
     location.reload();
   });
@@ -94,8 +143,10 @@ function renderGoogleSignInButton() {
 function showPanel() {
   el.adminGate.classList.add('hidden');
   el.adminPanel.classList.remove('hidden');
+  touchAdminActivity();
   renderAccountSlot();
   loadSites();
+  startIdleWatch();
 }
 
 async function loadSites() {
@@ -143,6 +194,8 @@ function renderList() {
       <div class="admin-site-main">
         <div class="admin-site-username">${esc(s.username)}.proves.work${(s.status === 'live' && s.ownerEmail) ? ` <span class="admin-owner-chip">${esc(s.ownerEmail)}</span>` : ''}</div>
         <div class="admin-site-meta">${s.ownerEmail ? esc(s.ownerEmail) : 'anonymous'} · updated ${s.updatedAt ? new Date(s.updatedAt).toLocaleString() : '—'}</div>
+        ${s.manualLink ? `<div class="admin-site-meta admin-site-link">🔗 <a href="${esc(s.manualLink)}" target="_blank" rel="noopener noreferrer">${esc(s.manualLink)}</a></div>` : ''}
+        ${s.paid ? `<div class="admin-site-meta admin-site-paid">✓ Paid${s.referenceNumber ? ` · ref: ${esc(s.referenceNumber)}` : ''}</div>` : ''}
       </div>
       <span class="admin-status-pill ${s.status}">${s.status}</span>
       <div class="admin-site-actions">
@@ -151,6 +204,9 @@ function renderList() {
           <button class="btn btn-ghost btn-sm" data-action="reject" type="button">Reject</button>` : ''}
         ${s.status === 'live' ? `<button class="btn btn-ghost btn-sm" data-action="reject" type="button">Unpublish</button>` : ''}
         ${(s.status === 'rejected' || s.status === 'deleted') ? `<button class="btn btn-secondary btn-sm" data-action="restore" type="button">Restore</button>` : ''}
+        <button class="btn btn-ghost btn-sm" data-action="${s.paid ? 'unmark-paid' : 'mark-paid'}" type="button">${s.paid ? 'Unmark paid' : '$ Mark paid'}</button>
+        <button class="btn btn-ghost btn-sm" data-action="edit-link" type="button">${s.manualLink ? 'Edit link' : '+ Add link'}</button>
+        <button class="btn btn-danger btn-sm" data-action="hard-delete" type="button">Delete</button>
       </div>
     </div>
   `).join('');
@@ -169,6 +225,118 @@ async function setStatus(username, status) {
     return;
   }
   loadSites();
+}
+
+async function hardDeleteSite(username) {
+  const account = getSavedAdminAccount();
+  const res = await fetch('/api/admin/delete-site', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ googleCredential: account.credential, username })
+  });
+  const data = await res.json();
+  if (!data.ok) {
+    alertModal(data.error || 'Something went wrong.');
+    return;
+  }
+  loadSites();
+}
+
+function confirmHardDelete(username) {
+  openModal(`
+    <h3 class="modal-title" id="modalTitle">Permanently delete @${esc(username)}?</h3>
+    <p class="modal-sub">This erases the site record entirely and immediately frees up <strong>${esc(username)}.proves.work</strong> for anyone to claim. This can't be undone — restoring won't work after this.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="cancelHardDeleteBtn" type="button">Cancel</button>
+      <button class="btn btn-danger btn-sm" id="confirmHardDeleteBtn" type="button">Delete permanently</button>
+    </div>
+  `, (root) => {
+    root.querySelector('#cancelHardDeleteBtn').addEventListener('click', closeModal);
+    root.querySelector('#confirmHardDeleteBtn').addEventListener('click', () => {
+      hardDeleteSite(username);
+      closeModal();
+    });
+  });
+}
+
+async function setPaid(username, paid, referenceNumber) {
+  const account = getSavedAdminAccount();
+  const res = await fetch('/api/admin/set-paid', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ googleCredential: account.credential, username, paid, referenceNumber })
+  });
+  const data = await res.json();
+  if (!data.ok) {
+    alertModal(data.error || 'Something went wrong.');
+    return;
+  }
+  loadSites();
+}
+
+function openMarkPaidModal(username, currentRef) {
+  openModal(`
+    <h3 class="modal-title" id="modalTitle">Mark @${esc(username)} as paid</h3>
+    <p class="modal-sub">Optional — add a payment reference number for your own records.</p>
+    <div class="admin-modal-field">
+      <input type="text" id="paidRefInput" placeholder="Reference number (optional)" value="${esc(currentRef || '')}" autocomplete="off" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="cancelPaidBtn" type="button">Cancel</button>
+      <button class="btn btn-secondary btn-sm" id="confirmPaidBtn" type="button">Mark paid</button>
+    </div>
+  `, (root) => {
+    root.querySelector('#cancelPaidBtn').addEventListener('click', closeModal);
+    root.querySelector('#confirmPaidBtn').addEventListener('click', () => {
+      const ref = root.querySelector('#paidRefInput').value.trim();
+      setPaid(username, true, ref);
+      closeModal();
+    });
+  });
+}
+
+async function setLink(username, link) {
+  const account = getSavedAdminAccount();
+  const res = await fetch('/api/admin/set-link', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ googleCredential: account.credential, username, link })
+  });
+  const data = await res.json();
+  if (!data.ok) {
+    alertModal(data.error || 'Something went wrong.');
+    return;
+  }
+  loadSites();
+}
+
+function openEditLinkModal(username, currentLink) {
+  openModal(`
+    <h3 class="modal-title" id="modalTitle">Manual link for @${esc(username)}</h3>
+    <p class="modal-sub">Attach a reference URL to this site (receipt, ticket, social profile, anything useful). Only visible here in admin.</p>
+    <div class="admin-modal-field">
+      <input type="url" id="manualLinkInput" placeholder="https://…" value="${esc(currentLink || '')}" autocomplete="off" />
+    </div>
+    <div class="modal-actions">
+      ${currentLink ? `<button class="btn btn-ghost btn-sm" id="removeLinkBtn" type="button">Remove link</button>` : ''}
+      <button class="btn btn-ghost btn-sm" id="cancelLinkBtn" type="button">Cancel</button>
+      <button class="btn btn-secondary btn-sm" id="confirmLinkBtn" type="button">Save link</button>
+    </div>
+  `, (root) => {
+    root.querySelector('#cancelLinkBtn').addEventListener('click', closeModal);
+    if (root.querySelector('#removeLinkBtn')) {
+      root.querySelector('#removeLinkBtn').addEventListener('click', () => {
+        setLink(username, '');
+        closeModal();
+      });
+    }
+    root.querySelector('#confirmLinkBtn').addEventListener('click', () => {
+      const link = root.querySelector('#manualLinkInput').value.trim();
+      if (!link) { alertModal('Enter a URL, or use Remove link instead.'); return; }
+      setLink(username, link);
+      closeModal();
+    });
+  });
 }
 
 async function viewSite(username) {
@@ -202,6 +370,7 @@ el.adminSitesList.addEventListener('click', (e) => {
   const row = e.target.closest('.admin-site-row');
   const username = row.dataset.username;
   const action = btn.dataset.action;
+  const site = allSites.find(s => s.username === username);
   if (action === 'view') viewSite(username);
   else if (action === 'approve') setStatus(username, 'live');
   else if (action === 'reject') setStatus(username, 'rejected');
@@ -211,6 +380,10 @@ el.adminSitesList.addEventListener('click', (e) => {
   // draft if nothing was ever approved, so the site comes back as
   // close to its last published version as possible.
   else if (action === 'restore') setStatus(username, 'live');
+  else if (action === 'hard-delete') confirmHardDelete(username);
+  else if (action === 'mark-paid') openMarkPaidModal(username, site && site.referenceNumber);
+  else if (action === 'unmark-paid') setPaid(username, false, '');
+  else if (action === 'edit-link') openEditLinkModal(username, site && site.manualLink);
 });
 
 document.querySelectorAll('.admin-tab').forEach(tab => {
@@ -228,6 +401,11 @@ el.adminRefreshBtn.addEventListener('click', loadSites);
 // ── Boot ─────────────────────────────────────────────────────
 (function init() {
   const account = getSavedAdminAccount();
+  if (account && isAdminSessionExpired(account)) {
+    clearAdminAccount();
+    renderGoogleSignInButton();
+    return;
+  }
   if (account && ADMIN_EMAILS.has(account.email)) {
     showPanel();
   } else {

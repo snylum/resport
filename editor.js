@@ -188,6 +188,37 @@ function renderEntryList(items, blockId, field, cols) {
     <button class="add-item-btn" data-action="add-item" data-block="${blockId}" data-field="${field}" data-item-type="object" type="button">+ Add</button>`;
 }
 
+// Turns a pasted YouTube/Vimeo/Loom URL into an embeddable iframe src.
+// Falls back to null (rendered as a plain link) for anything else, so
+// people can still paste a Google Drive link, a Dropbox link, etc.
+// without breaking the block.
+function videoEmbedSrc(url) {
+  if (!url) return null;
+  try {
+    const u = new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`);
+    const host = u.hostname.replace(/^www\./, '');
+    if (host === 'youtube.com' || host === 'm.youtube.com') {
+      const id = u.searchParams.get('v');
+      if (id) return `https://www.youtube.com/embed/${id}`;
+      const shorts = u.pathname.match(/^\/shorts\/([\w-]+)/);
+      if (shorts) return `https://www.youtube.com/embed/${shorts[1]}`;
+    }
+    if (host === 'youtu.be') {
+      const id = u.pathname.slice(1);
+      if (id) return `https://www.youtube.com/embed/${id}`;
+    }
+    if (host === 'vimeo.com') {
+      const id = u.pathname.split('/').filter(Boolean)[0];
+      if (id) return `https://player.vimeo.com/video/${id}`;
+    }
+    if (host === 'loom.com') {
+      const id = u.pathname.split('/').filter(Boolean).pop();
+      if (id) return `https://www.loom.com/embed/${id}`;
+    }
+  } catch { /* not a valid URL yet — treat as no embed */ }
+  return null;
+}
+
 function verifyControlHTML(block) {
   const v = block.data.verify || { type: 'none' };
   if (v.type !== 'none') {
@@ -228,6 +259,8 @@ function blockSummaryLine(block) {
     case 'certifications': return (d.items || []).map(i => i.name).filter(Boolean).join(', ') || 'Certifications';
     case 'languages': return (d.items || []).map(i => i.name).filter(Boolean).join(', ') || 'Languages';
     case 'gallery': return (d.photos || []).length ? `${d.photos.length} photo${d.photos.length === 1 ? '' : 's'}` : 'Photo gallery (empty)';
+    case 'video': return d.url || 'Embedded video (empty)';
+    case 'links': return (d.items || []).map(i => i.label).filter(Boolean).join(', ') || 'Embedded links';
     default: return 'Section';
   }
 }
@@ -289,6 +322,13 @@ function blockEditFieldsHTML(block) {
           <input type="file" accept="image/*" class="sd-gallery-file-input" data-block="${block.id}" hidden />
         </label>`);
     }
+    case 'video':
+      return field('Video URL (YouTube, Vimeo, Loom)', ceField(d.url, 'url', block.id))
+        + field('Caption (optional)', ceField(d.caption, 'caption', block.id));
+    case 'links':
+      return field('Links', renderEntryList(d.items, block.id, 'items', [
+        { key: 'label', cls: 'ce-strong' }, { key: 'url', cls: 'ce-muted' }
+      ]));
     default:
       return '';
   }
@@ -391,6 +431,23 @@ function createPortfolioBlock(block) {
         ? `<div class="pf-gallery-grid">${(block.data.photos || []).map(src => `<div class="pf-gallery-item"><img src="${esc(src)}" alt="" /></div>`).join('')}</div>`
         : `<div class="pf-gallery-empty">No photos yet — add some from the sidebar.</div>`;
       break;
+    case 'video': {
+      baseClass = 'pf-card pf-video-card';
+      const embedSrc = videoEmbedSrc(block.data.url);
+      innerHTML = block.data.url
+        ? (embedSrc
+          ? `<div class="pf-video-frame"><iframe src="${esc(embedSrc)}" title="Embedded video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`
+          : `<a class="pf-video-fallback" href="${esc(/^https?:\/\//i.test(block.data.url) ? block.data.url : `https://${block.data.url}`)}" target="_blank" rel="noopener noreferrer">▶ Watch video</a>`)
+        : `<div class="pf-gallery-empty">No video yet — add a URL from the sidebar.</div>`;
+      innerHTML += block.data.caption ? `<p class="pf-video-caption">${esc(block.data.caption)}</p>` : '';
+      break;
+    }
+    case 'links':
+      baseClass = 'pf-card pf-links-card';
+      innerHTML = (block.data.items || []).filter(i => i.url).length
+        ? `<div class="pf-links-list">${(block.data.items || []).filter(i => i.url).map(it => `<a class="pf-link-chip" href="${esc(/^https?:\/\//i.test(it.url) ? it.url : `https://${it.url}`)}" target="_blank" rel="noopener noreferrer">${esc(it.label || it.url)} ↗</a>`).join('')}</div>`
+        : `<div class="pf-gallery-empty">No links yet — add some from the sidebar.</div>`;
+      break;
     default:
       break;
   }
@@ -412,7 +469,7 @@ let pfCurrentSlide = 0;
 let pfSlideNavBound = false;
 
 function renderPortfolioCanvasBlocks(blocks, mode) {
-  if (mode !== 'horizontal') {
+  if (mode !== 'horizontal' && mode !== 'vertical') {
     el.pfSlideDots.innerHTML = '';
     el.pfSlideDots.classList.add('hidden');
     pfSlideEls = [];
@@ -422,6 +479,7 @@ function renderPortfolioCanvasBlocks(blocks, mode) {
     return;
   }
 
+  const axis = mode === 'vertical' ? 'y' : 'x';
   const slides = groupBlocksIntoSlides(blocks);
   const keepIndex = Math.min(pfCurrentSlide, Math.max(0, slides.length - 1));
 
@@ -455,7 +513,7 @@ function renderPortfolioCanvasBlocks(blocks, mode) {
   // action) back to whichever slide was active before the re-render,
   // once the new layout has settled.
   requestAnimationFrame(() => {
-    pfSlideEls[pfCurrentSlide]?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'start' });
+    pfSlideEls[pfCurrentSlide]?.scrollIntoView({ behavior: 'auto', block: axis === 'y' ? 'start' : 'nearest', inline: axis === 'x' ? 'start' : 'nearest' });
   });
 
   initPortfolioHorizontalNav();
@@ -465,11 +523,16 @@ function pfSetActiveDot(i) {
   pfDotEls.forEach((d, di) => d.classList.toggle('active', di === i));
 }
 
+function pfCurrentAxis() {
+  return el.portfolioSite.getAttribute('data-section-anim') === 'vertical' ? 'y' : 'x';
+}
+
 function pfGoToSlide(i) {
   if (i < 0 || i >= pfSlideEls.length) return;
+  const axis = pfCurrentAxis();
   pfCurrentSlide = i;
   pfIsProgrammaticScroll = true;
-  pfSlideEls[i].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+  pfSlideEls[i].scrollIntoView({ behavior: 'smooth', block: axis === 'y' ? 'start' : 'nearest', inline: axis === 'x' ? 'start' : 'nearest' });
   pfSetActiveDot(i);
   setTimeout(() => { pfIsProgrammaticScroll = false; }, 500);
 }
@@ -493,10 +556,12 @@ function initPortfolioHorizontalNav() {
 
   el.pfSections.addEventListener('scroll', () => {
     if (pfIsProgrammaticScroll || !pfSlideEls.length) return;
+    const axis = pfCurrentAxis();
     const trackRect = el.pfSections.getBoundingClientRect();
     let closest = 0, closestDist = Infinity;
     pfSlideEls.forEach((s, i) => {
-      const dist = Math.abs(s.getBoundingClientRect().left - trackRect.left);
+      const r = s.getBoundingClientRect();
+      const dist = axis === 'y' ? Math.abs(r.top - trackRect.top) : Math.abs(r.left - trackRect.left);
       if (dist < closestDist) { closestDist = dist; closest = i; }
     });
     if (closest !== pfCurrentSlide) {
@@ -507,19 +572,28 @@ function initPortfolioHorizontalNav() {
 
   el.pfSections.addEventListener('keydown', (e) => {
     if (!pfSlideEls.length) return;
-    if (e.key === 'ArrowRight') { e.preventDefault(); pfGoToSlide(pfCurrentSlide + 1); }
-    else if (e.key === 'ArrowLeft') { e.preventDefault(); pfGoToSlide(pfCurrentSlide - 1); }
+    const axis = pfCurrentAxis();
+    if (axis === 'x') {
+      if (e.key === 'ArrowRight') { e.preventDefault(); pfGoToSlide(pfCurrentSlide + 1); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); pfGoToSlide(pfCurrentSlide - 1); }
+    } else {
+      if (e.key === 'ArrowDown') { e.preventDefault(); pfGoToSlide(pfCurrentSlide + 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); pfGoToSlide(pfCurrentSlide - 1); }
+    }
   });
 
   el.pfSections.addEventListener('wheel', (e) => {
     if (!pfSlideEls.length) return;
-    if (el.portfolioSite.getAttribute('data-section-anim') !== 'horizontal') return;
+    const anim = el.portfolioSite.getAttribute('data-section-anim');
+    if (anim !== 'horizontal' && anim !== 'vertical') return;
     if (window.innerWidth <= 768) return;
-    if (Math.abs(e.deltaY) < 10 && Math.abs(e.deltaX) < 10) return;
+    const axis = anim === 'vertical' ? 'y' : 'x';
+    const delta = axis === 'y' ? e.deltaY : (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY);
+    if (Math.abs(delta) < 10) return;
     e.preventDefault();
     if (pfWheelCooldown) return;
     pfWheelCooldown = true;
-    pfGoToSlide(pfCurrentSlide + ((e.deltaY > 0 || e.deltaX > 0) ? 1 : -1));
+    pfGoToSlide(pfCurrentSlide + (delta > 0 ? 1 : -1));
     setTimeout(() => { pfWheelCooldown = false; }, 700);
   }, { passive: false });
 }
@@ -871,6 +945,7 @@ function renderPublishAccountBox() {
     box.querySelector('#googleSignOutBtn').addEventListener('click', () => {
       clearGoogleAccount();
       renderPublishAccountBox();
+      lockPublishUsernameField();
     });
   } else {
     box.innerHTML = `
@@ -878,6 +953,46 @@ function renderPublishAccountBox() {
       <div id="googleSignInSlot"></div>
     `;
     renderGoogleSignInButton(box.querySelector('#googleSignInSlot'));
+  }
+  unlockOrLockPublishUsernameField();
+}
+
+// Keeps the username field's locked/unlocked state (and its red italic
+// "sign in first" hint) in sync with Google sign-in status, live —
+// so signing in inside the Publish modal doesn't require reopening it.
+function unlockOrLockPublishUsernameField() {
+  const input = document.getElementById('publishUsernameInput');
+  if (!input) return; // modal not open / different modal on screen
+  if (getSavedGoogleAccount()) {
+    input.disabled = false;
+    const suffix = document.getElementById('publishUsernameSuffix');
+    if (suffix) suffix.textContent = `.${PUBLISH_APEX}`;
+    const hint = document.querySelector('.username-locked-hint');
+    if (hint) hint.remove();
+    input.dispatchEvent(new Event('input'));
+  } else {
+    lockPublishUsernameField();
+  }
+}
+
+function lockPublishUsernameField() {
+  const input = document.getElementById('publishUsernameInput');
+  if (!input) return;
+  input.disabled = true;
+  const suffix = document.getElementById('publishUsernameSuffix');
+  if (suffix) suffix.textContent = '';
+  const status = document.getElementById('publishUsernameStatus');
+  if (status) status.textContent = '';
+  const confirmBtn = document.getElementById('publishConfirmBtn');
+  if (confirmBtn) confirmBtn.disabled = true;
+  if (!document.querySelector('.username-locked-hint')) {
+    const fieldBox = input.closest('.field-box');
+    if (fieldBox) {
+      const hint = document.createElement('p');
+      hint.className = 'username-locked-hint';
+      hint.innerHTML = `<em>a-sign-up.${PUBLISH_APEX}</em> — sign in with Google above to claim a real username.${PUBLISH_APEX} address.`;
+      fieldBox.appendChild(hint);
+    }
   }
 }
 
@@ -1024,7 +1139,9 @@ document.addEventListener('keydown', function (e) {
 // the same interaction model as the homepage's own slide deck.
 (function () {
   var root = document.getElementById('portfolioSite');
-  if (!root || root.getAttribute('data-section-anim') !== 'horizontal') return;
+  var anim = root && root.getAttribute('data-section-anim');
+  if (!root || (anim !== 'horizontal' && anim !== 'vertical')) return;
+  var axis = anim === 'vertical' ? 'y' : 'x';
   var track = root.querySelector('.pf-sections');
   var slides = root.querySelectorAll('.pf-slide');
   var dots = root.querySelectorAll('.pf-dot');
@@ -1036,7 +1153,7 @@ document.addEventListener('keydown', function (e) {
     if (i < 0 || i >= slides.length) return;
     current = i;
     isProgrammatic = true;
-    slides[i].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+    slides[i].scrollIntoView({ behavior: 'smooth', block: axis === 'y' ? 'start' : 'nearest', inline: axis === 'x' ? 'start' : 'nearest' });
     setDots(i);
     setTimeout(function () { isProgrammatic = false; }, 500);
   }
@@ -1049,24 +1166,32 @@ document.addEventListener('keydown', function (e) {
   track.addEventListener('scroll', function () {
     if (isProgrammatic) return;
     var closest = 0, closestDist = Infinity;
+    var trackRect = track.getBoundingClientRect();
     slides.forEach(function (s, i) {
-      var dist = Math.abs(s.getBoundingClientRect().left - track.getBoundingClientRect().left);
+      var r = s.getBoundingClientRect();
+      var dist = axis === 'y' ? Math.abs(r.top - trackRect.top) : Math.abs(r.left - trackRect.left);
       if (dist < closestDist) { closestDist = dist; closest = i; }
     });
     if (closest !== current) { current = closest; setDots(current); }
   }, { passive: true });
   track.addEventListener('keydown', function (e) {
-    if (e.key === 'ArrowRight') goTo(current + 1);
-    else if (e.key === 'ArrowLeft') goTo(current - 1);
+    if (axis === 'x') {
+      if (e.key === 'ArrowRight') goTo(current + 1);
+      else if (e.key === 'ArrowLeft') goTo(current - 1);
+    } else {
+      if (e.key === 'ArrowDown') goTo(current + 1);
+      else if (e.key === 'ArrowUp') goTo(current - 1);
+    }
   });
   var wheelCooldown = false;
   track.addEventListener('wheel', function (e) {
     if (window.innerWidth <= 768) return;
-    if (Math.abs(e.deltaY) < 10 && Math.abs(e.deltaX) < 10) return;
+    var delta = axis === 'y' ? e.deltaY : (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY);
+    if (Math.abs(delta) < 10) return;
     e.preventDefault();
     if (wheelCooldown) return;
     wheelCooldown = true;
-    goTo(current + ((e.deltaY > 0 || e.deltaX > 0) ? 1 : -1));
+    goTo(current + (delta > 0 ? 1 : -1));
     setTimeout(function () { wheelCooldown = false; }, 700);
   }, { passive: false });
 })();
@@ -1165,6 +1290,25 @@ function renderStaticPortfolioBlock(block) {
       return (block.data.photos || []).length
         ? `<div class="pf-card pf-gallery-card"><div class="pf-gallery-grid">${(block.data.photos || []).map(src => `<div class="pf-gallery-item"><img src="${esc(src)}" alt="" /></div>`).join('')}</div></div>`
         : '';
+    case 'video': {
+      if (!block.data.url) return '';
+      const embedSrc = videoEmbedSrc(block.data.url);
+      const href = /^https?:\/\//i.test(block.data.url) ? block.data.url : `https://${block.data.url}`;
+      const bodyHTML = embedSrc
+        ? `<div class="pf-video-frame"><iframe src="${esc(embedSrc)}" title="Embedded video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`
+        : `<a class="pf-video-fallback" href="${esc(href)}" target="_blank" rel="noopener noreferrer">▶ Watch video</a>`;
+      const captionHTML = block.data.caption ? `<p class="pf-video-caption">${esc(block.data.caption)}</p>` : '';
+      return `<div class="pf-card pf-video-card">${bodyHTML}${captionHTML}</div>`;
+    }
+    case 'links': {
+      const items = (block.data.items || []).filter(i => i.url);
+      if (!items.length) return '';
+      const linksHTML = items.map(it => {
+        const href = /^https?:\/\//i.test(it.url) ? it.url : `https://${it.url}`;
+        return `<a class="pf-link-chip" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(it.label || it.url)} ↗</a>`;
+      }).join('');
+      return `<div class="pf-card pf-links-card"><div class="pf-links-list">${linksHTML}</div></div>`;
+    }
     default:
       return '';
   }
@@ -1212,7 +1356,8 @@ function buildPublishedSiteHTML() {
   const fullName = `${p.firstName} ${p.lastName}`.trim() || 'Untitled Portfolio';
   const contactLine = [p.email, p.phone, p.address].filter(Boolean).join('   •   ');
   const isHorizontal = (design.sectionAnimation || 'none') === 'horizontal';
-  const sectionsHTML = isHorizontal
+  const isVertical = (design.sectionAnimation || 'none') === 'vertical';
+  const sectionsHTML = (isHorizontal || isVertical)
     ? buildHorizontalSectionsHTML(blocks)
     : `<div class="pf-sections">${blocks.map(renderStaticPortfolioBlock).join('\n')}</div>`;
 
@@ -1231,7 +1376,7 @@ function buildPublishedSiteHTML() {
 </style>
 </head>
 <body data-viewmode="portfolio">
-  <div class="portfolio-site" id="portfolioSite" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};">
+  <div class="portfolio-site" id="portfolioSite" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-dots-pos="${esc(design.dotsPosition || 'right')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};">
     <header class="pf-hero">
       ${p.photo ? `<div class="pf-hero-photo-wrap"><img src="${esc(p.photo)}" alt="${esc(fullName)}" /></div>` : ''}
       <div class="pf-hero-text">
@@ -1260,6 +1405,7 @@ function buildPublishedSiteHTML() {
 function openPublishModal() {
   const p = Store.state.portfolio.profile;
   const defaultUsername = getSavedUsername() || slugifyUsername(`${p.firstName}${p.lastName}`) || 'me';
+  const signedIn = !!getSavedGoogleAccount();
 
   const html = `
     <h3 class="modal-title" id="modalTitle">Publish your portfolio</h3>
@@ -1267,10 +1413,11 @@ function openPublishModal() {
     <div class="field-box full-width">
       <span>Your ${PUBLISH_APEX} address</span>
       <div class="username-input-row">
-        <input type="text" id="publishUsernameInput" value="${esc(defaultUsername)}" maxlength="30" autocomplete="off" spellcheck="false" />
-        <span class="username-suffix">.${PUBLISH_APEX}</span>
+        <input type="text" id="publishUsernameInput" value="${esc(defaultUsername)}" maxlength="30" autocomplete="off" spellcheck="false" ${signedIn ? '' : 'disabled'} />
+        <span class="username-suffix" id="publishUsernameSuffix">${signedIn ? `.${PUBLISH_APEX}` : ''}</span>
       </div>
       <p class="username-status" id="publishUsernameStatus"></p>
+      ${signedIn ? '' : `<p class="username-locked-hint"><em>a-sign-up.${PUBLISH_APEX}</em> — sign in with Google above to claim a real username.${PUBLISH_APEX} address.</p>`}
     </div>
     <p class="modal-sub">Publishing is manually reviewed before it goes live and requires an active plan.</p>
     <div class="modal-actions">
@@ -1287,6 +1434,14 @@ function openPublishModal() {
     let checkTimer = null;
 
     async function checkAvailability() {
+      // Without a verified Google account there is no real address to
+      // check — the field itself is disabled above, so just keep this
+      // in the same locked state rather than hitting the API.
+      if (!getSavedGoogleAccount()) {
+        status.textContent = '';
+        confirmBtn.disabled = true;
+        return;
+      }
       const value = slugifyUsername(input.value);
       if (input.value !== value) input.value = value;
 
@@ -1379,9 +1534,10 @@ async function doPublish(username, confirmBtn) {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         username,
-        // Signed in: the Worker verifies this ID token server-side
-        // and ties the username to the Google account. Signed out:
-        // published anonymously, same as before (no ownership proof).
+        // The Worker verifies this ID token server-side and ties the
+        // username to the Google account — publishing without one is
+        // rejected server-side too (the UI already prevents reaching
+        // this point unless signed in).
         googleCredential: account ? account.credential : null,
         html: buildPublishedSiteHTML()
       })
@@ -1993,6 +2149,7 @@ function applyPortfolioDesign(design) {
   el.portfolioSite.style.setProperty('--pf-body-font', FONT_STACKS[design.bodyFont] || FONT_STACKS.sans);
   el.portfolioSite.setAttribute('data-header-style', design.headerStyle || 'scroll');
   el.portfolioSite.setAttribute('data-section-anim', design.sectionAnimation || 'none');
+  el.portfolioSite.setAttribute('data-dots-pos', design.dotsPosition || 'right');
   el.portfolioSite.setAttribute('data-content-width', design.contentWidth || 'contained');
   el.portfolioSite.setAttribute('data-hero-align', design.heroAlign || 'left');
   initPortfolioAnimation(design.sectionAnimation || 'none');

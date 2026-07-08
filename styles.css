@@ -120,6 +120,14 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
 }
 .btn-ghost:hover { background: var(--color-surface-alt); box-shadow: var(--shadow-lg); transform: translate(-2px,-2px); }
 
+.btn-danger {
+  background: #FDEAEA;
+  color: #B3261E;
+  border-color: #B3261E;
+  box-shadow: var(--shadow);
+}
+.btn-danger:hover { background: #B3261E; color: #fff; box-shadow: var(--shadow-lg); transform: translate(-2px,-2px); }
+
 .btn-sm { font-size: 0.75rem; padding: 0.4rem 0.875rem; }
 
 .btn-gradient {

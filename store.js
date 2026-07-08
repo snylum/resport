@@ -84,7 +84,7 @@ export const FONT_OPTIONS = [
 
 // Default design for the portfolio site (independent of résumé templates —
 // the portfolio has one flowing layout, but still themeable via color/font).
-export const PORTFOLIO_DEFAULT_DESIGN = { accent: '#7C4DFF', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'contained', heroAlign: 'left' };
+export const PORTFOLIO_DEFAULT_DESIGN = { accent: '#7C4DFF', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'contained', heroAlign: 'left', dotsPosition: 'right' };
 
 // Portfolio templates: unlike résumé templates (which change structural
 // layout — columns, alignment), the portfolio has one adaptive layout,
@@ -254,6 +254,96 @@ export const PORTFOLIO_STRUCTURAL_TEMPLATES = [
     category: 'structural',
     addsBlockTypes: ['gallery'],
     design: { accent: '#7C4DFF', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'horizontal', contentWidth: 'full', heroAlign: 'center' }
+  },
+  {
+    id: 'video-reel',
+    name: 'Video Reel / Filmmaker',
+    tagline: 'Adds a featured video embed up top',
+    icon: '🎬',
+    category: 'structural',
+    addsBlockTypes: ['video'],
+    design: { accent: '#111111', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'fade-up', contentWidth: 'wide', heroAlign: 'center' }
+  },
+  {
+    id: 'case-study-links',
+    name: 'Case Study / UX Design',
+    tagline: 'Project gallery plus links out to full case studies',
+    icon: '🧩',
+    category: 'structural',
+    addsBlockTypes: ['gallery', 'links'],
+    design: { accent: '#3D5A80', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'fade-up', contentWidth: 'contained', heroAlign: 'left' }
+  },
+  {
+    id: 'music-podcast',
+    name: 'Music / Podcast',
+    tagline: 'Embedded track plus streaming platform links',
+    icon: '🎙️',
+    category: 'structural',
+    addsBlockTypes: ['video', 'links'],
+    design: { accent: '#D62839', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'horizontal', contentWidth: 'full', heroAlign: 'center' }
+  },
+  {
+    id: 'coaching-showcase',
+    name: 'Coaching / Course Creator',
+    tagline: 'Testimonial video plus a booking or enrollment link',
+    icon: '🎯',
+    category: 'structural',
+    addsBlockTypes: ['video', 'links'],
+    design: { accent: '#E85D04', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'fade-up', contentWidth: 'contained', heroAlign: 'left' }
+  },
+  {
+    id: 'social-proof',
+    name: 'Social Media / Influencer',
+    tagline: 'Content grid plus links to every social profile',
+    icon: '📱',
+    category: 'structural',
+    addsBlockTypes: ['gallery', 'links'],
+    design: { accent: '#C0392B', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'horizontal', contentWidth: 'full', heroAlign: 'center' }
+  },
+  {
+    id: 'project-gallery-plus',
+    name: 'Architecture / Interior Design',
+    tagline: 'Project photo gallery plus links to floor plans or listings',
+    icon: '🏛️',
+    category: 'structural',
+    addsBlockTypes: ['gallery', 'links'],
+    design: { accent: '#33475B', headingFont: 'serif', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'wide', heroAlign: 'left' }
+  },
+  {
+    id: 'app-demo',
+    name: 'Software / App Showcase',
+    tagline: 'Product demo video plus store and repo links',
+    icon: '💾',
+    category: 'structural',
+    addsBlockTypes: ['video', 'links'],
+    design: { accent: '#7C4DFF', headingFont: 'mono', bodyFont: 'sans', headerStyle: 'pinned', sectionAnimation: 'fade-up', contentWidth: 'wide', heroAlign: 'left' }
+  },
+  {
+    id: 'speaker-reel',
+    name: 'Public Speaking / Author',
+    tagline: 'Speaker reel video plus press and book links',
+    icon: '🎤',
+    category: 'structural',
+    addsBlockTypes: ['video', 'links'],
+    design: { accent: '#0B2545', headingFont: 'serif', bodyFont: 'serif', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'contained', heroAlign: 'center' }
+  },
+  {
+    id: 'recipe-gallery',
+    name: 'Culinary / Chef',
+    tagline: 'Dish photo gallery plus an embedded cooking video',
+    icon: '👨‍🍳',
+    category: 'structural',
+    addsBlockTypes: ['gallery', 'video'],
+    design: { accent: '#B8860B', headingFont: 'serif', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'fade-up', contentWidth: 'wide', heroAlign: 'center' }
+  },
+  {
+    id: 'impact-story',
+    name: 'Nonprofit / Fundraising',
+    tagline: 'Impact photos, a story video, and a donate link',
+    icon: '🌍',
+    category: 'structural',
+    addsBlockTypes: ['gallery', 'video', 'links'],
+    design: { accent: '#4C7A3F', headingFont: 'serif', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'fade-up', contentWidth: 'contained', heroAlign: 'center' }
   }
 ];
 
@@ -276,7 +366,9 @@ export const BLOCK_LIBRARY = [
   { type: 'certifications', label: 'Certifications', makeData: () => ({ items: [{ name: 'Certification Name', issuer: 'Issuing Body', date: 'Year' }] }) },
   { type: 'languages', label: 'Languages', makeData: () => ({ items: [{ name: 'English', level: 'Fluent' }] }) },
   { type: 'custom', label: 'Custom Text Block', makeData: () => ({ title: 'Custom Section', text: 'Add any additional information here.' }) },
-  { type: 'gallery', label: 'Photo Gallery', makeData: () => ({ photos: [] }) }
+  { type: 'gallery', label: 'Photo Gallery', makeData: () => ({ photos: [] }) },
+  { type: 'video', label: 'Embedded Video', makeData: () => ({ url: '', caption: '' }) },
+  { type: 'links', label: 'Embedded Links', makeData: () => ({ items: [{ label: 'Website', url: '' }] }) }
 ];
 
 const defaultBlocks = [
