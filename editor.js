@@ -2548,7 +2548,20 @@ function initZoomControls() {
   //   manual-only magnifier; it's never auto-computed from a
   //   width/height ratio the way resume's is.
   const computeFitZoom = () => {
-    if (Store.state.viewMode === 'portfolio') return 100;
+    if (Store.state.viewMode === 'portfolio') {
+      // Keep the document's *natural* width pinned to the real device
+      // width (so responsive breakpoints/media queries behave exactly
+      // like an actual visitor's browser — see pinPortfolioWidth), but
+      // don't let that force the visible canvas to overflow/scroll
+      // whenever the left sidebar is dragged wider. Instead, zoom the
+      // whole thing out (transform: scale) just enough to keep it fully
+      // visible — same page, same dimensions, just viewed smaller.
+      const deviceWidth = document.documentElement.clientWidth;
+      const availWidth = getAvailWidth();
+      if (!deviceWidth || availWidth <= 0) return 100;
+      const scalePct = (availWidth / deviceWidth) * 100;
+      return Math.min(100, Math.max(MIN_ZOOM, scalePct));
+    }
 
     const doc = getActiveDoc();
     if (!doc) return zoom;

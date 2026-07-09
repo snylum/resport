@@ -455,19 +455,19 @@ export const BLOCK_LIBRARY = [
 ];
 
 const defaultBlocks = [
-  { id: 'b0', type: 'summary', col: 'main', data: { text: 'Detail-oriented Computer Science graduate with hands-on experience building and shipping user-facing features. Passionate about clean code, performance, and thoughtful design.' } },
+  { id: 'b0', type: 'summary', col: 'main', data: { text: '' } },
   { id: 'b1', type: 'section', col: 'main', data: { title: 'Experience' } },
-  { id: 'b4', type: 'experience', col: 'main', data: { company: 'Tech Company Inc.', dates: 'Jan 2024 – Present', role: 'Software Engineer', location: 'Makati, PH', bullets: ['Built and shipped a feature used by 10k monthly active users.', 'Optimized frontend rendering speeds by restructuring dynamic canvas flows.'], verify: emptyVerify() } },
+  { id: 'b4', type: 'experience', col: 'main', data: { company: '', dates: '', role: '', location: '', bullets: [], verify: emptyVerify() } },
   { id: 'b1e', type: 'section', col: 'main', data: { title: 'Education' } },
-  { id: 'b2', type: 'education', col: 'main', data: { school: 'University of the Philippines', degree: 'B.S. Computer Science', location: 'Diliman, Quezon City', year: 'June 2024', gpa: 'GPA: 1.50' } },
+  { id: 'b2', type: 'education', col: 'main', data: { school: '', degree: '', location: '', year: '', gpa: '' } },
   { id: 'b5', type: 'section', col: 'main', data: { title: 'Skills' } },
-  { id: 'b6', type: 'skills', col: 'main', data: { items: ['JavaScript', 'Python', 'Figma', 'Git', 'SQL'] } }
+  { id: 'b6', type: 'skills', col: 'main', data: { items: [] } }
 ];
 
 const defaultProfile = {
   jobTitle: '', firstName: '', lastName: '',
   email: '', phone: '', address: '', photo: null,
-  tagline: 'I build things for the web and like proving it.'
+  tagline: ''
 };
 
 // ── Sample content library for the Randomize feature ────────────
@@ -930,7 +930,6 @@ class EditorStore {
   // state never collides with whatever was there before.
   randomizeContent() {
     const sample = SAMPLE_PROFILES[Math.floor(Math.random() * SAMPLE_PROFILES.length)];
-    const style = SAMPLE_STYLES[Math.floor(Math.random() * SAMPLE_STYLES.length)];
     const doc = this.active();
 
     doc.profile = deepClone(sample.profile);
@@ -956,9 +955,21 @@ class EditorStore {
     ]);
 
     if (this.state.viewMode === 'resume') {
-      doc.design = { ...doc.design, accent: style.accent, headingFont: style.headingFont, bodyFont: style.bodyFont };
+      // Pick from the full résumé template library (not just the
+      // curated 7-style accent/font list) so Randomize can land on
+      // any look a user could otherwise only get by picking it
+      // manually from the Customize > Template gallery.
+      const template = TEMPLATES[Math.floor(Math.random() * TEMPLATES.length)];
+      doc.template = template.id;
+      doc.design = { ...doc.design, ...deepClone(template.design) };
     } else {
-      doc.design = { accent: style.accent, headingFont: style.headingFont, bodyFont: style.bodyFont };
+      // Same idea for the portfolio: draw from every style template
+      // (accent/fonts/header/motion/width bundle) instead of the
+      // smaller standalone style list, so Randomize actually shows
+      // off the full range of themes available in Customize.
+      const template = PORTFOLIO_TEMPLATES[Math.floor(Math.random() * PORTFOLIO_TEMPLATES.length)];
+      doc.template = template.id;
+      doc.design = { ...PORTFOLIO_DEFAULT_DESIGN, ...deepClone(template.design) };
     }
 
     this.state.selectedBlockId = null;

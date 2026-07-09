@@ -91,6 +91,22 @@
   transition: min-height 0.15s ease, padding 0.15s ease;
 }
 
+/* In "deck" mode (see the fixed-shell block further down) the hero,
+   dot rail, slide track and footer all share one fixed 100vh column.
+   Sizing the hero straight off 100vh (as the plain rule above does
+   for normal scroll pages) ignores that the footer *also* needs a
+   guaranteed slice of that same 100vh — so a tall header ratio (e.g.
+   80/20) could eat into, or entirely swallow, the footer's space and
+   squeeze the slide track down to almost nothing. Basing the header's
+   target height on (100vh minus the footer's real, fixed height)
+   instead means the chosen ratio always splits the space that's
+   actually available to header vs. content, and the footer keeps its
+   own reserved room no matter what ratio is picked. */
+.portfolio-site[data-section-anim="horizontal"] .pf-hero,
+.portfolio-site[data-section-anim="vertical"] .pf-hero {
+  min-height: max(calc((100vh - var(--pf-footer-height, 4.5rem)) * var(--pf-header-pct) / 100), var(--pf-hero-min));
+}
+
 #canvasZoomTarget .pf-hero {
   /* Mirrors the horizontal/vertical-mode fix above: vh inside the
      editor canvas resolves against the real browser window, not the
@@ -99,6 +115,15 @@
      shell override below) instead of the true viewport. 6.4px per
      percentage point == 640px / 100. Same min-height floor applies. */
   min-height: max(calc(var(--pf-header-pct) * 6.4px), var(--pf-hero-min));
+}
+
+#canvasZoomTarget .portfolio-site[data-section-anim="horizontal"] .pf-hero,
+#canvasZoomTarget .portfolio-site[data-section-anim="vertical"] .pf-hero {
+  /* Same footer-reserving split as the published-page deck rule
+     above, just against the editor's fixed 640px canvas instead of
+     the real viewport (640px * 16px/rem-equivalent conversion — see
+     --pf-footer-height, defined in rem). */
+  min-height: max(calc((640px - var(--pf-footer-height, 4.5rem)) * var(--pf-header-pct) / 100), var(--pf-hero-min));
 }
 
 .pf-hero-photo-wrap {
