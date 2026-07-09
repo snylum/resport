@@ -726,6 +726,23 @@ body {
   box-shadow: 0 3px 0 0 var(--color-secondary);
 }
 
+/* The base .portfolio-site rule in portfolio.css renders a bordered,
+   max-780px "card" — that's editor chrome, meant to read as a
+   distinct object sitting on the canvas. But the real published page
+   (see buildPublishedSiteHTML's inline <style> override) always
+   renders it edge-to-edge, full width, no border. Those two were
+   never the same size, which is exactly why the in-editor preview
+   didn't match what publishing actually looks like on a real device.
+   This mirrors that same override here, scoped to the editor canvas
+   only, so at 100% zoom the preview is genuinely the same width the
+   published site would be at that window size — not a shrunk card. */
+#canvasWrap .portfolio-site {
+  width: 100%;
+  max-width: 100%;
+  border: none;
+  box-shadow: none;
+}
+
 /* ── Live Canvas Area ────────────────────────────────────── */
 .editor-canvas {
   flex: 1 1 auto;

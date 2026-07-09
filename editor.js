@@ -2489,33 +2489,47 @@ function initZoomControls() {
     Store.state.viewMode === 'resume' ? el.resumePaper : el.portfolioSite
   );
 
+  const getAvailWidth = () => {
+    const wrapStyle = getComputedStyle(el.canvasWrap);
+    const padX = parseFloat(wrapStyle.paddingLeft) + parseFloat(wrapStyle.paddingRight);
+    return el.canvasWrap.clientWidth - padX;
+  };
+
+  // Portfolio now renders edge-to-edge in the editor (see #canvasWrap
+  // .portfolio-site override in editor.css), same as the real
+  // published page. So its "natural" width isn't something to read
+  // off the DOM first — it's however much real space the canvas has,
+  // set directly, exactly like a browser window's viewport determines
+  // a real page's width. Zoom (below) is then just a magnifier
+  // layered on top of that already-real-width render, same as before.
+  const pinPortfolioWidth = () => {
+    const availWidth = getAvailWidth();
+    if (availWidth > 0) {
+      el.canvasZoomTarget.style.width = `${availWidth}px`;
+    }
+  };
+
   // "Fit" zoom, computed differently per document type:
   // - Resume is a fixed paper size, so fit means shrink-to-thumbnail
   //   (both width AND height) so the whole page is visible at once.
-  // - Portfolio is a real webpage: what matters is that it renders at
-  //   the size it will actually publish at (matching the person's own
-  //   display), not shrunk into a thumbnail. So portfolio's "fit" only
-  //   ever shrinks if it genuinely doesn't fit the available width,
-  //   and never zooms in past 100% automatically — height is left
-  //   alone entirely, since scrolling down a real page is normal.
+  // - Portfolio's width is already pinned to the real available space
+  //   (pinPortfolioWidth, above) — that IS matching-real-device-width,
+  //   not something zoom needs to solve. So portfolio's zoom simply
+  //   stays 100% by default (a pure 1:1 preview) and is otherwise a
+  //   manual-only magnifier; it's never auto-computed from a
+  //   width/height ratio the way resume's is.
   const computeFitZoom = () => {
+    if (Store.state.viewMode === 'portfolio') return 100;
+
     const doc = getActiveDoc();
     if (!doc) return zoom;
     const wrapStyle = getComputedStyle(el.canvasWrap);
-    const padX = parseFloat(wrapStyle.paddingLeft) + parseFloat(wrapStyle.paddingRight);
-    const availWidth = el.canvasWrap.clientWidth - padX;
-    const docWidth = doc.offsetWidth;
-    if (!docWidth || availWidth <= 0) return zoom;
-
-    if (Store.state.viewMode === 'portfolio') {
-      const scalePct = (availWidth / docWidth) * 100;
-      return Math.min(100, Math.max(MIN_ZOOM, scalePct));
-    }
-
     const padY = parseFloat(wrapStyle.paddingTop) + parseFloat(wrapStyle.paddingBottom);
+    const availWidth = getAvailWidth();
     const availHeight = el.canvasWrap.clientHeight - padY;
+    const docWidth = doc.offsetWidth;
     const docHeight = doc.offsetHeight;
-    if (!docHeight || availHeight <= 0) return zoom;
+    if (!docWidth || !docHeight || availWidth <= 0 || availHeight <= 0) return zoom;
     const scalePct = Math.min(availWidth / docWidth, availHeight / docHeight) * 100;
     return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, scalePct));
   };
@@ -2523,7 +2537,16 @@ function initZoomControls() {
   const applyZoom = () => {
     const doc = getActiveDoc();
     const scale = zoom / 100;
-    if (doc) {
+    const isPortfolio = Store.state.viewMode === 'portfolio';
+    if (doc && isPortfolio) {
+      pinPortfolioWidth();
+      const natW = doc.offsetWidth;
+      const natH = doc.offsetHeight;
+      el.canvasZoomTarget.style.height = `${natH}px`;
+      el.canvasZoomTarget.style.transform = `translate(-50%, -50%) scale(${scale})`;
+      el.canvasContainer.style.width = `${natW * scale}px`;
+      el.canvasContainer.style.height = `${natH * scale}px`;
+    } else if (doc) {
       // Give the zoom target an explicit, unambiguous natural size
       // (rather than relying on it shrink-wrapping its visible child)
       // so the scaled footprint we assign to the container below is
