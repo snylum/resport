@@ -1054,6 +1054,7 @@ function handleGoogleCredential(response) {
   saveGoogleAccount({ email: payload.email, name: payload.name, credential: response.credential });
   renderPublishAccountBox();
   refreshNavUsername();
+  refreshPublishToolbarButton();
   // Just signed in mid-session: pull in whatever draft already exists
   // for this account from another device. If there isn't one yet,
   // push what's currently in the editor up so cross-device sync
@@ -1096,6 +1097,8 @@ function renderPublishAccountBox() {
       renderPublishAccountBox();
       lockPublishUsernameField();
       refreshNavUsername();
+      refreshPublishToolbarButton();
+      closeModal();
     });
   } else {
     box.innerHTML = `
@@ -1637,6 +1640,49 @@ function buildPublishedSiteHTML() {
   <script>${PUBLISHED_PAGE_SCRIPT}</script>
 </body>
 </html>`;
+}
+
+// Keeps the toolbar action in sync with sign-in state: signed-out
+// visitors see "Sign in to Google" (publishing requires an account to
+// own the address against); once signed in it flips to the normal
+// "Publish" action. Called on load, right after sign-in, and right
+// after sign-out.
+function refreshPublishToolbarButton() {
+  const btn = document.getElementById('btnPublishShowcase');
+  if (!btn) return;
+  const signedIn = !!getSavedGoogleAccount();
+  btn.textContent = signedIn ? '✦ Publish' : 'Sign in to Google';
+  btn.classList.toggle('btn-secondary', signedIn);
+  btn.classList.toggle('btn-ghost', !signedIn);
+}
+
+// A focused, single-purpose modal for signing in — shown when the
+// toolbar button is clicked while signed out. On success it hands
+// straight off into the normal Publish modal, so "sign in" flows
+// directly into "publish" in one motion rather than making the person
+// click the toolbar button a second time.
+function openSignInModal() {
+  openModal(`
+    <h3 class="modal-title" id="modalTitle">Sign in to Google</h3>
+    <p class="modal-sub">Sign in to save your progress and publish your portfolio to ${PUBLISH_APEX}.</p>
+    <div class="field-box full-width" id="signInAccountBox"></div>
+  `, (root) => {
+    const box = root.querySelector('#signInAccountBox');
+    if (!(window.google && window.google.accounts && window.google.accounts.id)) {
+      box.innerHTML = `<p class="username-status warn">Google sign-in script hasn't loaded (offline, or blocked) — try again in a moment.</p>`;
+      return;
+    }
+    window.google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: async (response) => {
+        handleGoogleCredential(response);
+        closeModal();
+        await refreshSiteStatusBadge();
+        openPublishModal();
+      }
+    });
+    window.google.accounts.id.renderButton(box, { theme: 'outline', size: 'large', text: 'signin_with' });
+  });
 }
 
 function openPublishModal() {
@@ -2314,6 +2360,13 @@ function initToolbar() {
   });
 
   document.getElementById('btnPublishShowcase').addEventListener('click', async () => {
+    // Signed-out visitors don't get straight to the Publish modal —
+    // there's no account yet to own the address against — so the
+    // button itself doubles as "Sign in to Google" until one exists.
+    if (!getSavedGoogleAccount()) {
+      openSignInModal();
+      return;
+    }
     // Refresh site status right before opening the Publish modal so
     // "already paid & live" is judged against the current truth, not
     // whatever was cached at page load — an admin could have approved
@@ -2322,6 +2375,7 @@ function initToolbar() {
     await refreshSiteStatusBadge();
     openPublishModal();
   });
+  refreshPublishToolbarButton();
   refreshSiteStatusBadge();
   document.getElementById('btnPreviewShowcase').addEventListener('click', () => {
     const blob = new Blob([buildPublishedSiteHTML()], { type: 'text/html' });

@@ -336,11 +336,16 @@
 .pf-slide-inner {
   width: 100%;
   max-width: 700px;
-  height: 100%;
+  max-height: 100%;
   overflow-y: auto;
   /* Internal scroll is a per-slide fallback, not the default look —
      only kicks in when that slide's own content genuinely doesn't
-     fit the space it's given. */
+     fit the space it's given. max-height (not height) lets short
+     content size to itself and sit centered via .pf-slide's
+     align-items/justify-content, instead of always stretching to
+     fill the slide and leaving dead space below on tall viewports
+     (the editor's own preview canvas is a fixed, short 640px, which
+     is why this only shows up on real, taller browser windows). */
   padding: calc(2.75rem + var(--pf-text-pad)) calc(2.75rem + var(--pf-text-pad)) calc(3.25rem + var(--pf-text-pad));
   display: flex;
   flex-direction: column;

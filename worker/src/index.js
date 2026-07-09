@@ -402,6 +402,8 @@ async function handleApi(request, env, url) {
         paidAt: record.paidAt || null,
         paidUntil: record.paidUntil || null,
         paidDurationMonths: record.paidDurationMonths || null,
+        amountPaid: record.amountPaid || null,
+        payments: Array.isArray(record.payments) ? record.payments : [],
         manualLink: record.manualLink || ''
       } : null;
     }));
@@ -509,6 +511,10 @@ async function handleApi(request, env, url) {
     // editor.js) but an admin can override it per-site (e.g. a promo
     // or a partial-period renewal).
     const durationMonths = paid ? (Number(body.durationMonths) > 0 ? Number(body.durationMonths) : 3) : null;
+    // The peso (or whatever currency) amount actually received —
+    // purely a manual bookkeeping field, defaults to the standard fee
+    // but an admin can adjust it for discounts/promos/partial payments.
+    const amount = paid ? (Number(body.amount) >= 0 ? Number(body.amount) : 249) : null;
     const existing = await env.SITES.get(`site:${username}`, 'json');
     if (!existing) return json({ ok: false, error: 'Not found.' }, 404);
 
@@ -517,14 +523,33 @@ async function handleApi(request, env, url) {
       ? new Date(now.getFullYear(), now.getMonth() + durationMonths, now.getDate()).toISOString()
       : (existing.paidUntil || null);
 
+    // Every time an admin marks a site paid, that's a real payment
+    // event worth keeping — appended to a running log rather than
+    // overwritten, so the dashboard can total revenue and chart it
+    // over time instead of only ever knowing about the latest one.
+    // Unmarking "paid" (e.g. correcting a mistake) never touches the
+    // log — it only flips the current paid/live flag.
+    const payments = Array.isArray(existing.payments) ? existing.payments.slice() : [];
+    if (paid) {
+      payments.push({
+        amount,
+        referenceNumber,
+        durationMonths,
+        paidAt: now.toISOString(),
+        adminEmail
+      });
+    }
+
     await env.SITES.put(`site:${username}`, JSON.stringify({
       ...existing,
       paid,
       referenceNumber: paid ? referenceNumber : (existing.referenceNumber || ''),
       paidAt: paid ? now.toISOString() : (existing.paidAt || null),
       paidDurationMonths: paid ? durationMonths : (existing.paidDurationMonths || null),
+      amountPaid: paid ? amount : (existing.amountPaid || null),
       paidUntil,
-      paidMarkedBy: adminEmail
+      paidMarkedBy: adminEmail,
+      payments
     }));
     return json({ ok: true });
   }

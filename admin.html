@@ -28,23 +28,51 @@
 
     <div id="adminPanel" class="admin-panel hidden">
       <div class="admin-toolbar">
-        <h1 class="admin-heading">Published sites</h1>
+        <h1 class="admin-heading">Admin dashboard</h1>
         <div class="admin-toolbar-actions">
           <input type="search" id="adminSearch" placeholder="Filter by username or owner email…" autocomplete="off" spellcheck="false" />
           <button class="btn btn-ghost btn-sm" id="adminRefreshBtn" type="button">↻ Refresh</button>
         </div>
       </div>
 
-      <div class="admin-tabs">
-        <button class="admin-tab active" data-filter="pending" type="button">Pending review</button>
-        <button class="admin-tab" data-filter="live" type="button">Live</button>
-        <button class="admin-tab" data-filter="rejected" type="button">Rejected</button>
-        <button class="admin-tab" data-filter="deleted" type="button">Deleted / lost</button>
-        <button class="admin-tab" data-filter="all" type="button">All</button>
+      <div class="admin-view-tabs">
+        <button class="admin-view-tab active" data-view="overview" type="button">📊 Overview</button>
+        <button class="admin-view-tab" data-view="sites" type="button">🗂️ Sites</button>
       </div>
 
       <p class="username-status" id="adminListStatus"></p>
-      <div id="adminSitesList" class="admin-sites-list"></div>
+
+      <div id="adminOverviewView" class="admin-view">
+        <div class="admin-stats-grid" id="adminStatsGrid"></div>
+        <div class="admin-charts-grid">
+          <div class="admin-card">
+            <h3 class="admin-card-title">Revenue — last 6 months</h3>
+            <div id="adminRevenueChart" class="admin-chart"></div>
+          </div>
+          <div class="admin-card">
+            <h3 class="admin-card-title">Sites by status</h3>
+            <div id="adminStatusChart" class="admin-chart"></div>
+          </div>
+        </div>
+        <div class="admin-card">
+          <div class="admin-card-title-row">
+            <h3 class="admin-card-title">Recent payments</h3>
+            <span class="admin-card-title-sub" id="adminPaymentsCount"></span>
+          </div>
+          <div id="adminPaymentsLog"></div>
+        </div>
+      </div>
+
+      <div id="adminSitesView" class="admin-view hidden">
+        <div class="admin-tabs">
+          <button class="admin-tab active" data-filter="pending" type="button">Pending review</button>
+          <button class="admin-tab" data-filter="live" type="button">Live</button>
+          <button class="admin-tab" data-filter="rejected" type="button">Rejected</button>
+          <button class="admin-tab" data-filter="deleted" type="button">Deleted / lost</button>
+          <button class="admin-tab" data-filter="all" type="button">All</button>
+        </div>
+        <div id="adminSitesList" class="admin-sites-list"></div>
+      </div>
     </div>
   </main>
 

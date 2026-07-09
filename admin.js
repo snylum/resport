@@ -26,6 +26,13 @@ const el = {
   adminListStatus: document.getElementById('adminListStatus'),
   adminSearch: document.getElementById('adminSearch'),
   adminRefreshBtn: document.getElementById('adminRefreshBtn'),
+  adminOverviewView: document.getElementById('adminOverviewView'),
+  adminSitesView: document.getElementById('adminSitesView'),
+  adminStatsGrid: document.getElementById('adminStatsGrid'),
+  adminRevenueChart: document.getElementById('adminRevenueChart'),
+  adminStatusChart: document.getElementById('adminStatusChart'),
+  adminPaymentsLog: document.getElementById('adminPaymentsLog'),
+  adminPaymentsCount: document.getElementById('adminPaymentsCount'),
   modalOverlay: document.getElementById('modalOverlay'),
   modalContent: document.getElementById('modalContent'),
   modalCloseBtn: document.getElementById('modalCloseBtn'),
@@ -102,7 +109,9 @@ el.modalOverlay.addEventListener('click', (e) => { if (e.target === el.modalOver
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
 let activeFilter = 'pending';
+let activeView = 'overview';
 let allSites = [];
+const CURRENCY = '₱';
 
 function renderAccountSlot() {
   const account = getSavedAdminAccount();
@@ -149,6 +158,137 @@ function showPanel() {
   startIdleWatch();
 }
 
+document.querySelectorAll('.admin-view-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.admin-view-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    activeView = tab.dataset.view;
+    el.adminOverviewView.classList.toggle('hidden', activeView !== 'overview');
+    el.adminSitesView.classList.toggle('hidden', activeView !== 'sites');
+  });
+});
+
+function money(n) {
+  return `${CURRENCY}${Number(n || 0).toLocaleString()}`;
+}
+
+function formatDate(iso) {
+  return iso ? new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
+}
+
+// Flattens every site's payments log into one list (each entry tagged
+// with the username it belongs to), newest first — the single source
+// both the revenue chart and the "Recent payments" list are built from.
+function allPayments() {
+  const out = [];
+  allSites.forEach(s => {
+    (s.payments || []).forEach(p => out.push({ ...p, username: s.username }));
+  });
+  out.sort((a, b) => new Date(b.paidAt || 0) - new Date(a.paidAt || 0));
+  return out;
+}
+
+// A tiny, dependency-free horizontal bar chart — good enough for a
+// handful of categories/months without pulling in a charting library.
+// `rows` is [{ label, value, hint? }]; bars scale relative to the
+// largest value in the set.
+function renderBarChart(container, rows, { formatValue = (v) => v, barColor = 'var(--color-secondary)' } = {}) {
+  if (!rows.length || rows.every(r => !r.value)) {
+    container.innerHTML = `<p class="admin-empty admin-empty-sm">No data yet.</p>`;
+    return;
+  }
+  const max = Math.max(...rows.map(r => r.value), 1);
+  container.innerHTML = rows.map(r => `
+    <div class="admin-bar-row">
+      <span class="admin-bar-label">${esc(r.label)}</span>
+      <div class="admin-bar-track">
+        <div class="admin-bar-fill" style="width:${Math.max((r.value / max) * 100, r.value > 0 ? 3 : 0)}%;background:${r.color || barColor};"></div>
+      </div>
+      <span class="admin-bar-value">${esc(formatValue(r.value))}</span>
+    </div>
+  `).join('');
+}
+
+function renderOverview() {
+  const now = new Date();
+  const total = allSites.length;
+  const byStatus = { live: 0, pending: 0, rejected: 0, deleted: 0 };
+  let paidActive = 0, expiringSoon = 0;
+  allSites.forEach(s => {
+    if (byStatus[s.status] != null) byStatus[s.status]++;
+    if (s.paid && s.paidUntil) {
+      const daysLeft = Math.ceil((new Date(s.paidUntil).getTime() - now.getTime()) / 86400000);
+      if (daysLeft > 0) {
+        paidActive++;
+        if (daysLeft <= 7) expiringSoon++;
+      }
+    }
+  });
+
+  const payments = allPayments();
+  const totalRevenue = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthRevenue = payments
+    .filter(p => new Date(p.paidAt || 0) >= monthStart)
+    .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+
+  // ── Stat cards ──────────────────────────────────────────────
+  const cards = [
+    { label: 'Total sites', value: total },
+    { label: 'Live', value: byStatus.live, tone: 'ok' },
+    { label: 'Pending review', value: byStatus.pending, tone: byStatus.pending ? 'warn' : '' },
+    { label: 'Paid & active', value: paidActive, tone: 'ok' },
+    { label: 'Expiring ≤7 days', value: expiringSoon, tone: expiringSoon ? 'warn' : '' },
+    { label: 'Revenue this month', value: money(monthRevenue) },
+    { label: 'Total revenue', value: money(totalRevenue) },
+    { label: 'Payments logged', value: payments.length },
+  ];
+  el.adminStatsGrid.innerHTML = cards.map(c => `
+    <div class="admin-stat-card">
+      <div class="admin-stat-value ${c.tone || ''}">${esc(String(c.value))}</div>
+      <div class="admin-stat-label">${esc(c.label)}</div>
+    </div>
+  `).join('');
+
+  // ── Revenue by month (last 6 months, oldest → newest) ────────
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({ key: `${d.getFullYear()}-${d.getMonth()}`, label: d.toLocaleString(undefined, { month: 'short' }), value: 0 });
+  }
+  payments.forEach(p => {
+    const d = new Date(p.paidAt || 0);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    const bucket = months.find(m => m.key === key);
+    if (bucket) bucket.value += Number(p.amount) || 0;
+  });
+  renderBarChart(el.adminRevenueChart, months, { formatValue: money });
+
+  // ── Sites by status ───────────────────────────────────────────
+  renderBarChart(el.adminStatusChart, [
+    { label: 'Live', value: byStatus.live, color: 'var(--color-success)' },
+    { label: 'Pending', value: byStatus.pending, color: 'var(--color-warning)' },
+    { label: 'Rejected', value: byStatus.rejected, color: 'var(--color-danger)' },
+    { label: 'Deleted', value: byStatus.deleted, color: 'var(--color-text-muted)' },
+  ], { formatValue: (v) => String(v) });
+
+  // ── Recent payments log ───────────────────────────────────────
+  el.adminPaymentsCount.textContent = payments.length ? `${payments.length} total` : '';
+  if (!payments.length) {
+    el.adminPaymentsLog.innerHTML = `<p class="admin-empty admin-empty-sm">No payments logged yet — mark a site paid from the Sites tab to start tracking.</p>`;
+  } else {
+    el.adminPaymentsLog.innerHTML = payments.slice(0, 15).map(p => `
+      <div class="admin-payment-row">
+        <div class="admin-payment-main">
+          <span class="admin-payment-username">${esc(p.username)}.proves.work</span>
+          <span class="admin-payment-meta">${formatDate(p.paidAt)}${p.durationMonths ? ` · ${p.durationMonths}mo` : ''}${p.referenceNumber ? ` · ref: ${esc(p.referenceNumber)}` : ''}</span>
+        </div>
+        <span class="admin-payment-amount">${money(p.amount)}</span>
+      </div>
+    `).join('');
+  }
+}
+
 async function loadSites() {
   const account = getSavedAdminAccount();
   el.adminListStatus.textContent = 'Loading sites…';
@@ -164,11 +304,13 @@ async function loadSites() {
       el.adminListStatus.textContent = data.error || 'Not authorized.';
       el.adminListStatus.className = 'username-status warn';
       allSites = [];
+      renderOverview();
       renderList();
       return;
     }
     allSites = data.sites;
     el.adminListStatus.textContent = '';
+    renderOverview();
     renderList();
   } catch (err) {
     el.adminListStatus.textContent = 'Could not reach the admin API — check the Worker is deployed.';
@@ -207,7 +349,7 @@ function renderList() {
       <div class="admin-site-main">
         <div class="admin-site-username">${esc(s.username)}.proves.work${(s.status === 'live' && s.ownerEmail) ? ` <span class="admin-owner-chip">${esc(s.ownerEmail)}</span>` : ''}</div>
         <div class="admin-site-meta">${s.ownerEmail ? esc(s.ownerEmail) : 'anonymous'} · updated ${s.updatedAt ? new Date(s.updatedAt).toLocaleString() : '—'}</div>
-        ${s.paid ? `<div class="admin-site-meta admin-site-paid">✓ Paid${s.referenceNumber ? ` · ref: ${esc(s.referenceNumber)}` : ''}${paidCountdownLabel(s)}</div>` : ''}
+        ${s.paid ? `<div class="admin-site-meta admin-site-paid">✓ Paid${s.amountPaid != null ? ` ${money(s.amountPaid)}` : ''}${s.referenceNumber ? ` · ref: ${esc(s.referenceNumber)}` : ''}${paidCountdownLabel(s)}</div>` : ''}
       </div>
       <span class="admin-status-pill ${s.status}">${s.status}</span>
       <div class="admin-site-actions">
@@ -270,12 +412,12 @@ function confirmHardDelete(username) {
   });
 }
 
-async function setPaid(username, paid, referenceNumber, durationMonths) {
+async function setPaid(username, paid, referenceNumber, durationMonths, amount) {
   const account = getSavedAdminAccount();
   const res = await fetch('/api/admin/set-paid', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ googleCredential: account.credential, username, paid, referenceNumber, durationMonths })
+    body: JSON.stringify({ googleCredential: account.credential, username, paid, referenceNumber, durationMonths, amount })
   });
   const data = await res.json();
   if (!data.ok) {
@@ -288,7 +430,11 @@ async function setPaid(username, paid, referenceNumber, durationMonths) {
 function openMarkPaidModal(username, currentRef) {
   openModal(`
     <h3 class="modal-title" id="modalTitle">Mark @${esc(username)} as paid</h3>
-    <p class="modal-sub">Choose how long this payment covers, and optionally add a reference number for your own records.</p>
+    <p class="modal-sub">Record what was actually received, how long it covers, and optionally a reference number for your own records.</p>
+    <div class="admin-modal-field">
+      <label for="paidAmountInput" style="display:block;font-size:0.8rem;color:var(--color-text-muted);margin-bottom:0.3rem;">Amount received (${CURRENCY})</label>
+      <input type="number" id="paidAmountInput" min="0" step="1" value="249" autocomplete="off" />
+    </div>
     <div class="admin-modal-field">
       <label for="paidDurationSelect" style="display:block;font-size:0.8rem;color:var(--color-text-muted);margin-bottom:0.3rem;">Duration</label>
       <select id="paidDurationSelect">
@@ -310,7 +456,8 @@ function openMarkPaidModal(username, currentRef) {
     root.querySelector('#confirmPaidBtn').addEventListener('click', () => {
       const ref = root.querySelector('#paidRefInput').value.trim();
       const durationMonths = Number(root.querySelector('#paidDurationSelect').value) || 3;
-      setPaid(username, true, ref, durationMonths);
+      const amount = Number(root.querySelector('#paidAmountInput').value) || 0;
+      setPaid(username, true, ref, durationMonths, amount);
       closeModal();
     });
   });
