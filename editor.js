@@ -1105,6 +1105,12 @@ function paidCountdownSuffix(data) {
   return ` · paid, ${daysLeft}d left`;
 }
 
+// Cached from the most recent refreshSiteStatusBadge() call — lets the
+// publish flow (below) check "is this address already paid and live"
+// without re-fetching, so a person who already paid never gets routed
+// back through the fee modal just to push a content update.
+let lastSiteStatusData = null;
+
 async function refreshSiteStatusBadge() {
   if (!el.siteStatusBadge) return;
   const username = getSavedUsername();
@@ -1119,6 +1125,7 @@ async function refreshSiteStatusBadge() {
     const res = await fetch(`/api/site-status?u=${encodeURIComponent(username)}`);
     if (!res.ok) throw new Error('no-backend');
     const data = await res.json();
+    lastSiteStatusData = data;
     const status = data.status || 'draft';
     el.siteStatusBadge.className = `site-status-badge status-${status}`;
     el.siteStatusBadge.textContent = (SITE_STATUS_LABELS[status] || SITE_STATUS_LABELS.draft) + paidCountdownSuffix(data);
@@ -1126,6 +1133,7 @@ async function refreshSiteStatusBadge() {
   } catch (err) {
     // No backend reachable from here — don't claim a status we can't
     // verify.
+    lastSiteStatusData = null;
     el.siteStatusBadge.classList.add('hidden');
   }
   refreshNavUsername();
@@ -1647,7 +1655,23 @@ function openPublishModal() {
 
     confirmBtn.addEventListener('click', () => {
       const username = slugifyUsername(input.value);
-      openPublishFeeModal(username);
+      // Already paid, approved, and within the paid window for THIS
+      // exact address? This is just a content update, not a new
+      // publish — skip the fee modal entirely and push the update
+      // straight through. Re-showing "Pay ₱249 & Publish" here would
+      // be charging someone again for something they already own.
+      const alreadyPaidAndLive = (
+        lastSiteStatusData &&
+        lastSiteStatusData.status === 'live' &&
+        lastSiteStatusData.paid &&
+        username === getSavedUsername() &&
+        (!lastSiteStatusData.paidUntil || new Date(lastSiteStatusData.paidUntil).getTime() > Date.now())
+      );
+      if (alreadyPaidAndLive) {
+        doPublish(username, confirmBtn);
+      } else {
+        openPublishFeeModal(username);
+      }
     });
   });
 }
@@ -2497,15 +2521,20 @@ function initZoomControls() {
 
   // Portfolio now renders edge-to-edge in the editor (see #canvasWrap
   // .portfolio-site override in editor.css), same as the real
-  // published page. So its "natural" width isn't something to read
-  // off the DOM first — it's however much real space the canvas has,
-  // set directly, exactly like a browser window's viewport determines
-  // a real page's width. Zoom (below) is then just a magnifier
-  // layered on top of that already-real-width render, same as before.
+  // published page. Its width must come from the actual browser
+  // viewport (documentElement.clientWidth — window width minus its
+  // own scrollbar) and NOT from the canvas region's available space,
+  // which shrinks whenever the left sidebar is dragged wider. A real
+  // visitor's browser window doesn't get narrower because some other
+  // panel exists next to it, so neither should this preview — it's
+  // meant to always match "what my display would show", full stop.
+  // If that's wider than the visible canvas area, the canvas simply
+  // scrolls horizontally to reveal the rest, the same way scrolling
+  // sideways on an actual wide page would work.
   const pinPortfolioWidth = () => {
-    const availWidth = getAvailWidth();
-    if (availWidth > 0) {
-      el.canvasZoomTarget.style.width = `${availWidth}px`;
+    const deviceWidth = document.documentElement.clientWidth;
+    if (deviceWidth > 0) {
+      el.canvasZoomTarget.style.width = `${deviceWidth}px`;
     }
   };
 
@@ -2621,6 +2650,7 @@ function initZoomControls() {
   };
 
   new ResizeObserver(scheduleRefit).observe(el.canvasWrap);
+  window.addEventListener('resize', scheduleRefit);
   const docObserver = new ResizeObserver(scheduleRefit);
   docObserver.observe(el.resumePaper);
   docObserver.observe(el.portfolioSite);

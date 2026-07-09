@@ -761,11 +761,24 @@ body {
      grows → refit again → flicker). With the gutter reserved, the
      loop's trigger condition never fires. */
   overflow-y: auto;
-  overflow-x: hidden;
+  /* auto, not hidden: the portfolio preview's width now tracks the
+     real browser viewport (see pinPortfolioWidth in editor.js), not
+     this box's own available space — so whenever the sidebar is wide
+     enough to eat into that space, the preview is intentionally
+     wider than what's visible here, and needs to scroll sideways to
+     see the rest, same as scrolling a wide page normally would. */
+  overflow-x: auto;
   scrollbar-gutter: stable;
   padding: 2rem;
   display: flex;
-  justify-content: center;
+  /* "safe center": plain `center` has a well-known flexbox quirk
+     where, once content overflows, the browser clips the start-side
+     overflow instead of leaving it scrollable — so a wider-than-box
+     preview looks like it's jammed against one edge instead of truly
+     centered-but-scrollable. "safe" keeps it centered whenever it
+     fits, and falls back to start-aligned (fully scrollable, nothing
+     clipped) once it doesn't. */
+  justify-content: safe center;
   align-items: flex-start;
   position: relative;
 }
