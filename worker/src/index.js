@@ -150,9 +150,11 @@ async function serveSite(username, env) {
     status: 200,
     headers: {
       'content-type': 'text/html;charset=UTF-8',
-      // Short edge cache: republishing should show up within a minute,
-      // not be stuck behind a long cache.
-      'cache-control': 'public, max-age=60'
+      // Short cache: republishing should show up within seconds, not
+      // be stuck behind a stale browser/edge cache for a full minute.
+      // (KV writes themselves can still take up to ~60s to propagate
+      // globally — that floor isn't controllable via headers.)
+      'cache-control': 'public, max-age=10, must-revalidate'
     }
   });
 }
@@ -326,7 +328,53 @@ async function handleApi(request, env, url) {
     return json({ ok: true });
   }
 
-  // ── Admin routes (dashboard at /admin) ───────────────────────
+  // ── Cross-device draft sync (signed-in editors only) ──────────
+  // Lets a signed-in Google account's in-progress edits (the full
+  // editable Store state — profile/blocks/design/template for both
+  // documents — NOT the rendered HTML) follow them to any device,
+  // independent of whether they've published/paid/been approved yet.
+  // Keyed by the verified email itself (draft:<email>), since a
+  // person can be editing before they've even picked/claimed a
+  // username. This is deliberately separate from the site: record
+  // (which only ever holds published snapshots) so autosaving drafts
+  // never risks touching what's actually live.
+  if (url.pathname === '/api/draft/save' && request.method === 'POST') {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ ok: false, error: 'Invalid JSON body.' }, 400);
+    }
+    const email = await verifyGoogleCredential(body.googleCredential);
+    if (!email) return json({ ok: false, error: 'Sign in with Google to sync edits across devices.' }, 401);
+
+    const stateStr = JSON.stringify(body.state ?? null);
+    if (stateStr.length > 2_000_000) {
+      return json({ ok: false, error: 'Draft too large (2MB limit).' }, 400);
+    }
+
+    await env.SITES.put(`draft:${email}`, JSON.stringify({
+      state: body.state,
+      updatedAt: new Date().toISOString()
+    }));
+    return json({ ok: true });
+  }
+
+  if (url.pathname === '/api/draft/load' && request.method === 'POST') {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ ok: false, error: 'Invalid JSON body.' }, 400);
+    }
+    const email = await verifyGoogleCredential(body.googleCredential);
+    if (!email) return json({ ok: false, error: 'Sign in with Google to sync edits across devices.' }, 401);
+
+    const record = await env.SITES.get(`draft:${email}`, 'json');
+    return json({ ok: true, state: record ? record.state : null, updatedAt: record ? record.updatedAt : null });
+  }
+
+
   // Every route below requires a verified Google ID token belonging to
   // an address in ADMIN_EMAILS. Sites are never public until 'approve'
   // is called here, and can always be recovered ('restore') even after

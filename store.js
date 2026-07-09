@@ -1003,6 +1003,29 @@ class EditorStore {
     this.emit('blocks_changed', doc.blocks);
     this.emit('design_changed', doc.design);
   }
+  // ── Full-state serialize/restore (for autosave — local & cross-
+  // device). Deliberately the whole editable state, not rendered
+  // HTML, so it can be loaded straight back into the editor and kept
+  // working on, unlike a published snapshot.
+  serialize() {
+    return {
+      viewMode: this.state.viewMode,
+      portfolio: this.state.portfolio,
+      resume: this.state.resume
+    };
+  }
+
+  loadSerialized(data) {
+    if (!data || typeof data !== 'object') return;
+    if (data.portfolio) this.state.portfolio = data.portfolio;
+    if (data.resume) this.state.resume = data.resume;
+    if (data.viewMode) this.state.viewMode = data.viewMode;
+    this.state.selectedBlockId = null;
+    this.emit('profile_changed', this.active().profile);
+    this.emit('blocks_changed', this.active().blocks);
+    this.emit('design_changed', this.active().design);
+    this.emit('viewmode_changed', this.state.viewMode);
+  }
 }
 
 export const Store = new EditorStore();

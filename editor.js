@@ -45,7 +45,6 @@ const el = {
   pfSlideDots: document.getElementById('pfSlideDots'),
   pfSlideArrowTop: document.getElementById('pfSlideArrowTop'),
   pfSlideArrowBottom: document.getElementById('pfSlideArrowBottom'),
-  pfFooterName: document.getElementById('pfFooterName'),
 
   sidebarSectionsList: document.getElementById('sidebarSectionsList'),
   editorSidebar: document.getElementById('editorSidebar'),
@@ -141,7 +140,6 @@ function refreshHeader() {
     el.pfTagline.textContent = profile.tagline || '';
     el.pfTagline.style.display = profile.tagline ? '' : 'none';
     el.pfContactLine.textContent = contactLine;
-    el.pfFooterName.textContent = fullName;
     if (profile.photo) {
       el.pfPhotoImg.src = profile.photo;
       el.pfPhotoWrap.classList.remove('hidden');
@@ -929,7 +927,90 @@ function openVerifyEditModal(blockId, photoIndex) {
 const PUBLISH_APEX = 'proves.work';
 const PUBLISH_USERNAME_KEY = 'proveswork_username';
 
-// ── Google Sign-In (replaces the old copy-paste "publish key") ──────
+// ── Cross-device autosave (drafts) ──────────────────────────────
+// Everyone gets local autosave — no account needed, works offline,
+// and never loses work on refresh (previously there was NO
+// persistence at all; a refresh silently wiped the whole document).
+// Signed-in users additionally sync the exact same state to the
+// server, keyed by their Google account (see worker's
+// /api/draft/save + /api/draft/load) — that's what makes edits
+// follow you to any device, independent of publish/paid/approval
+// status. Publishing (a separate, explicit action) is unaffected —
+// this only ever writes to the draft: key, never to a live site.
+const LOCAL_DRAFT_KEY = 'proveswork_editor_draft';
+
+function saveLocalDraft() {
+  try {
+    localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify(Store.serialize()));
+  } catch (err) {
+    // Storage full/disabled (private browsing, etc.) — local autosave
+    // is best-effort; the signed-in server sync (if any) still works.
+  }
+}
+
+function loadLocalDraft() {
+  try {
+    const raw = localStorage.getItem(LOCAL_DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+let draftSyncTimer = null;
+function syncDraftToServer() {
+  const account = getSavedGoogleAccount();
+  if (!account) return;
+  fetch('/api/draft/save', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ googleCredential: account.credential, state: Store.serialize() })
+  }).catch(() => { /* offline / worker not deployed yet — local autosave already has it covered */ });
+}
+
+// Local save is synchronous and immediate (never lost even if the tab
+// closes a moment later); the server sync is debounced so rapid
+// typing doesn't fire a request per keystroke.
+function scheduleAutosave() {
+  saveLocalDraft();
+  if (draftSyncTimer) clearTimeout(draftSyncTimer);
+  draftSyncTimer = setTimeout(syncDraftToServer, 1200);
+}
+
+async function loadServerDraft() {
+  const account = getSavedGoogleAccount();
+  if (!account) return null;
+  try {
+    const res = await fetch('/api/draft/load', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ googleCredential: account.credential })
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.ok ? data.state : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+// Wires autosave to every content-mutating Store event, and — for a
+// signed-in account — pulls that account's server draft in. The
+// server copy wins over this browser's own localStorage if both
+// exist, since it may hold newer edits made from a different device.
+function initPersistence() {
+  ['profile_changed', 'blocks_changed', 'design_changed', 'template_changed', 'title_changed', 'resume_reset']
+    .forEach(evt => Store.on(evt, scheduleAutosave));
+
+  loadServerDraft().then(state => {
+    if (state) {
+      Store.loadSerialized(state);
+      saveLocalDraft();
+    }
+  });
+}
+
+
 // NOTE: this front-end scaffold requests + decodes a Google ID token
 // (JWT) so the person's Google account is what proves ownership of a
 // username, instead of a random token they had to copy/paste/lose.
@@ -973,6 +1054,18 @@ function handleGoogleCredential(response) {
   saveGoogleAccount({ email: payload.email, name: payload.name, credential: response.credential });
   renderPublishAccountBox();
   refreshNavUsername();
+  // Just signed in mid-session: pull in whatever draft already exists
+  // for this account from another device. If there isn't one yet,
+  // push what's currently in the editor up so cross-device sync
+  // starts from here instead of from nothing.
+  loadServerDraft().then(state => {
+    if (state) {
+      Store.loadSerialized(state);
+      saveLocalDraft();
+    } else {
+      syncDraftToServer();
+    }
+  });
 }
 
 function renderGoogleSignInButton(container) {
@@ -1532,7 +1625,6 @@ function buildPublishedSiteHTML() {
       </div>
     </header>
     ${sectionsHTML}
-    <footer class="pf-footer">${esc(fullName)} · built with <a href="https://${PUBLISH_APEX}">${PUBLISH_APEX}</a></footer>
   </div>
 
   <div class="modal-overlay hidden" id="modalOverlay">
@@ -2788,6 +2880,13 @@ function initSampleContentControls() {
 
 // ── Application bootstrapping ──────────────────────────────────
 function init() {
+  // Restore autosaved edits before the first paint. Local storage is
+  // synchronous, so this can't race the initial render below; a
+  // signed-in user's server draft (possibly newer, from another
+  // device) is fetched and applied right after — see initPersistence.
+  const localDraft = loadLocalDraft();
+  if (localDraft) Store.loadSerialized(localDraft);
+
   document.body.dataset.viewmode = Store.state.viewMode;
 
   initModal();
@@ -2803,6 +2902,7 @@ function init() {
   initSidebarActions();
   initAddSectionMenu();
   initSampleContentControls();
+  initPersistence();
 
   refreshToolbarActiveStates();
   refreshDocTitle();

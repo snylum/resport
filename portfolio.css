@@ -61,11 +61,6 @@
   --pf-line-height: 1.5;
   --pf-section-gap: 1.75rem;
   --pf-card-pad: 1.25rem 1.4rem;
-  /* Matches .pf-footer's real rendered height (1.75rem padding on
-     each side + one line of 0.8rem text + its 2px top border) so
-     anything that needs to sit "above the footer" can reference one
-     source of truth instead of guessing a rem value. */
-  --pf-footer-height: 4.5rem;
 }
 
 .pf-hero {
@@ -91,22 +86,6 @@
   transition: min-height 0.15s ease, padding 0.15s ease;
 }
 
-/* In "deck" mode (see the fixed-shell block further down) the hero,
-   dot rail, slide track and footer all share one fixed 100vh column.
-   Sizing the hero straight off 100vh (as the plain rule above does
-   for normal scroll pages) ignores that the footer *also* needs a
-   guaranteed slice of that same 100vh — so a tall header ratio (e.g.
-   80/20) could eat into, or entirely swallow, the footer's space and
-   squeeze the slide track down to almost nothing. Basing the header's
-   target height on (100vh minus the footer's real, fixed height)
-   instead means the chosen ratio always splits the space that's
-   actually available to header vs. content, and the footer keeps its
-   own reserved room no matter what ratio is picked. */
-.portfolio-site[data-section-anim="horizontal"] .pf-hero,
-.portfolio-site[data-section-anim="vertical"] .pf-hero {
-  min-height: max(calc((100vh - var(--pf-footer-height, 4.5rem)) * var(--pf-header-pct) / 100), var(--pf-hero-min));
-}
-
 #canvasZoomTarget .pf-hero {
   /* Mirrors the horizontal/vertical-mode fix above: vh inside the
      editor canvas resolves against the real browser window, not the
@@ -115,15 +94,6 @@
      shell override below) instead of the true viewport. 6.4px per
      percentage point == 640px / 100. Same min-height floor applies. */
   min-height: max(calc(var(--pf-header-pct) * 6.4px), var(--pf-hero-min));
-}
-
-#canvasZoomTarget .portfolio-site[data-section-anim="horizontal"] .pf-hero,
-#canvasZoomTarget .portfolio-site[data-section-anim="vertical"] .pf-hero {
-  /* Same footer-reserving split as the published-page deck rule
-     above, just against the editor's fixed 640px canvas instead of
-     the real viewport (640px * 16px/rem-equivalent conversion — see
-     --pf-footer-height, defined in rem). */
-  min-height: max(calc((640px - var(--pf-footer-height, 4.5rem)) * var(--pf-header-pct) / 100), var(--pf-hero-min));
 }
 
 .pf-hero-photo-wrap {
@@ -307,9 +277,7 @@
 }
 
 .portfolio-site[data-section-anim="horizontal"] .pf-hero,
-.portfolio-site[data-section-anim="horizontal"] .pf-footer,
-.portfolio-site[data-section-anim="vertical"] .pf-hero,
-.portfolio-site[data-section-anim="vertical"] .pf-footer {
+.portfolio-site[data-section-anim="vertical"] .pf-hero {
   flex-shrink: 0;
 }
 
@@ -373,7 +341,7 @@
   /* Internal scroll is a per-slide fallback, not the default look —
      only kicks in when that slide's own content genuinely doesn't
      fit the space it's given. */
-  padding: calc(2.25rem + var(--pf-text-pad)) calc(2.75rem + var(--pf-text-pad)) calc(3.25rem + var(--pf-text-pad));
+  padding: calc(2.75rem + var(--pf-text-pad)) calc(2.75rem + var(--pf-text-pad)) calc(3.25rem + var(--pf-text-pad));
   display: flex;
   flex-direction: column;
   gap: var(--pf-section-gap);
@@ -452,13 +420,9 @@
   top: calc(var(--pf-header-pct) * 6.4px + 1.5rem);
 }
 
-/* "bottom" must clear the footer, which has a fixed, predictable
-   height (padding + one line of text — see .pf-footer). The old
-   3.25rem offset was shorter than the footer itself, so the dot
-   rail actually sat on top of the footer instead of above it. */
 .portfolio-site[data-section-anim="horizontal"][data-dots-pos="bottom"] .pf-slide-dots,
 .portfolio-site[data-section-anim="vertical"][data-dots-pos="bottom"] .pf-slide-dots {
-  bottom: calc(var(--pf-footer-height, 4.5rem) + 1.5rem);
+  bottom: 1.5rem;
 }
 
 .pf-dot {
@@ -898,22 +862,6 @@
   color: var(--color-text);
   border-color: var(--color-secondary);
   color: var(--color-secondary);
-}
-
-/* ── Footer ───────────────────────────────────────────────── */
-.pf-footer {
-  text-align: center;
-  padding: 1.75rem 1.25rem;
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-  border-top: 2px solid var(--color-border);
-  background: var(--color-surface-alt);
-}
-
-.pf-footer a {
-  color: var(--color-secondary);
-  font-weight: 600;
-  text-decoration: none;
 }
 
 /* ============================================================
