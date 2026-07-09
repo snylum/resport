@@ -9,6 +9,21 @@
    just a different "page" of it.
    ============================================================ */
 
+/* Establishes the "pf" container context used by the @container
+   queries below. On the real published page this is just the page
+   body — at that point its inline-size IS the visitor's real device
+   viewport, so behavior matches plain @media exactly. Inside the
+   editor, the canvas wrapper (#canvasZoomTarget, see editor.css)
+   re-declares this same container-name at a size that tracks the
+   available editor space instead, so the preview reflows like an
+   actual resized browser window rather than staying locked to
+   whatever the editor's own (unrelated) browser window width
+   happens to be. */
+body {
+  container-type: inline-size;
+  container-name: pf;
+}
+
 .canvas-zoom-target {
   position: absolute;
   /* Centered via top/left 50% + translate(-50%,-50%) rather than
@@ -26,8 +41,8 @@
 }
 
 .portfolio-site {
-  width: 780px;
-  max-width: 90vw;
+  width: 100%;
+  max-width: 780px;
   background: var(--color-background);
   border: 3px solid var(--color-border);
   box-shadow: 0 10px 30px rgba(0,0,0,0.08);
@@ -486,13 +501,13 @@
 .pf-slide-arrow-top { top: 0.75rem; }
 .pf-slide-arrow-bottom { bottom: 0.75rem; }
 .pf-slide-arrow:disabled { opacity: 0.35; cursor: default; }
-@media (max-width: 768px) {
+@container pf (max-width: 768px) {
   .pf-slide-arrow { display: none !important; }
 }
 
 /* Small screens: horizontal slides revert to normal vertical
    stacking, same breakpoint behavior as the homepage. */
-@media (max-width: 768px) {
+@container pf (max-width: 768px) {
   .portfolio-site[data-section-anim="horizontal"],
   .portfolio-site[data-section-anim="vertical"] {
     height: auto;
@@ -1186,7 +1201,7 @@
   font-size: 0.75rem;
 }
 
-@media (max-width: 640px) {
+@container pf (max-width: 640px) {
   .pf-hero {
     flex-direction: column;
     text-align: center;
