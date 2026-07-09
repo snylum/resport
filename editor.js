@@ -526,9 +526,10 @@ function renderPortfolioCanvasBlocks(blocks, mode) {
 
   el.pfSlideDots.innerHTML = '';
   el.pfSlideDots.classList.toggle('hidden', slides.length <= 1);
-  const showArrows = slides.length > 1;
-  el.pfSlideArrowTop.classList.toggle('hidden', !showArrows);
-  el.pfSlideArrowBottom.classList.toggle('hidden', !showArrows);
+  // Arrowheads removed per feedback — dot nav + wheel/keyboard
+  // navigation are enough; always keep the arrow buttons hidden.
+  el.pfSlideArrowTop.classList.add('hidden');
+  el.pfSlideArrowBottom.classList.add('hidden');
   // Arrows always sit top/bottom, but their glyph and meaning flip
   // with the scroll axis: up/down = prev/next when stacking
   // vertically, left/right when paging horizontally.
@@ -2186,6 +2187,7 @@ function refreshToolbarActiveStates() {
 function initToolbar() {
   el.tabPortfolioBtn.addEventListener('click', () => Store.setViewMode('portfolio'));
   el.tabResumeBtn.addEventListener('click', () => Store.setViewMode('resume'));
+  Store.on('viewmode_changed', () => resetZoomOnModeSwitch());
   el.tabEditBtn.addEventListener('click', () => Store.setMode('edit'));
   el.tabCustomizeBtn.addEventListener('click', () => Store.setMode('customize'));
 
@@ -2473,59 +2475,47 @@ function initCustomizePanel() {
 // solely trusting ResizeObserver's own (rAF-batched, sometimes-delayed)
 // timing to notice the canvas area changed size.
 let forceCanvasRefit = () => {};
+let resetZoomOnModeSwitch = () => {};
 
 function initZoomControls() {
   const MIN_ZOOM = 25;
   const MAX_ZOOM = 150;
   const STEP = 10;
-  // Smallest width the portfolio preview will ever reflow down to —
-  // matches a realistic small phone. Anything narrower than this and
-  // the layout itself (not just the preview) would be unusable, so
-  // there's no value in "simulating" it.
-  const MIN_DEVICE_WIDTH = 320;
-  // Matches .portfolio-site's own max-width in portfolio.css — the
-  // widest the live site itself will ever render, so the preview
-  // should never reflow wider than this either.
-  const MAX_DEVICE_WIDTH = 780;
 
-  // Magnifier only: how much extra visual zoom is layered on top of
-  // whatever the preview has already reflowed to. This is NOT what
-  // determines mobile vs. desktop layout — see computeDeviceWidth.
   let zoom = 100;
-  // Resume-only: whether zoom is tracking "whole page visible" or the
-  // person zoomed manually. Portfolio no longer uses this — its width
-  // always tracks the real available space, and it scrolls vertically
-  // like a real page instead of shrinking to avoid a scrollbar.
   let fitMode = true;
 
   const getActiveDoc = () => (
     Store.state.viewMode === 'resume' ? el.resumePaper : el.portfolioSite
   );
 
-  // The live "device width" the portfolio preview reflows to. This is
-  // what makes @container breakpoints in portfolio.css fire for real
-  // — same idea as resizing an actual browser window narrower until a
-  // site's mobile layout kicks in, rather than rendering the desktop
-  // layout small (which never triggers those breakpoints at all).
-  const computeDeviceWidth = () => {
-    const wrapStyle = getComputedStyle(el.canvasWrap);
-    const padX = parseFloat(wrapStyle.paddingLeft) + parseFloat(wrapStyle.paddingRight);
-    const availWidth = el.canvasWrap.clientWidth - padX;
-    if (availWidth <= 0) return MAX_DEVICE_WIDTH;
-    return Math.max(MIN_DEVICE_WIDTH, Math.min(availWidth, MAX_DEVICE_WIDTH));
-  };
-
+  // "Fit" zoom, computed differently per document type:
+  // - Resume is a fixed paper size, so fit means shrink-to-thumbnail
+  //   (both width AND height) so the whole page is visible at once.
+  // - Portfolio is a real webpage: what matters is that it renders at
+  //   the size it will actually publish at (matching the person's own
+  //   display), not shrunk into a thumbnail. So portfolio's "fit" only
+  //   ever shrinks if it genuinely doesn't fit the available width,
+  //   and never zooms in past 100% automatically — height is left
+  //   alone entirely, since scrolling down a real page is normal.
   const computeFitZoom = () => {
     const doc = getActiveDoc();
     if (!doc) return zoom;
     const wrapStyle = getComputedStyle(el.canvasWrap);
     const padX = parseFloat(wrapStyle.paddingLeft) + parseFloat(wrapStyle.paddingRight);
-    const padY = parseFloat(wrapStyle.paddingTop) + parseFloat(wrapStyle.paddingBottom);
     const availWidth = el.canvasWrap.clientWidth - padX;
-    const availHeight = el.canvasWrap.clientHeight - padY;
     const docWidth = doc.offsetWidth;
+    if (!docWidth || availWidth <= 0) return zoom;
+
+    if (Store.state.viewMode === 'portfolio') {
+      const scalePct = (availWidth / docWidth) * 100;
+      return Math.min(100, Math.max(MIN_ZOOM, scalePct));
+    }
+
+    const padY = parseFloat(wrapStyle.paddingTop) + parseFloat(wrapStyle.paddingBottom);
+    const availHeight = el.canvasWrap.clientHeight - padY;
     const docHeight = doc.offsetHeight;
-    if (!docWidth || !docHeight || availWidth <= 0 || availHeight <= 0) return zoom;
+    if (!docHeight || availHeight <= 0) return zoom;
     const scalePct = Math.min(availWidth / docWidth, availHeight / docHeight) * 100;
     return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, scalePct));
   };
@@ -2533,23 +2523,12 @@ function initZoomControls() {
   const applyZoom = () => {
     const doc = getActiveDoc();
     const scale = zoom / 100;
-    const isPortfolio = Store.state.viewMode === 'portfolio';
-
-    if (doc && isPortfolio) {
-      // 1) Reflow the real document to the real available width
-      //    first — exactly like a browser window being resized —
-      //    so its own responsive CSS genuinely kicks in.
-      const deviceWidth = computeDeviceWidth();
-      el.canvasZoomTarget.style.width = `${deviceWidth}px`;
-      el.canvasZoomTarget.style.height = 'auto';
-      // 2) Only THEN layer the separate magnifier scale on top of
-      //    that already-reflowed, already-correct-breakpoint layout.
-      const natH = doc.offsetHeight;
-      el.canvasZoomTarget.style.transform = `translate(-50%, -50%) scale(${scale})`;
-      el.canvasContainer.style.width = `${deviceWidth * scale}px`;
-      el.canvasContainer.style.height = `${natH * scale}px`;
-    } else if (doc) {
-      // Resume: unchanged — fixed paper size, shrink-to-fit zoom.
+    if (doc) {
+      // Give the zoom target an explicit, unambiguous natural size
+      // (rather than relying on it shrink-wrapping its visible child)
+      // so the scaled footprint we assign to the container below is
+      // guaranteed to match exactly what's rendered — no drift, no
+      // off-center content.
       const natW = doc.offsetWidth;
       const natH = doc.offsetHeight;
       el.canvasZoomTarget.style.width = `${natW}px`;
@@ -2560,32 +2539,20 @@ function initZoomControls() {
     } else {
       el.canvasZoomTarget.style.transform = `translate(-50%, -50%) scale(${scale})`;
     }
-
     el.zoomLevelDisplay.textContent = `${Math.round(zoom)}%`;
-    el.zoomLevelDisplay.title = isPortfolio
-      ? 'Preview reflows to the available window width automatically — +/- is just a magnifier'
-      : (fitMode
-        ? 'Fitted to window — click +/- to zoom manually'
-        : 'Click to fit the whole document');
+    el.zoomLevelDisplay.title = fitMode
+      ? 'Fitted to window — click +/- to zoom manually'
+      : 'Click to fit the whole document';
     el.btnZoomOut.disabled = zoom <= MIN_ZOOM;
     el.btnZoomIn.disabled = zoom >= MAX_ZOOM;
   };
 
-
   const refit = () => {
-    // Portfolio: no shrink-to-fit clamping needed anymore — the
-    // document reflows to the real available width (computeDeviceWidth,
-    // used inside applyZoom) and scrolls vertically like a real page,
-    // so there's nothing to "fit" here beyond just re-applying.
-    // Resume: unchanged — a fixed paper size that shrinks to keep the
-    // whole page visible, same as before.
-    if (Store.state.viewMode !== 'portfolio') {
-      const fitZoom = computeFitZoom();
-      if (fitMode) {
-        zoom = fitZoom;
-      } else if (zoom > fitZoom) {
-        zoom = fitZoom;
-      }
+    const fitZoom = computeFitZoom();
+    if (fitMode) {
+      zoom = fitZoom;
+    } else if (zoom > fitZoom) {
+      zoom = fitZoom;
     }
     applyZoom();
   };
@@ -2603,11 +2570,7 @@ function initZoomControls() {
   });
 
   el.zoomLevelDisplay.addEventListener('click', () => {
-    if (Store.state.viewMode === 'portfolio') {
-      zoom = 100;
-    } else {
-      fitMode = true;
-    }
+    fitMode = true;
     refit();
   });
 
@@ -2640,6 +2603,11 @@ function initZoomControls() {
   docObserver.observe(el.portfolioSite);
 
   forceCanvasRefit = refit;
+  resetZoomOnModeSwitch = () => {
+    zoom = 100;
+    fitMode = true;
+    refit();
+  };
 
   // Belt-and-suspenders on top of the ResizeObservers above: content
   // (sections, photos, template swaps) can change the document's

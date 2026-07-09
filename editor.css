@@ -781,15 +781,6 @@ body {
   top: 50%;
   left: 50%;
   transform-origin: center center;
-  /* Re-declares the "pf" container-name from portfolio.css's <body>
-     rule, scoped to this element's own JS-driven width instead of the
-     editor's own (unrelated) browser window. That width is set in
-     editor.js to track the real available canvas space on every
-     resize/sidebar-drag, so .portfolio-site's @container breakpoints
-     fire exactly as they would for a visitor resizing their real
-     browser — not based on how wide the editor itself happens to be. */
-  container-type: inline-size;
-  container-name: pf;
   /* Same reasoning as .canvas-container above: animate the scale
      itself so manual/fit zoom changes visibly ease between
      percentages instead of snapping straight to the new value. */
