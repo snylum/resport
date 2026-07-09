@@ -1614,7 +1614,7 @@ function buildPublishedSiteHTML() {
 </style>
 </head>
 <body data-viewmode="portfolio">
-  <div class="portfolio-site" id="portfolioSite" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-dots-pos="${esc(design.dotsPosition || 'right')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" data-hero-photo-shape="${esc(design.heroPhotoShape || 'circle')}" data-hero-photo-size="${esc(design.heroPhotoSize || 'md')}" data-hero-size="${esc(design.heroSize || 'normal')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};--pf-header-pct:${esc(design.headerHeightPct || 30)};">
+  <div class="portfolio-site" id="portfolioSite" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-dots-pos="${esc(design.dotsPosition || 'right')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" data-hero-photo-shape="${esc(design.heroPhotoShape || 'circle')}" data-hero-photo-size="${esc(design.heroPhotoSize || 'md')}" data-hero-size="${esc(design.heroSize || 'normal')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};--pf-header-pct:${esc(design.headerHeightPct || 30)};--pf-text-pad:${esc((Number(design.textPaddingRem) || 0) + 'rem')};--pf-line-height:${esc(LINE_SPACING_PRESETS[design.lineSpacing] || LINE_SPACING_PRESETS.normal)};--pf-section-gap:${esc(SECTION_SPACING_PRESETS[design.sectionSpacing] || SECTION_SPACING_PRESETS.normal)};--pf-card-pad:${esc(CARD_PADDING_PRESETS[design.cardPadding] || CARD_PADDING_PRESETS.normal)};">
     <header class="pf-hero">
       ${p.photo ? `<div class="pf-hero-photo-wrap"><img src="${esc(p.photo)}" alt="${esc(fullName)}" /></div>` : ''}
       <div class="pf-hero-text">
@@ -2313,7 +2313,15 @@ function initToolbar() {
     downloadResumeAsPDF();
   });
 
-  document.getElementById('btnPublishShowcase').addEventListener('click', openPublishModal);
+  document.getElementById('btnPublishShowcase').addEventListener('click', async () => {
+    // Refresh site status right before opening the Publish modal so
+    // "already paid & live" is judged against the current truth, not
+    // whatever was cached at page load — an admin could have approved
+    // or marked the site paid at any point since then. This is what
+    // makes the fee-skip check further down actually trustworthy.
+    await refreshSiteStatusBadge();
+    openPublishModal();
+  });
   refreshSiteStatusBadge();
   document.getElementById('btnPreviewShowcase').addEventListener('click', () => {
     const blob = new Blob([buildPublishedSiteHTML()], { type: 'text/html' });
@@ -2880,6 +2888,17 @@ function initSampleContentControls() {
 
 // ── Application bootstrapping ──────────────────────────────────
 function init() {
+  // Default to signed out on every fresh visit to the editor — a
+  // lingering Google session from last time shouldn't silently carry
+  // over just because localStorage still has it. This only affects
+  // the *sign-in* state itself: the saved username, the site's
+  // paid/approved status, and the local draft are untouched, so
+  // signing back in (one click) immediately re-establishes "already
+  // signed in, already paid, already approved" for the republish-fee
+  // skip above — it just requires that one click each visit rather
+  // than persisting indefinitely and silently.
+  clearGoogleAccount();
+
   // Restore autosaved edits before the first paint. Local storage is
   // synchronous, so this can't race the initial render below; a
   // signed-in user's server draft (possibly newer, from another

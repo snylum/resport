@@ -367,8 +367,6 @@
 .portfolio-site[data-section-anim="horizontal"] .pf-slide-dots,
 .portfolio-site[data-section-anim="vertical"] .pf-slide-dots {
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
   flex-direction: column;
   gap: 0.6rem;
   padding: 0.6rem 0.4rem;
@@ -376,6 +374,28 @@
   background: color-mix(in srgb, var(--color-surface) 70%, transparent);
   box-shadow: 0 2px 10px rgba(0,0,0,0.08);
   z-index: 5;
+}
+/* "left"/"right" center the rail on the SECTION area only — the space
+   below the header/hero band, not the whole page (which would drag
+   the rail visually up into/above the header on any header-pct other
+   than the one this was eyeballed against). The section area runs
+   from the header's real bottom edge (--pf-header-pct, same math the
+   header itself uses) down to the bottom of the viewport, so its
+   vertical center sits at (100vh + header-height) / 2. */
+.portfolio-site[data-section-anim="horizontal"][data-dots-pos="left"] .pf-slide-dots,
+.portfolio-site[data-section-anim="vertical"][data-dots-pos="left"] .pf-slide-dots,
+.portfolio-site[data-section-anim="horizontal"][data-dots-pos="right"] .pf-slide-dots,
+.portfolio-site[data-section-anim="vertical"][data-dots-pos="right"] .pf-slide-dots {
+  top: calc(50vh + (var(--pf-header-pct) * 0.5vh));
+  transform: translateY(-50%);
+}
+#canvasZoomTarget .portfolio-site[data-section-anim="horizontal"][data-dots-pos="left"] .pf-slide-dots,
+#canvasZoomTarget .portfolio-site[data-section-anim="vertical"][data-dots-pos="left"] .pf-slide-dots,
+#canvasZoomTarget .portfolio-site[data-section-anim="horizontal"][data-dots-pos="right"] .pf-slide-dots,
+#canvasZoomTarget .portfolio-site[data-section-anim="vertical"][data-dots-pos="right"] .pf-slide-dots {
+  /* Same 640px-canvas / 6.4px-per-percent reference the header and the
+     "top" dots position already use inside the editor canvas. */
+  top: calc(320px + (var(--pf-header-pct) * 3.2px));
 }
 .portfolio-site[data-section-anim="horizontal"][data-dots-pos="left"] .pf-slide-dots,
 .portfolio-site[data-section-anim="vertical"][data-dots-pos="left"] .pf-slide-dots {
@@ -386,12 +406,14 @@
   right: 1.25rem;
 }
 
-/* "Top"/"bottom" flip the rail from a vertical side column into a
-   horizontal row centered under the top arrow or above the bottom
-   arrow — same dots, same click targets, just oriented to match
-   however the person wants the indicator to read. */
-.portfolio-site[data-section-anim="horizontal"][data-dots-pos="top"] .pf-slide-dots,
-.portfolio-site[data-section-anim="vertical"][data-dots-pos="top"] .pf-slide-dots,
+/* "Bottom" stays a floating overlay row, same treatment as left/right
+   (a pill anchored near an edge of the section area) — see the shared
+   absolute-positioning rule above. "Top" is handled differently below:
+   it's taken out of absolute positioning entirely, because the hero's
+   height isn't fixed (it's a min-height target that grows if the
+   content needs more room — see .pf-hero), so any calc() guessing at
+   "the header's height" drifts and lets the dots render on top of a
+   taller-than-target header instead of below it. */
 .portfolio-site[data-section-anim="horizontal"][data-dots-pos="bottom"] .pf-slide-dots,
 .portfolio-site[data-section-anim="vertical"][data-dots-pos="bottom"] .pf-slide-dots {
   left: 50%;
@@ -401,28 +423,32 @@
   gap: 0.5rem;
   padding: 0.4rem 0.7rem;
 }
-/* "top" must clear the *actual* header band, which is a user-
-   adjustable percentage (--pf-header-pct) of the viewport — not a
-   fixed offset. Using a flat rem value here meant the dots sat
-   correctly only at the default header height and drifted under
-   (or floated awkwardly above) the header at every other setting.
-   Mirroring the same --pf-header-pct math the header itself uses
-   (see .pf-hero above) keeps the rail glued just under the header's
-   real bottom edge, with ample breathing room added on top. */
-.portfolio-site[data-section-anim="horizontal"][data-dots-pos="top"] .pf-slide-dots,
-.portfolio-site[data-section-anim="vertical"][data-dots-pos="top"] .pf-slide-dots {
-  top: calc(var(--pf-header-pct) * 1vh + 1.5rem);
-}
-#canvasZoomTarget .portfolio-site[data-section-anim="horizontal"][data-dots-pos="top"] .pf-slide-dots,
-#canvasZoomTarget .portfolio-site[data-section-anim="vertical"][data-dots-pos="top"] .pf-slide-dots {
-  /* Same 6.4px-per-percent conversion the header uses inside the
-     editor canvas (see #canvasZoomTarget .pf-hero above). */
-  top: calc(var(--pf-header-pct) * 6.4px + 1.5rem);
-}
-
 .portfolio-site[data-section-anim="horizontal"][data-dots-pos="bottom"] .pf-slide-dots,
 .portfolio-site[data-section-anim="vertical"][data-dots-pos="bottom"] .pf-slide-dots {
   bottom: 1.5rem;
+}
+
+/* "Top": a real row in normal document flow, not an absolutely
+   positioned guess — placed between the hero and the section track
+   via flex `order` so it always sits flush against the header's
+   actual rendered bottom edge, however tall that ends up being. */
+.portfolio-site[data-section-anim="horizontal"][data-dots-pos="top"] .pf-slide-dots,
+.portfolio-site[data-section-anim="vertical"][data-dots-pos="top"] .pf-slide-dots {
+  position: static;
+  order: 1;
+  flex-shrink: 0;
+  align-self: center;
+  left: auto;
+  top: auto;
+  transform: none;
+  flex-direction: row;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  padding: 0.4rem 0.7rem;
+}
+.portfolio-site[data-section-anim="horizontal"][data-dots-pos="top"] .pf-sections,
+.portfolio-site[data-section-anim="vertical"][data-dots-pos="top"] .pf-sections {
+  order: 2;
 }
 
 .pf-dot {
