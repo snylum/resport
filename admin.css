@@ -131,18 +131,6 @@
   vertical-align: middle;
 }
 
-.admin-kind-badge {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--color-primary);
-  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
-  border: 1px solid var(--color-primary);
-  border-radius: 3px;
-  padding: 0.1rem 0.4rem;
-  margin-left: 0.35rem;
-  vertical-align: middle;
-}
-
 .admin-site-meta {
   font-size: 0.78rem;
   color: var(--color-text-muted);

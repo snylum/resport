@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>proves.work</title>
-  <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="stylesheet" href="dazed.css" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="home.css" />
@@ -346,20 +345,9 @@
             </ul>
             <a href="#" class="btn btn-primary" style="width:100%;justify-content:center">Get Pro</a>
           </div>
-          <div class="price-card">
-            <div class="price-name">Just the name</div>
-            <div class="price-amount">₱349 <span>/year</span></div>
-            <ul class="price-features">
-              <li>✓ your-name.proves.work reserved</li>
-              <li>✓ Cheaper than a real domain + host</li>
-              <li>✓ No Cloudflare setup needed</li>
-              <li>✓ Add a portfolio anytime</li>
-            </ul>
-            <button type="button" class="btn btn-ghost" style="width:100%;justify-content:center" id="domainClaimOpenBtn">Reserve it →</button>
-          </div>
         </div>
       </div>
-      <p class="pricing-fee-note">💡 Publishing your live <strong>.proves.work</strong> address is a one-time <strong>₱249</strong> fee — valid for <strong>3 months</strong>, no subscription. Renew anytime for the same flat fee. Only want the <strong>name</strong> reserved, no portfolio yet? That's <strong>₱349/year</strong> — see the "Just the name" card above.</p>
+      <p class="pricing-fee-note">💡 Publishing your live <strong>.proves.work</strong> address is a one-time <strong>₱249</strong> fee — valid for <strong>3 months</strong>, no subscription. Renew anytime for the same flat fee.</p>
     </section>
 
     <!-- SLIDE 6: CTA / FOOTER -->
@@ -433,180 +421,6 @@
         // Removed taglineTarget code to prevent null reference errors
         actionsTarget.classList.add('visible');
       }
-    });
-  <!-- DOMAIN-ONLY CLAIM MODAL -->
-  <div class="domain-modal-overlay hidden" id="domainModalOverlay">
-    <div class="domain-modal" id="domainModalContent"></div>
-  </div>
-
-  <style>
-    .domain-modal-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 1000; padding: 1rem;
-    }
-    .domain-modal-overlay.hidden { display: none; }
-    .domain-modal {
-      background: var(--color-surface, #fff);
-      border: 2px solid var(--color-border, #000);
-      box-shadow: var(--shadow, 6px 6px 0 0 #000);
-      padding: 2rem;
-      width: 100%;
-      max-width: 420px;
-    }
-    .domain-modal h3 { margin: 0 0 0.5rem; font-family: var(--font-display); font-size: 1.2rem; }
-    .domain-modal p.sub { margin: 0 0 1.25rem; color: var(--color-text-muted, #6b7280); font-size: 0.9rem; }
-    .domain-modal input[type="text"] {
-      width: 100%; padding: 0.65rem 0.85rem; border: 2px solid var(--color-border, #000);
-      font-size: 1rem; font-family: inherit; margin-bottom: 0.5rem; box-sizing: border-box;
-    }
-    .domain-modal .domain-suffix { color: var(--color-text-muted, #6b7280); font-size: 0.85rem; margin-bottom: 1rem; }
-    .domain-modal .status-line { font-size: 0.85rem; min-height: 1.2em; margin-bottom: 0.75rem; }
-    .domain-modal .status-line.warn { color: #c0392b; }
-    .domain-modal .status-line.ok { color: #1f9d55; }
-    .domain-modal .actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem; }
-    .domain-modal .close-x {
-      position: absolute; top: 0.75rem; right: 1rem; background: none; border: none;
-      font-size: 1.2rem; cursor: pointer; color: var(--color-text-muted, #6b7280);
-    }
-    .domain-modal { position: relative; }
-  </style>
-
-  <!-- Google Identity Services — used only to attach a verified email
-       to a domain reservation, same trust model as the editor's
-       publish flow. -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script type="module">
-    // Must match GOOGLE_CLIENT_ID in worker/src/index.js and editor.js.
-    const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com';
-    const GOOGLE_ACCOUNT_KEY = 'proveswork_google_account';
-
-    function getSavedGoogleAccount() {
-      try { return JSON.parse(localStorage.getItem(GOOGLE_ACCOUNT_KEY) || 'null'); }
-      catch { return null; }
-    }
-    function saveGoogleAccount(account) {
-      localStorage.setItem(GOOGLE_ACCOUNT_KEY, JSON.stringify(account));
-    }
-    function decodeGoogleCredential(credential) {
-      const payload = credential.split('.')[1];
-      return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-    }
-
-    const overlay = document.getElementById('domainModalOverlay');
-    const content = document.getElementById('domainModalContent');
-
-    function closeDomainModal() {
-      overlay.classList.add('hidden');
-      content.innerHTML = '';
-    }
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeDomainModal(); });
-
-    let checkTimer = null;
-
-    function renderClaimStep() {
-      const account = getSavedGoogleAccount();
-      content.innerHTML = `
-        <button type="button" class="close-x" id="domainCloseBtn" aria-label="Close">✕</button>
-        <h3>Reserve your name</h3>
-        <p class="sub">₱349 flat, valid one year — just the address, no portfolio required. Add one later anytime.</p>
-        <input type="text" id="domainNameInput" placeholder="yourname" autocomplete="off" />
-        <div class="domain-suffix">.proves.work</div>
-        <div class="status-line" id="domainStatusLine"></div>
-        ${account
-          ? `<p class="sub" style="margin-bottom:0.5rem">Signed in as <strong>${account.email}</strong></p>`
-          : `<div id="domainSignInSlot"></div>`}
-        <div class="actions">
-          <button type="button" class="btn btn-ghost btn-sm" id="domainCancelBtn">Cancel</button>
-          <button type="button" class="btn btn-primary btn-sm" id="domainSubmitBtn" ${account ? '' : 'disabled'}>Reserve it</button>
-        </div>
-      `;
-
-      document.getElementById('domainCloseBtn').addEventListener('click', closeDomainModal);
-      document.getElementById('domainCancelBtn').addEventListener('click', closeDomainModal);
-
-      const input = document.getElementById('domainNameInput');
-      const statusLine = document.getElementById('domainStatusLine');
-      const submitBtn = document.getElementById('domainSubmitBtn');
-
-      input.addEventListener('input', () => {
-        clearTimeout(checkTimer);
-        const val = input.value.trim().toLowerCase();
-        if (!val) { statusLine.textContent = ''; return; }
-        statusLine.textContent = 'Checking…';
-        statusLine.className = 'status-line';
-        checkTimer = setTimeout(async () => {
-          try {
-            const res = await fetch(`/api/check-username?u=${encodeURIComponent(val)}`);
-            const data = await res.json();
-            statusLine.textContent = data.available ? `${val}.proves.work is available` : 'That name is taken or invalid.';
-            statusLine.className = `status-line ${data.available ? 'ok' : 'warn'}`;
-          } catch {
-            statusLine.textContent = "Couldn't check availability — try again.";
-            statusLine.className = 'status-line warn';
-          }
-        }, 400);
-      });
-
-      if (!getSavedGoogleAccount() && window.google && window.google.accounts && window.google.accounts.id) {
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: (response) => {
-            const payload = decodeGoogleCredential(response.credential);
-            saveGoogleAccount({ email: payload.email, name: payload.name, credential: response.credential });
-            renderClaimStep();
-          }
-        });
-        window.google.accounts.id.renderButton(document.getElementById('domainSignInSlot'), { theme: 'outline', size: 'medium', text: 'signin_with' });
-      }
-
-      submitBtn.addEventListener('click', async () => {
-        const val = input.value.trim().toLowerCase();
-        const acc = getSavedGoogleAccount();
-        if (!val) { statusLine.textContent = 'Enter a name first.'; statusLine.className = 'status-line warn'; return; }
-        if (!acc) { statusLine.textContent = 'Sign in with Google first.'; statusLine.className = 'status-line warn'; return; }
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Reserving…';
-        try {
-          const res = await fetch('/api/domain/claim', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ username: val, googleCredential: acc.credential })
-          });
-          const data = await res.json();
-          if (!data.ok) {
-            statusLine.textContent = data.error || 'Something went wrong.';
-            statusLine.className = 'status-line warn';
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Reserve it';
-            return;
-          }
-          renderSuccessStep(val);
-        } catch {
-          statusLine.textContent = 'Network error — try again.';
-          statusLine.className = 'status-line warn';
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Reserve it';
-        }
-      });
-    }
-
-    function renderSuccessStep(username) {
-      content.innerHTML = `
-        <button type="button" class="close-x" id="domainCloseBtn2" aria-label="Close">✕</button>
-        <h3>Request received 🎉</h3>
-        <p class="sub"><strong>${username}.proves.work</strong> is reserved for you pending payment confirmation (₱349/year). An admin reviews and approves every reservation by hand — once approved, the address goes live automatically, no further setup needed.</p>
-        <div class="actions">
-          <button type="button" class="btn btn-primary btn-sm" id="domainDoneBtn">Got it</button>
-        </div>
-      `;
-      document.getElementById('domainCloseBtn2').addEventListener('click', closeDomainModal);
-      document.getElementById('domainDoneBtn').addEventListener('click', closeDomainModal);
-    }
-
-    document.getElementById('domainClaimOpenBtn').addEventListener('click', () => {
-      overlay.classList.remove('hidden');
-      renderClaimStep();
     });
   </script>
 </body>

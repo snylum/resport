@@ -347,7 +347,7 @@ function renderList() {
   el.adminSitesList.innerHTML = filtered.map(s => `
     <div class="admin-site-row" data-username="${esc(s.username)}">
       <div class="admin-site-main">
-        <div class="admin-site-username">${esc(s.username)}.proves.work${s.kind === 'domain' ? ` <span class="admin-kind-badge">Domain only</span>` : ''}${(s.status === 'live' && s.ownerEmail) ? ` <span class="admin-owner-chip">${esc(s.ownerEmail)}</span>` : ''}</div>
+        <div class="admin-site-username">${esc(s.username)}.proves.work${(s.status === 'live' && s.ownerEmail) ? ` <span class="admin-owner-chip">${esc(s.ownerEmail)}</span>` : ''}</div>
         <div class="admin-site-meta">${s.ownerEmail ? esc(s.ownerEmail) : 'anonymous'} · updated ${s.updatedAt ? new Date(s.updatedAt).toLocaleString() : '—'}</div>
         ${s.paid ? `<div class="admin-site-meta admin-site-paid">✓ Paid${s.amountPaid != null ? ` ${money(s.amountPaid)}` : ''}${s.referenceNumber ? ` · ref: ${esc(s.referenceNumber)}` : ''}${paidCountdownLabel(s)}</div>` : ''}
       </div>
@@ -358,7 +358,7 @@ function renderList() {
           <button class="btn btn-ghost btn-sm" data-action="reject" type="button">Reject</button>` : ''}
         ${s.status === 'live' ? `<button class="btn btn-ghost btn-sm" data-action="reject" type="button">Unpublish</button>` : ''}
         ${(s.status === 'rejected' || s.status === 'deleted') ? `<button class="btn btn-secondary btn-sm" data-action="restore" type="button">Restore</button>` : ''}
-        <button class="btn btn-ghost btn-sm" data-action="${s.paid ? 'unmark-paid' : 'mark-paid'}" data-kind="${s.kind || 'site'}" type="button">${s.paid ? 'Unmark paid' : '$ Mark paid'}</button>
+        <button class="btn btn-ghost btn-sm" data-action="${s.paid ? 'unmark-paid' : 'mark-paid'}" type="button">${s.paid ? 'Unmark paid' : '$ Mark paid'}</button>
         <button class="btn btn-danger btn-sm" data-action="hard-delete" type="button">Delete</button>
       </div>
     </div>
@@ -427,24 +427,21 @@ async function setPaid(username, paid, referenceNumber, durationMonths, amount) 
   loadSites();
 }
 
-function openMarkPaidModal(username, currentRef, kind = 'site') {
-  const isDomain = kind === 'domain';
+function openMarkPaidModal(username, currentRef) {
   openModal(`
     <h3 class="modal-title" id="modalTitle">Mark @${esc(username)} as paid</h3>
-    <p class="modal-sub">${isDomain
-      ? 'Domain-only reservation — the standard rate is ₱349 for 1 year. Adjust if this was a promo or partial payment.'
-      : 'Record what was actually received, how long it covers, and optionally a reference number for your own records.'}</p>
+    <p class="modal-sub">Record what was actually received, how long it covers, and optionally a reference number for your own records.</p>
     <div class="admin-modal-field">
       <label for="paidAmountInput" style="display:block;font-size:0.8rem;color:var(--color-text-muted);margin-bottom:0.3rem;">Amount received (${CURRENCY})</label>
-      <input type="number" id="paidAmountInput" min="0" step="1" value="${isDomain ? 349 : 249}" autocomplete="off" />
+      <input type="number" id="paidAmountInput" min="0" step="1" value="249" autocomplete="off" />
     </div>
     <div class="admin-modal-field">
       <label for="paidDurationSelect" style="display:block;font-size:0.8rem;color:var(--color-text-muted);margin-bottom:0.3rem;">Duration</label>
       <select id="paidDurationSelect">
         <option value="1">1 month</option>
-        <option value="3"${isDomain ? '' : ' selected'}>3 months${isDomain ? '' : ' (standard)'}</option>
+        <option value="3" selected>3 months (standard)</option>
         <option value="6">6 months</option>
-        <option value="12"${isDomain ? ' selected' : ''}>12 months${isDomain ? ' (standard)' : ''}</option>
+        <option value="12">12 months</option>
       </select>
     </div>
     <div class="admin-modal-field">
@@ -458,7 +455,7 @@ function openMarkPaidModal(username, currentRef, kind = 'site') {
     root.querySelector('#cancelPaidBtn').addEventListener('click', closeModal);
     root.querySelector('#confirmPaidBtn').addEventListener('click', () => {
       const ref = root.querySelector('#paidRefInput').value.trim();
-      const durationMonths = Number(root.querySelector('#paidDurationSelect').value) || (isDomain ? 12 : 3);
+      const durationMonths = Number(root.querySelector('#paidDurationSelect').value) || 3;
       const amount = Number(root.querySelector('#paidAmountInput').value) || 0;
       setPaid(username, true, ref, durationMonths, amount);
       closeModal();
@@ -508,7 +505,7 @@ el.adminSitesList.addEventListener('click', (e) => {
   // close to its last published version as possible.
   else if (action === 'restore') setStatus(username, 'live');
   else if (action === 'hard-delete') confirmHardDelete(username);
-  else if (action === 'mark-paid') openMarkPaidModal(username, site && site.referenceNumber, (site && site.kind) || 'site');
+  else if (action === 'mark-paid') openMarkPaidModal(username, site && site.referenceNumber);
   else if (action === 'unmark-paid') setPaid(username, false, '');
 });
 

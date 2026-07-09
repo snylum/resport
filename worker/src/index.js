@@ -73,30 +73,6 @@ function escapeHtml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-// Shown at <username>.proves.work once a *domain-only* reservation
-// (no portfolio, just the name) has been approved by an admin — this
-// becomes the record's liveHtml the same way a real portfolio's html
-// does, via the exact same /api/admin/set-status → 'live' path.
-function domainReservedPage(username) {
-  return `<!DOCTYPE html><html><head><meta charset="utf-8" />
-<title>${escapeHtml(username)}.${APP_HOST}</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<style>
-  body{font-family:-apple-system,'Inter',system-ui,sans-serif;background:#FDF7FA;color:#1A1A1A;
-       display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:0 1.5rem;}
-  a{color:#7C4DFF;font-weight:700;text-decoration:none;}
-  h1{font-size:1.5rem;margin:0 0 0.5rem;}
-  p{color:#4b5563;margin:0.25rem 0;}
-</style></head>
-<body>
-  <div>
-    <h1>${escapeHtml(username)}.${APP_HOST}</h1>
-    <p>This name is reserved. A portfolio is coming soon.</p>
-    <p><a href="https://${APP_HOST}">Built with ${APP_HOST} →</a></p>
-  </div>
-</body></html>`;
-}
-
 // Shown at <username>.proves.work while a site is saved but not yet
 // approved (pending review) — the site is never public until an admin
 // approves it, so this page (not the person's real content) is what
@@ -229,58 +205,6 @@ async function handleApi(request, env, url) {
     // restore it, not to squat the name forever.
     const isFree = !existing || existing.status === 'deleted';
     return json({ available: isFree });
-  }
-
-  // ── Domain-only reservation (no portfolio) ────────────────────
-  // Lets someone pay a flat yearly fee for just the address itself —
-  // <username>.proves.work — with no site attached yet, marketed on
-  // the homepage as a cheaper alternative to buying a whole domain
-  // elsewhere. This is deliberately built on the exact same `site:`
-  // record + status machine as a real portfolio publish: it lands as
-  // 'pending', an admin reviews and approves it from /admin exactly
-  // like any other submission (so nothing goes live unattended), and
-  // once approved the wildcard routing that already serves every
-  // *.proves.work subdomain just works — no separate DNS/Cloudflare
-  // registration step is needed, since the zone's wildcard record
-  // already covers it.
-  if (url.pathname === '/api/domain/claim' && request.method === 'POST') {
-    let body;
-    try {
-      body = await request.json();
-    } catch {
-      return json({ ok: false, error: 'Invalid JSON body.' }, 400);
-    }
-
-    const username = String(body.username || '').toLowerCase().trim();
-    const ownerEmail = await verifyGoogleCredential(body.googleCredential);
-
-    // Same trust boundary as /api/publish — a real address needs a
-    // real, verified account behind it so it can be billed, disputed,
-    // or recovered later.
-    if (!ownerEmail) {
-      return json({ ok: false, error: 'Sign in with Google to reserve a proves.work address.' }, 401);
-    }
-    if (!USERNAME_RE.test(username) || RESERVED.has(username)) {
-      return json({ ok: false, error: 'Name must be 3-30 lowercase letters, numbers, or hyphens.' }, 400);
-    }
-
-    const existing = await env.SITES.get(`site:${username}`, 'json');
-    if (existing && existing.status !== 'deleted') {
-      return json({ ok: false, error: 'That name is already taken.' }, 409);
-    }
-
-    await env.SITES.put(`site:${username}`, JSON.stringify({
-      kind: 'domain', // distinguishes a name-only reservation from a real portfolio ('kind' absent/'site') in the admin dashboard
-      ownerEmail,
-      html: domainReservedPage(username),
-      liveHtml: null,
-      status: 'pending',
-      paid: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }));
-
-    return json({ ok: true, status: 'pending', url: `https://${username}.${APP_HOST}` });
   }
 
   // Lets the editor show "Draft / Pending approval / Live / Rejected"
@@ -468,7 +392,6 @@ async function handleApi(request, env, url) {
       const username = k.name.slice('site:'.length);
       return record ? {
         username,
-        kind: record.kind || 'site',
         ownerEmail: record.ownerEmail,
         status: record.status || 'live',
         updatedAt: record.updatedAt,
