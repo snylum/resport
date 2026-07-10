@@ -18,7 +18,7 @@
   "kv_namespaces": [
     {
       "binding": "SITES",
-      "id": "06ef81d83ca54bfaa3cc4ff7a8ecaf10"
+      "id": "<REPLACE_WITH_YOUR_KV_NAMESPACE_ID>"
     }
   ],
 

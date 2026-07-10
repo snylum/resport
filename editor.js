@@ -95,8 +95,6 @@ const el = {
   inIncludePortfolioLink: document.getElementById('inIncludePortfolioLink'),
   portfolioLinkUrlPreview: document.getElementById('portfolioLinkUrlPreview'),
   portfolioLinkLockMsg: document.getElementById('portfolioLinkLockMsg'),
-  btnCopyPortfolioLink: document.getElementById('btnCopyPortfolioLink'),
-  btnCopyResumeText: document.getElementById('btnCopyResumeText'),
   templateGallery: document.getElementById('templateGallery'),
   portfolioTemplateGallery: document.getElementById('portfolioTemplateGallery'),
 
@@ -2546,7 +2544,18 @@ function tailorVerdictForScore(score) {
 function initTailorToPosting() {
   const btn = document.getElementById('btnTailorResume');
   const input = document.getElementById('jobPostingInput');
+  const wordCount = document.getElementById('jobPostingWordCount');
   if (!btn || !input) return;
+
+  if (wordCount) {
+    const updateCount = () => {
+      const words = input.value.trim().split(/\s+/).filter(Boolean);
+      wordCount.textContent = `${words.length} word${words.length === 1 ? '' : 's'}`;
+      wordCount.classList.toggle('is-thin', words.length > 0 && words.length < 30);
+    };
+    input.addEventListener('input', updateCount);
+    updateCount();
+  }
 
   function paint(score, verdict, missing, emphasize, swaps) {
     document.getElementById('tailorResults').classList.remove('hidden');
@@ -3010,45 +3019,6 @@ function initCustomizePanel() {
 
   if (el.inIncludePortfolioLink) {
     el.inIncludePortfolioLink.addEventListener('change', (e) => Store.setDesign('includePortfolioLink', e.target.checked));
-  }
-
-  if (el.btnCopyPortfolioLink) {
-    el.btnCopyPortfolioLink.addEventListener('click', async () => {
-      const username = getSavedUsername();
-      if (!username) {
-        alertModal('Publish your portfolio first — you\'ll need a claimed address before there\'s a link to copy.');
-        return;
-      }
-      const url = `https://${username}.${PUBLISH_APEX}`;
-      try {
-        await navigator.clipboard.writeText(url);
-      } catch (err) {
-        // Clipboard API unavailable (insecure context, permissions) —
-        // fall back to a manual-copy prompt instead of failing silently.
-        window.prompt('Copy your portfolio link:', url);
-        return;
-      }
-      const btn = el.btnCopyPortfolioLink;
-      const original = btn.textContent;
-      btn.textContent = '✓ Copied!';
-      setTimeout(() => { btn.textContent = original; }, 1600);
-    });
-  }
-
-  if (el.btnCopyResumeText) {
-    el.btnCopyResumeText.addEventListener('click', async () => {
-      const text = buildResumePlainText();
-      const btn = el.btnCopyResumeText;
-      const original = btn.textContent;
-      try {
-        await navigator.clipboard.writeText(text);
-      } catch (err) {
-        window.prompt('Copy your résumé text:', text);
-        return;
-      }
-      btn.textContent = '✓ Copied!';
-      setTimeout(() => { btn.textContent = original; }, 1600);
-    });
   }
 
   document.querySelectorAll('.template-card[data-template]').forEach(card => {

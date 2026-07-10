@@ -214,8 +214,6 @@
       </li>
       <li class="toolbar-divider" aria-hidden="true"></li>
       <li data-viewmode-only="resume"><button class="btn btn-ghost btn-sm" id="btnResetResume" type="button" title="Re-copy this résumé from your portfolio content">↺ Reset</button></li>
-      <li data-viewmode-only="resume"><button class="btn btn-ghost btn-sm" id="btnCopyPortfolioLink" type="button" title="Copy your published portfolio's link to the clipboard">🔗 Copy Portfolio Link</button></li>
-      <li data-viewmode-only="resume"><button class="btn btn-ghost btn-sm" id="btnCopyResumeText" type="button" title="Copy your résumé as plain text — handy for pasting into ATS forms and job applications">📋 Copy as Plain Text</button></li>
       <li data-viewmode-only="resume"><button class="btn btn-ghost btn-sm" id="btnDownloadPDF" type="button">⬇ PDF</button></li>
       <li data-viewmode-only="portfolio"><span class="site-status-badge hidden" id="siteStatusBadge"></span></li>
       <li data-viewmode-only="portfolio"><button class="btn btn-ghost btn-sm" id="btnPreviewShowcase" type="button">👀 Preview</button></li>
@@ -283,6 +281,17 @@
             </div>
           </div>
 
+          <div class="portfolio-link-wrap" data-viewmode-only="resume">
+            <div class="customize-toggle-row">
+              <p class="customize-label" style="margin:0;" id="portfolioLinkLabel">Add Portfolio Link <span id="portfolioLinkUrlPreview">yourname.proves.work</span></p>
+              <label class="customize-toggle">
+                <input type="checkbox" id="inIncludePortfolioLink" disabled />
+                <span class="customize-toggle-slider"></span>
+              </label>
+            </div>
+            <p class="customize-plan-lock" id="portfolioLinkLockMsg">Publish and get approved on a paid plan to add your live portfolio link to your résumé's contact line.</p>
+          </div>
+
           <div class="sample-content-wrap">
             <button class="btn btn-ghost btn-sm" id="btnRandomize" type="button" title="Fill this document with a random inspiring sample person">🎲 Randomize</button>
             <button class="btn btn-ghost btn-sm" id="btnResetContent" type="button" title="Restore the original starter content">↺ Reset</button>
@@ -330,7 +339,12 @@
               <h3 class="sm-title">Tailor to a Job Posting</h3>
             </div>
             <p class="sm-subtitle">Paste the raw text of a job posting. An AI model will match its language against your résumé, flag important keywords you're missing, and highlight which of your existing bullets to emphasize. Your text is sent only for this one match and isn't stored.</p>
-            <textarea id="jobPostingInput" class="job-posting-textarea" rows="6" placeholder="Paste the full job description here…"></textarea>
+            <div class="job-posting-input-wrap">
+              <textarea id="jobPostingInput" class="job-posting-textarea" rows="10" placeholder="Paste the full job description here — the more detail, the better the match (requirements, responsibilities, and any preferred qualifications all help)."></textarea>
+              <div class="job-posting-input-footer">
+                <span id="jobPostingWordCount">0 words</span>
+              </div>
+            </div>
             <button class="btn btn-secondary btn-sm" id="btnTailorResume" type="button">🎯 Match my résumé to this posting</button>
             <div class="ai-review-results hidden" id="tailorResults">
               <div class="ai-review-score-box">
@@ -815,25 +829,6 @@
                   <button class="option-pill" data-value="bar">Bar</button>
                   <button class="option-pill" data-value="boxed">Boxed</button>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-section active" data-viewmode-only="resume">
-            <button class="form-section-toggle" type="button">
-              <span class="fs-title">Portfolio Link</span>
-              <span class="fs-chevron">▼</span>
-            </button>
-            <div class="form-section-content">
-              <div class="customize-group">
-                <div class="customize-toggle-row">
-                  <p class="customize-label" style="margin:0;" id="portfolioLinkLabel">Include <span id="portfolioLinkUrlPreview">yourname.proves.work</span></p>
-                  <label class="customize-toggle">
-                    <input type="checkbox" id="inIncludePortfolioLink" disabled />
-                    <span class="customize-toggle-slider"></span>
-                  </label>
-                </div>
-                <p class="customize-plan-lock" id="portfolioLinkLockMsg">Publish and get approved on a paid plan to add your live portfolio link to your résumé's contact line.</p>
               </div>
             </div>
           </div>

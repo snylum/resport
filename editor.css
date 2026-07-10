@@ -363,6 +363,10 @@ body {
 }
 
 /* Toggle switch (border between columns, include-portfolio-link) */
+.portfolio-link-wrap {
+  padding: 0.9rem 1.25rem;
+  border-top: 1px solid var(--color-border);
+}
 .customize-toggle-row {
   display: flex;
   align-items: center;
@@ -1789,20 +1793,47 @@ body.is-printing-resume #resumePaper {
   flex-direction: column;
   gap: 0.35rem;
 }
+.job-posting-input-wrap {
+  position: relative;
+}
 .job-posting-textarea {
   width: 100%;
+  min-height: 180px;
   resize: vertical;
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  padding: 0.6rem 0.7rem;
+  border: 1.5px solid var(--color-border);
+  border-radius: 12px;
+  padding: 0.75rem 0.85rem 1.6rem;
   font: inherit;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
   color: var(--color-text);
   background: var(--color-surface, #fff);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.job-posting-textarea::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.75;
+}
+.job-posting-textarea:hover {
+  border-color: var(--color-text-muted);
 }
 .job-posting-textarea:focus {
-  outline: 2px solid var(--color-accent, #6366f1);
-  outline-offset: 1px;
+  outline: none;
+  border-color: var(--color-accent, #6366f1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent, #6366f1) 18%, transparent);
+}
+.job-posting-input-footer {
+  position: absolute;
+  right: 0.7rem;
+  bottom: 0.5rem;
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+  pointer-events: none;
+  background: var(--color-surface, #fff);
+  padding: 0 0.2rem;
+}
+.job-posting-input-footer #jobPostingWordCount.is-thin {
+  color: var(--color-danger, #d64545);
 }
 
 /* ── Nav logo username: unclaimed vs claimed ─────────────────
