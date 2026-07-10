@@ -31,36 +31,149 @@
 // header/date alignment), color, typography and section-title
 // styling all at once. Every one of those axes stays individually
 // tweakable afterwards from the Customize panel.
+// Shared numeric defaults every template starts from — individually
+// tweakable afterwards via the sliders/toggles in the Customize panel.
+// pageSize: 'letter' | 'a4' | 'legal'. colSplit/colGap/colBorder only
+// matter in two-column layouts. includePortfolioLink starts off; it's
+// gated on an approved/paid published site regardless of template.
+const BASE_NUMERIC_DEFAULTS = {
+  pageSize: 'letter',
+  sectionGap: 1,
+  blockPad: 0.5,
+  bulletSize: 100,
+  pageMargin: 2.5,
+  colSplit: 34,
+  colGap: 2,
+  colBorder: true,
+  includePortfolioLink: false
+};
+
 export const TEMPLATES = [
   {
     id: 'ats',
     name: 'ATS Simple',
     tagline: 'Plain & parser-friendly',
-    design: { layout: '1', headerAlign: 'left', dateAlign: 'right', accent: '#1A1A1A', headingFont: 'sans', bodyFont: 'sans', fontSize: '100', lineHeight: 'normal', titleStyle: 'plain' }
+    design: { ...BASE_NUMERIC_DEFAULTS, layout: '1', headerAlign: 'left', dateAlign: 'right', accent: '#1A1A1A', headingFont: 'sans', bodyFont: 'sans', fontSize: '100', lineHeight: 1.45, titleStyle: 'plain' }
   },
   {
     id: 'harvard',
     name: 'Harvard Classic',
     tagline: 'Centered, academic, serif',
-    design: { layout: '1', headerAlign: 'center', dateAlign: 'right', accent: '#1E3A5F', headingFont: 'serif', bodyFont: 'serif', fontSize: '100', lineHeight: 'normal', titleStyle: 'underline' }
+    design: { ...BASE_NUMERIC_DEFAULTS, layout: '1', headerAlign: 'center', dateAlign: 'right', accent: '#1E3A5F', headingFont: 'serif', bodyFont: 'serif', fontSize: '100', lineHeight: 1.45, titleStyle: 'underline' }
   },
   {
     id: 'lasalle',
     name: 'La Salle',
     tagline: 'Sidebar with campus colors',
-    design: { layout: '2', headerAlign: 'left', dateAlign: 'right', accent: '#00693E', headingFont: 'modern', bodyFont: 'sans', fontSize: '100', lineHeight: 'normal', titleStyle: 'bar' }
+    design: { ...BASE_NUMERIC_DEFAULTS, layout: '2', headerAlign: 'left', dateAlign: 'right', accent: '#00693E', headingFont: 'modern', bodyFont: 'sans', fontSize: '100', lineHeight: 1.45, titleStyle: 'bar' }
   },
   {
     id: 'compact',
     name: 'Executive Compact',
     tagline: 'Dense — fits more on one page',
-    design: { layout: '1', headerAlign: 'left', dateAlign: 'right', accent: '#33475B', headingFont: 'sans', bodyFont: 'sans', fontSize: '90', lineHeight: 'compact', titleStyle: 'plain' }
+    design: { ...BASE_NUMERIC_DEFAULTS, layout: '1', headerAlign: 'left', dateAlign: 'right', accent: '#33475B', headingFont: 'sans', bodyFont: 'sans', fontSize: '90', lineHeight: 1.25, titleStyle: 'plain', sectionGap: 0.5, blockPad: 0.3 }
   },
   {
     id: 'creative',
     name: 'Creative Accent',
     tagline: 'Bold color, modern display type',
-    design: { layout: '2', headerAlign: 'left', dateAlign: 'right', accent: '#7C4DFF', headingFont: 'modern', bodyFont: 'sans', fontSize: '100', lineHeight: 'normal', titleStyle: 'bar' }
+    design: { ...BASE_NUMERIC_DEFAULTS, layout: '2', headerAlign: 'left', dateAlign: 'right', accent: '#7C4DFF', headingFont: 'modern', bodyFont: 'sans', fontSize: '100', lineHeight: 1.45, titleStyle: 'bar' }
+  },
+  {
+    id: 'minimalist',
+    name: 'Minimalist',
+    tagline: 'No rules, quiet type',
+    design: { ...BASE_NUMERIC_DEFAULTS, layout: '1', headerAlign: 'left', dateAlign: 'right', accent: '#444444', headingFont: 'sans', bodyFont: 'sans', fontSize: '100', lineHeight: 1.6, titleStyle: 'plain', sectionGap: 1.5 }
+  },
+  {
+    id: 'modern-sidebar',
+    name: 'Modern Sidebar',
+    tagline: 'Dark tinted sidebar',
+    design: { ...BASE_NUMERIC_DEFAULTS, layout: '2', headerAlign: 'left', dateAlign: 'right', accent: '#1A1A1A', headingFont: 'modern', bodyFont: 'sans', fontSize: '100', lineHeight: 1.45, titleStyle: 'plain', colBorder: false, colSplit: 36 }
+  },
+  {
+    id: 'bold-header',
+    name: 'Bold Header',
+    tagline: 'Full-width color band',
+    design: { ...BASE_NUMERIC_DEFAULTS, layout: '1', headerAlign: 'left', dateAlign: 'right', accent: '#7C4DFF', headingFont: 'modern', bodyFont: 'sans', fontSize: '100', lineHeight: 1.45, titleStyle: 'bar' }
+  },
+  {
+    id: 'elegant-serif',
+    name: 'Elegant Serif',
+    tagline: 'Refined, italic accents',
+    design: { ...BASE_NUMERIC_DEFAULTS, layout: '1', headerAlign: 'center', dateAlign: 'right', accent: '#8A6D3B', headingFont: 'serif', bodyFont: 'serif', fontSize: '100', lineHeight: 1.5, titleStyle: 'plain' }
+  },
+  {
+    id: 'tech-mono',
+    name: 'Tech Mono',
+    tagline: 'Monospace, bracketed titles',
+    design: { ...BASE_NUMERIC_DEFAULTS, layout: '2', headerAlign: 'left', dateAlign: 'left', accent: '#00693E', headingFont: 'sans', bodyFont: 'sans', fontSize: '95', lineHeight: 1.4, titleStyle: 'plain' }
+  },
+  {
+    id: 'timeline',
+    name: 'Timeline',
+    tagline: 'Connected date markers',
+    design: { ...BASE_NUMERIC_DEFAULTS, layout: '1', headerAlign: 'left', dateAlign: 'right', accent: '#1E3A5F', headingFont: 'sans', bodyFont: 'sans', fontSize: '100', lineHeight: 1.45, titleStyle: 'underline' }
+  },
+  {
+    id: 'two-tone',
+    name: 'Two-Tone',
+    tagline: 'Banded header, divided blocks',
+    design: { ...BASE_NUMERIC_DEFAULTS, layout: '1', headerAlign: 'left', dateAlign: 'right', accent: '#33475B', headingFont: 'modern', bodyFont: 'sans', fontSize: '100', lineHeight: 1.45, titleStyle: 'plain', sectionGap: 0.75 }
+  },
+  {
+    id: 'banner',
+    name: 'Banner Photo',
+    tagline: 'Centered photo & name',
+    design: { ...BASE_NUMERIC_DEFAULTS, layout: '1', headerAlign: 'center', dateAlign: 'right', accent: '#C0392B', headingFont: 'serif', bodyFont: 'sans', fontSize: '100', lineHeight: 1.45, titleStyle: 'underline' }
+  },
+  {
+    id: 'ivy-serif',
+    name: 'Ivy Serif',
+    tagline: 'Traditional, tightly kerned',
+    design: { ...BASE_NUMERIC_DEFAULTS, layout: '1', headerAlign: 'center', dateAlign: 'right', accent: '#293241', headingFont: 'serif', bodyFont: 'serif', fontSize: '95', lineHeight: 1.4, titleStyle: 'underline', sectionGap: 0.75 }
+  },
+  {
+    id: 'slate-sidebar',
+    name: 'Slate Sidebar',
+    tagline: 'Cool-toned two column',
+    design: { ...BASE_NUMERIC_DEFAULTS, layout: '2', headerAlign: 'left', dateAlign: 'right', accent: '#37474F', headingFont: 'sans', bodyFont: 'sans', fontSize: '100', lineHeight: 1.45, titleStyle: 'bar', colSplit: 32, colBorder: false }
+  },
+  {
+    id: 'condensed-grid',
+    name: 'Condensed Grid',
+    tagline: 'Tight, high-density one-pager',
+    design: { ...BASE_NUMERIC_DEFAULTS, layout: '1', headerAlign: 'left', dateAlign: 'right', accent: '#1A1A1A', headingFont: 'sans', bodyFont: 'sans', fontSize: '85', lineHeight: 1.2, titleStyle: 'plain', sectionGap: 0.4, blockPad: 0.25, pageMargin: 1.5 }
+  },
+  {
+    id: 'soft-rounded',
+    name: 'Soft Rounded',
+    tagline: 'Friendly, boxed sections',
+    design: { ...BASE_NUMERIC_DEFAULTS, layout: '1', headerAlign: 'left', dateAlign: 'right', accent: '#E07A5F', headingFont: 'modern', bodyFont: 'sans', fontSize: '100', lineHeight: 1.5, titleStyle: 'boxed', sectionGap: 1.25 }
+  },
+  {
+    id: 'mono-grid',
+    name: 'Mono Grid',
+    tagline: 'Monospace, boxed titles, dense',
+    design: { ...BASE_NUMERIC_DEFAULTS, layout: '2', headerAlign: 'left', dateAlign: 'left', accent: '#1A1A1A', headingFont: 'mono', bodyFont: 'mono', fontSize: '90', lineHeight: 1.35, titleStyle: 'boxed', colGap: 1.5 }
+  },
+  {
+    id: 'gold-classic',
+    name: 'Gold Classic',
+    tagline: 'Warm accent, generous spacing',
+    design: { ...BASE_NUMERIC_DEFAULTS, layout: '1', headerAlign: 'center', dateAlign: 'right', accent: '#B8860B', headingFont: 'classic', bodyFont: 'serif', fontSize: '100', lineHeight: 1.55, titleStyle: 'underline', sectionGap: 1.5, pageMargin: 3 }
+  },
+  {
+    id: 'wide-photo-sidebar',
+    name: 'Wide Photo Sidebar',
+    tagline: 'Large sidebar, roomy gap',
+    design: { ...BASE_NUMERIC_DEFAULTS, layout: '2', headerAlign: 'left', dateAlign: 'right', accent: '#2E5339', headingFont: 'modern', bodyFont: 'sans', fontSize: '100', lineHeight: 1.45, titleStyle: 'bar', colSplit: 40, colGap: 2.5, colBorder: true }
+  },
+  {
+    id: 'petite-classic',
+    name: 'Petite Classic',
+    tagline: 'Small type, clean serif, compact',
+    design: { ...BASE_NUMERIC_DEFAULTS, layout: '1', headerAlign: 'left', dateAlign: 'right', accent: '#3A3A3A', headingFont: 'classic', bodyFont: 'classic', fontSize: '88', lineHeight: 1.3, titleStyle: 'plain', sectionGap: 0.6, blockPad: 0.35 }
   }
 ];
 
@@ -451,7 +564,7 @@ export const BLOCK_LIBRARY = [
   { type: 'custom', label: 'Custom Text Block', makeData: () => ({ title: 'Custom Section', text: 'Add any additional information here.' }) },
   { type: 'gallery', label: 'Photo Gallery', makeData: () => ({ photos: [] }), mediaOnly: true },
   { type: 'video', label: 'Embedded Video', makeData: () => ({ url: '', caption: '' }), mediaOnly: true },
-  { type: 'links', label: 'Embedded Links', makeData: () => ({ items: [{ label: 'Website', url: '' }] }) }
+  { type: 'links', label: 'Embedded Links', makeData: () => ({ items: [{ label: 'Website', url: '' }] }), mediaOnly: true }
 ];
 
 const defaultBlocks = [
@@ -703,10 +816,20 @@ class EditorStore {
   }
 
   _makeResumeFromPortfolio() {
+    // Résumés never carry a photo, and never carry portfolio-only media
+    // blocks (galleries, embedded video, embedded link lists) — those
+    // exist to showcase work on the live site, but have no place on an
+    // ATS-safe résumé and would just get silently dropped by the plain-text
+    // export anyway. Strip them here so what you see in the résumé editor
+    // is exactly what will actually appear on the document.
+    const MEDIA_ONLY_TYPES = ['gallery', 'video', 'links'];
+    const profile = deepClone(this.state.portfolio.profile);
+    profile.photo = null;
     return {
       resumeTitle: 'Untitled résumé',
-      profile: deepClone(this.state.portfolio.profile),
-      blocks: ensureVerifyShape(deepClone(this.state.portfolio.blocks)),
+      profile,
+      blocks: ensureVerifyShape(deepClone(this.state.portfolio.blocks))
+        .filter(b => !MEDIA_ONLY_TYPES.includes(b.type)),
       template: TEMPLATES[0].id,
       design: { ...TEMPLATES[0].design }
     };

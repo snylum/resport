@@ -7,6 +7,26 @@ index.html, editor.html, css, js) is untouched; this Worker is only
 routed on `/api/*` at that host, plus every `*.proves.work`
 subdomain.
 
+## AI features (résumé check + tailor-to-job-posting)
+
+These run on **Cloudflare Workers AI**, using an open-source model
+(`@cf/meta/llama-3.1-8b-instruct`), not a third-party API. There's
+nothing to sign up for beyond your existing Cloudflare account:
+
+- No API key to create or store.
+- Free tier: 10,000 "neurons" per day (roughly a few hundred requests/day
+  for a model this size — plenty for personal/small-scale use). See
+  current limits at https://developers.cloudflare.com/workers-ai/platform/pricing/
+- Already wired up via the `ai` binding in `wrangler.jsonc` — nothing
+  extra to configure. Just deploy (`npx wrangler deploy`) and the
+  `/api/ai/resume-check` and `/api/ai/tailor-resume` routes are live.
+- If the free daily quota is hit, or the request fails for any other
+  reason, the editor automatically falls back to a local, non-AI
+  heuristic check so the feature never just breaks — it just gets less
+  precise until quota resets.
+- Résumé/job-posting text sent to these routes is used only for that
+  one request and is never written to KV or logged.
+
 ## Why a Worker (and not Cloudflare Pages / Custom Domains)
 
 - Cloudflare **Custom Domains do not support wildcard DNS records** —

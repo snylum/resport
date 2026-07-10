@@ -51,6 +51,21 @@ function json(obj, status = 200) {
   });
 }
 
+// Open-source instruction-tuned models occasionally wrap their JSON in
+// ```fences``` or a sentence of preamble even when told not to — pull
+// out the first {...} block and parse that instead of trusting the
+// raw string.
+function parseAIJson(text) {
+  if (!text) return null;
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  try {
+    return JSON.parse(match[0]);
+  } catch {
+    return null;
+  }
+}
+
 function notFoundPage(username) {
   return `<!DOCTYPE html><html><head><meta charset="utf-8" />
 <title>Not found — ${APP_HOST}</title>
@@ -229,6 +244,89 @@ async function handleApi(request, env, url) {
     // restore it, not to squat the name forever.
     const isFree = !existing || existing.status === 'deleted';
     return json({ available: isFree });
+  }
+
+  // ── AI: résumé check ───────────────────────────────────────────
+  // Runs an open-source model (Llama 3.1 8B) on Cloudflare Workers AI —
+  // free tier, no external API key. Résumé text is sent for this one
+  // request only; nothing is stored server-side.
+  if (url.pathname === '/api/ai/resume-check' && request.method === 'POST') {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ ok: false, error: 'Invalid JSON body.' }, 400);
+    }
+    const resumeText = (body.resumeText || '').slice(0, 8000);
+    if (!resumeText.trim()) return json({ ok: false, error: 'resumeText is required.' }, 400);
+
+    const prompt = `You are an ATS (applicant tracking system) and résumé-writing expert. Review the résumé text below.
+
+Respond with ONLY a JSON object, no markdown fences, no preamble, in exactly this shape:
+{"score": <integer 1-100>, "verdict": "<short phrase, e.g. 'Strong résumé'>", "issues": ["<concrete problem>", ...], "improvements": ["<concrete suggestion>", ...]}
+
+Score based on: ATS-readability, presence of contact info/headline, strong action-verb bullets, quantified impact (numbers/%/$), concise bullet length, and a solid skills section. List at most 6 issues and 6 improvements, each one sentence.
+
+RÉSUMÉ TEXT:
+"""
+${resumeText}
+"""`;
+
+    try {
+      const aiResult = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 800
+      });
+      const parsed = parseAIJson(aiResult.response);
+      if (!parsed) return json({ ok: false, error: 'AI returned an unparseable response.' }, 502);
+      return json({ ok: true, ...parsed });
+    } catch (err) {
+      return json({ ok: false, error: 'AI request failed.' }, 502);
+    }
+  }
+
+  // ── AI: tailor résumé to a pasted job posting ──────────────────
+  if (url.pathname === '/api/ai/tailor-resume' && request.method === 'POST') {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ ok: false, error: 'Invalid JSON body.' }, 400);
+    }
+    const resumeText = (body.resumeText || '').slice(0, 8000);
+    const postingText = (body.postingText || '').slice(0, 8000);
+    if (!resumeText.trim() || !postingText.trim()) {
+      return json({ ok: false, error: 'resumeText and postingText are both required.' }, 400);
+    }
+
+    const prompt = `You are a career coach helping someone tailor their résumé to a specific job posting.
+
+Respond with ONLY a JSON object, no markdown fences, no preamble, in exactly this shape:
+{"score": <integer 0-100, how well the résumé currently matches the posting>, "verdict": "<short phrase>", "missingKeywords": ["<important term from the posting that's absent or weak in the résumé>", ...], "emphasize": ["<résumé bullet, quoted close to verbatim, that already aligns well with the posting and should be kept/emphasized>", ...], "suggestions": ["<concrete rewrite or wording suggestion tying a résumé bullet to the posting's language>", ...]}
+
+List at most 10 missingKeywords, 6 emphasize items, and 6 suggestions.
+
+JOB POSTING:
+"""
+${postingText}
+"""
+
+RÉSUMÉ TEXT:
+"""
+${resumeText}
+"""`;
+
+    try {
+      const aiResult = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 900
+      });
+      const parsed = parseAIJson(aiResult.response);
+      if (!parsed) return json({ ok: false, error: 'AI returned an unparseable response.' }, 502);
+      return json({ ok: true, ...parsed });
+    } catch (err) {
+      return json({ ok: false, error: 'AI request failed.' }, 502);
+    }
   }
 
   // ── Domain-only reservation (no portfolio) ────────────────────

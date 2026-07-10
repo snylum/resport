@@ -338,6 +338,93 @@ body {
   cursor: pointer;
 }
 
+/* Recommended-value tick, positioned as a % of track width via
+   inline --tick-pos on the wrapper. A quiet "your slider has a
+   sane default" marker, not a hard constraint. */
+.customize-range-wrap {
+  position: relative;
+}
+.customize-range-tick {
+  position: absolute;
+  top: 4px;
+  width: 2px;
+  height: 8px;
+  background: var(--color-text-muted);
+  opacity: 0.4;
+  left: var(--tick-pos, 50%);
+  pointer-events: none;
+}
+.customize-range-tick-label {
+  font-size: 0.62rem;
+  color: var(--color-text-muted);
+  display: block;
+  text-align: right;
+  margin-top: 0.15rem;
+}
+
+/* Toggle switch (border between columns, include-portfolio-link) */
+.customize-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+.customize-toggle {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 19px;
+  flex-shrink: 0;
+}
+.customize-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.customize-toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.customize-toggle-slider::before {
+  content: "";
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  left: 2px;
+  top: 2px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.15s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
+.customize-toggle input:checked + .customize-toggle-slider {
+  background: var(--color-primary, #7C4DFF);
+}
+.customize-toggle input:checked + .customize-toggle-slider::before {
+  transform: translateX(15px);
+}
+.customize-toggle input:disabled + .customize-toggle-slider {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.customize-plan-lock {
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+  margin: 0.35rem 0 0;
+  line-height: 1.4;
+}
+
+.customize-select-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
 .option-pill-row {
   display: flex;
   gap: 0.5rem;
@@ -819,9 +906,9 @@ body {
 
 .resume-paper {
   background: #ffffff;
-  width: 210mm;
-  min-height: 297mm;
-  padding: 2.5rem;
+  width: var(--rp-page-w, 210mm);
+  min-height: var(--rp-page-min-h, 297mm);
+  padding: var(--rp-margin, 2.5rem);
   box-shadow: 0 10px 30px rgba(0,0,0,0.08);
   border: 3px solid var(--color-border);
   flex-shrink: 0;
@@ -953,7 +1040,7 @@ body {
 /* Column layout, driven by [data-layout] on .resume-paper */
 #canvasTracks {
   display: flex;
-  gap: 2rem;
+  gap: var(--rp-col-gap, 2rem);
 }
 
 .col-track {
@@ -966,12 +1053,12 @@ body {
 }
 
 .resume-paper[data-layout="2"] .main-track {
-  flex: 0 0 62%;
+  flex: 1 1 0;
 }
 
 .resume-paper[data-layout="2"] .side-track {
-  flex: 0 0 34%;
-  border-left: 2px solid var(--color-border);
+  flex: 0 0 var(--rp-side-width, 34%);
+  border-left: var(--rp-col-border-w, 2px) solid var(--color-border);
   padding-left: 1.5rem;
 }
 
@@ -1049,7 +1136,7 @@ body {
 .rb-bullets {
   margin: 0.4rem 0 0;
   padding-left: 1.1rem;
-  font-size: 0.85em;
+  font-size: calc(0.85em * var(--rp-bullet-scale, 1));
 }
 
 .rb-edu-gpa {
@@ -1059,10 +1146,10 @@ body {
 }
 
 .resume-block {
-  padding: 0.5rem;
+  padding: var(--rp-block-pad, 0.5rem);
   border: 2px dashed transparent;
   cursor: pointer;
-  margin-bottom: 1rem;
+  margin-bottom: var(--rp-section-gap, 1rem);
 }
 
 .resume-block.selected {
@@ -1479,6 +1566,129 @@ body {
   border-left: none;
 }
 
+/* Minimalist: no rules anywhere, generous whitespace, light type */
+.resume-paper[data-template="minimalist"] .rb-header {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.resume-paper[data-template="minimalist"] .rb-name {
+  font-weight: 300;
+  letter-spacing: 0.02em;
+}
+.resume-paper[data-template="minimalist"] .rb-section-title {
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  color: var(--color-text-muted);
+}
+
+/* Modern Sidebar: dark tinted sidebar, name inside header band */
+.resume-paper[data-template="modern-sidebar"] .side-track {
+  background: var(--rp-accent, #1A1A1A);
+  color: #fff;
+  padding: 1.25rem;
+}
+.resume-paper[data-template="modern-sidebar"] .side-track .rb-section-title,
+.resume-paper[data-template="modern-sidebar"] .side-track .rb-custom-title {
+  color: #fff;
+}
+.resume-paper[data-template="modern-sidebar"] .side-track .rb-dates,
+.resume-paper[data-template="modern-sidebar"] .side-track .rb-loc {
+  color: rgba(255,255,255,0.7);
+}
+
+/* Bold Header: full-width color band behind the header */
+.resume-paper[data-template="bold-header"] {
+  padding-top: 0;
+}
+.resume-paper[data-template="bold-header"] .rb-header {
+  background: var(--rp-accent, var(--color-secondary));
+  color: #fff;
+  margin: calc(-1 * var(--rp-margin, 2.5rem)) calc(-1 * var(--rp-margin, 2.5rem)) 1.5rem;
+  padding: var(--rp-margin, 2.5rem) var(--rp-margin, 2.5rem) 1.25rem;
+  border-bottom: none;
+}
+.resume-paper[data-template="bold-header"] .rb-title {
+  color: rgba(255,255,255,0.85);
+}
+.resume-paper[data-template="bold-header"] .rb-contact-line {
+  color: rgba(255,255,255,0.7);
+}
+
+/* Elegant Serif: refined serif headings, thin double rule */
+.resume-paper[data-template="elegant-serif"] .rb-header {
+  border-bottom: 3px double var(--rp-accent, var(--color-border));
+}
+.resume-paper[data-template="elegant-serif"] .rb-name {
+  font-style: italic;
+}
+.resume-paper[data-template="elegant-serif"] .rb-section-title {
+  font-style: italic;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+/* Tech Mono: monospace accents, bracketed section titles */
+.resume-paper[data-template="tech-mono"] .rb-section-title,
+.resume-paper[data-template="tech-mono"] .rb-custom-title {
+  font-family: 'Courier New', ui-monospace, monospace;
+}
+.resume-paper[data-template="tech-mono"] .rb-section-title::before {
+  content: "// ";
+  color: var(--rp-accent, var(--color-secondary));
+}
+.resume-paper[data-template="tech-mono"] .rb-dates,
+.resume-paper[data-template="tech-mono"] .rb-loc {
+  font-family: 'Courier New', ui-monospace, monospace;
+}
+
+/* Timeline: connected dots down the margin of experience/education dates */
+.resume-paper[data-template="timeline"] .rb-exp-row,
+.resume-paper[data-template="timeline"] .rb-edu-row {
+  position: relative;
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--rp-accent, var(--color-border));
+}
+.resume-paper[data-template="timeline"] .rb-exp-row::before,
+.resume-paper[data-template="timeline"] .rb-edu-row::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: 0.3em;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--rp-accent, var(--color-secondary));
+}
+
+/* Two-Tone: colored sidebar band on the main header photo side, crisp block dividers */
+.resume-paper[data-template="two-tone"] .rb-header {
+  border-bottom: none;
+  background: var(--color-surface-alt);
+  padding: 1.25rem;
+}
+.resume-paper[data-template="two-tone"] .resume-block:not(:last-child) {
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Banner Photo: large centered photo, name below it, banner-style rule */
+.resume-paper[data-template="banner"] .rb-header {
+  flex-direction: column;
+  text-align: center;
+  border-bottom: none;
+}
+.resume-paper[data-template="banner"] .rb-header-photo-wrap {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  margin: 0 auto 0.5rem;
+}
+.resume-paper[data-template="banner"] .rb-name {
+  border-top: 2px solid var(--rp-accent, var(--color-border));
+  border-bottom: 2px solid var(--rp-accent, var(--color-border));
+  padding: 0.3rem 0;
+  width: 100%;
+}
+
 /* ── PDF export (print-to-PDF via window.print) ──────────────
    Toggled by JS just before/after calling print(): isolates the
    résumé paper as the only visible thing on the page, at its
@@ -1578,6 +1788,21 @@ body.is-printing-resume #resumePaper {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+}
+.job-posting-textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 0.6rem 0.7rem;
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--color-text);
+  background: var(--color-surface, #fff);
+}
+.job-posting-textarea:focus {
+  outline: 2px solid var(--color-accent, #6366f1);
+  outline-offset: 1px;
 }
 
 /* ── Nav logo username: unclaimed vs claimed ─────────────────

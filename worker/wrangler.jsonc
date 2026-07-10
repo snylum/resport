@@ -20,5 +20,14 @@
       "binding": "SITES",
       "id": "06ef81d83ca54bfaa3cc4ff7a8ecaf10"
     }
-  ]
+  ],
+
+  // Cloudflare Workers AI — runs open-source models (Llama 3.1 8B here)
+  // directly on Cloudflare's infrastructure. Free tier: 10,000 "neurons"
+  // per day, no external API key/account needed, nothing to rotate. This
+  // powers the résumé-check and tailor-to-job-posting AI features.
+  // Docs: https://developers.cloudflare.com/workers-ai/
+  "ai": {
+    "binding": "AI"
+  }
 }

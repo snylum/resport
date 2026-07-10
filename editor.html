@@ -214,6 +214,8 @@
       </li>
       <li class="toolbar-divider" aria-hidden="true"></li>
       <li data-viewmode-only="resume"><button class="btn btn-ghost btn-sm" id="btnResetResume" type="button" title="Re-copy this résumé from your portfolio content">↺ Reset</button></li>
+      <li data-viewmode-only="resume"><button class="btn btn-ghost btn-sm" id="btnCopyPortfolioLink" type="button" title="Copy your published portfolio's link to the clipboard">🔗 Copy Portfolio Link</button></li>
+      <li data-viewmode-only="resume"><button class="btn btn-ghost btn-sm" id="btnCopyResumeText" type="button" title="Copy your résumé as plain text — handy for pasting into ATS forms and job applications">📋 Copy as Plain Text</button></li>
       <li data-viewmode-only="resume"><button class="btn btn-ghost btn-sm" id="btnDownloadPDF" type="button">⬇ PDF</button></li>
       <li data-viewmode-only="portfolio"><span class="site-status-badge hidden" id="siteStatusBadge"></span></li>
       <li data-viewmode-only="portfolio"><button class="btn btn-ghost btn-sm" id="btnPreviewShowcase" type="button">👀 Preview</button></li>
@@ -268,7 +270,7 @@
                   <label>Tagline / Short Bio</label>
                   <input type="text" id="inTagline" placeholder="One line about you, shown under your name" />
                 </div>
-                <div class="field-box" id="photoUploadBox">
+                <div class="field-box" id="photoUploadBox" data-viewmode-only="portfolio">
                   <label>Photo</label>
                   <div class="photo-input-row">
                     <div class="photo-preview-placeholder" id="photoSidebarPreview"></div>
@@ -304,7 +306,7 @@
             <div class="sm-header-row">
               <h3 class="sm-title">Résumé Check</h3>
             </div>
-            <p class="sm-subtitle">Runs a quick automated check for ATS-readiness and strong bullet writing — entirely in your browser, nothing is sent anywhere.</p>
+            <p class="sm-subtitle">Uses an AI model to check for ATS-readiness and strong bullet writing. Your résumé text is sent only for this one check and isn't stored.</p>
             <button class="btn btn-secondary btn-sm" id="btnReviewResume" type="button">✦ Check my résumé</button>
             <div class="ai-review-results hidden" id="aiReviewResults">
               <div class="ai-review-score-box">
@@ -319,6 +321,34 @@
               <div class="ai-review-list-box hidden" id="aiReviewImprovementsBox">
                 <p class="ai-review-list-title" id="aiReviewImprovementsTitle">Improvements</p>
                 <ul id="aiReviewImprovementsList"></ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="ai-review-wrap" data-viewmode-only="resume">
+            <div class="sm-header-row">
+              <h3 class="sm-title">Tailor to a Job Posting</h3>
+            </div>
+            <p class="sm-subtitle">Paste the raw text of a job posting. An AI model will match its language against your résumé, flag important keywords you're missing, and highlight which of your existing bullets to emphasize. Your text is sent only for this one match and isn't stored.</p>
+            <textarea id="jobPostingInput" class="job-posting-textarea" rows="6" placeholder="Paste the full job description here…"></textarea>
+            <button class="btn btn-secondary btn-sm" id="btnTailorResume" type="button">🎯 Match my résumé to this posting</button>
+            <div class="ai-review-results hidden" id="tailorResults">
+              <div class="ai-review-score-box">
+                <span class="ai-review-score-label">Match</span>
+                <span class="ai-review-score-num" id="tailorScoreNum">0%</span>
+                <span class="ai-review-score-verdict" id="tailorVerdict"></span>
+              </div>
+              <div class="ai-review-list-box hidden" id="tailorMissingBox">
+                <p class="ai-review-list-title" id="tailorMissingTitle">Keywords Missing From Your Résumé</p>
+                <ul id="tailorMissingList"></ul>
+              </div>
+              <div class="ai-review-list-box hidden" id="tailorEmphasizeBox">
+                <p class="ai-review-list-title">Bullets Worth Emphasizing</p>
+                <ul id="tailorEmphasizeList"></ul>
+              </div>
+              <div class="ai-review-list-box hidden" id="tailorSwapBox">
+                <p class="ai-review-list-title">Suggested Term Swaps</p>
+                <ul id="tailorSwapList"></ul>
               </div>
             </div>
           </div>
@@ -417,6 +447,199 @@
                   <div class="tpl-card-tag">Bold color, modern type</div>
                 </button>
 
+                <button class="template-card" data-template="minimalist" type="button">
+                  <div class="tpl-preview">
+                    <div class="tpl-line" style="width:40%;height:6px;background:#444;font-weight:300;"></div>
+                    <div class="tpl-line short" style="background:#ccc;"></div>
+                    <div class="tpl-line" style="margin-top:6px;background:#eee;"></div>
+                    <div class="tpl-line" style="background:#eee;"></div>
+                  </div>
+                  <div class="tpl-card-name">Minimalist</div>
+                  <div class="tpl-card-tag">No rules, quiet type</div>
+                </button>
+
+                <button class="template-card" data-template="modern-sidebar" type="button">
+                  <div class="tpl-preview tpl-two-col">
+                    <div class="tpl-col">
+                      <div class="tpl-line" style="width:60%;height:8px;background:#1A1A1A;"></div>
+                      <div class="tpl-line short"></div>
+                      <div class="tpl-line" style="margin-top:4px;"></div>
+                    </div>
+                    <div class="tpl-col tpl-side" style="background:#1A1A1A;padding:4px;">
+                      <div class="tpl-line" style="background:#fff;"></div>
+                      <div class="tpl-line short" style="background:#999;"></div>
+                    </div>
+                  </div>
+                  <div class="tpl-card-name">Modern Sidebar</div>
+                  <div class="tpl-card-tag">Dark tinted sidebar</div>
+                </button>
+
+                <button class="template-card" data-template="bold-header" type="button">
+                  <div class="tpl-preview" style="padding:0;gap:0;">
+                    <div style="background:#7C4DFF;padding:5px;width:100%;">
+                      <div class="tpl-line" style="width:55%;height:7px;background:#fff;"></div>
+                      <div class="tpl-line short" style="background:rgba(255,255,255,0.7);"></div>
+                    </div>
+                    <div class="tpl-line" style="margin-top:6px;"></div>
+                    <div class="tpl-line short"></div>
+                  </div>
+                  <div class="tpl-card-name">Bold Header</div>
+                  <div class="tpl-card-tag">Full-width color band</div>
+                </button>
+
+                <button class="template-card" data-template="elegant-serif" type="button">
+                  <div class="tpl-preview" style="align-items:center;">
+                    <div class="tpl-line" style="width:50%;height:8px;background:#8a6d3b;font-style:italic;"></div>
+                    <div class="tpl-line short" style="width:35%;background:#bbb;"></div>
+                    <div class="tpl-line" style="width:85%;margin-top:4px;border-top:3px double #8a6d3b;height:0;background:none;"></div>
+                    <div class="tpl-line" style="width:70%;"></div>
+                  </div>
+                  <div class="tpl-card-name">Elegant Serif</div>
+                  <div class="tpl-card-tag">Refined, italic accents</div>
+                </button>
+
+                <button class="template-card" data-template="tech-mono" type="button">
+                  <div class="tpl-preview">
+                    <div class="tpl-line" style="width:50%;height:8px;background:#00693E;font-family:monospace;"></div>
+                    <div class="tpl-line short" style="background:#999;"></div>
+                    <div class="tpl-line" style="width:30%;margin-top:4px;background:#00693E;"></div>
+                    <div class="tpl-line"></div>
+                  </div>
+                  <div class="tpl-card-name">Tech Mono</div>
+                  <div class="tpl-card-tag">Monospace, bracketed titles</div>
+                </button>
+
+                <button class="template-card" data-template="timeline" type="button">
+                  <div class="tpl-preview" style="padding-left:6px;border-left:2px solid #1E3A5F;">
+                    <div class="tpl-line" style="width:50%;height:8px;background:#1E3A5F;"></div>
+                    <div class="tpl-line short"></div>
+                    <div class="tpl-line" style="margin-top:4px;"></div>
+                    <div class="tpl-line short"></div>
+                  </div>
+                  <div class="tpl-card-name">Timeline</div>
+                  <div class="tpl-card-tag">Connected date markers</div>
+                </button>
+
+                <button class="template-card" data-template="two-tone" type="button">
+                  <div class="tpl-preview" style="gap:0;">
+                    <div style="background:#f1ecff;padding:4px;width:100%;">
+                      <div class="tpl-line" style="width:50%;height:7px;background:#33475B;"></div>
+                    </div>
+                    <div class="tpl-line" style="margin-top:5px;border-bottom:1px solid #ddd;padding-bottom:4px;"></div>
+                    <div class="tpl-line short"></div>
+                  </div>
+                  <div class="tpl-card-name">Two-Tone</div>
+                  <div class="tpl-card-tag">Banded header, divided blocks</div>
+                </button>
+
+                <button class="template-card" data-template="banner" type="button">
+                  <div class="tpl-preview" style="align-items:center;">
+                    <div style="width:18px;height:18px;border-radius:50%;background:#C0392B;margin-bottom:3px;"></div>
+                    <div class="tpl-line" style="width:50%;height:6px;background:#C0392B;border-top:2px solid #C0392B;border-bottom:2px solid #C0392B;"></div>
+                    <div class="tpl-line short" style="width:30%;"></div>
+                  </div>
+                  <div class="tpl-card-name">Banner Photo</div>
+                  <div class="tpl-card-tag">Centered photo &amp; name</div>
+                </button>
+
+                <button class="template-card" data-template="ivy-serif" type="button">
+                  <div class="tpl-preview" style="align-items:center;">
+                    <div class="tpl-line" style="width:45%;height:7px;background:#293241;"></div>
+                    <div class="tpl-line short" style="width:30%;background:#999;"></div>
+                    <div class="tpl-line" style="width:80%;margin-top:4px;border-top:1px solid #293241;height:0;background:none;"></div>
+                    <div class="tpl-line short"></div>
+                  </div>
+                  <div class="tpl-card-name">Ivy Serif</div>
+                  <div class="tpl-card-tag">Traditional, tightly kerned</div>
+                </button>
+
+                <button class="template-card" data-template="slate-sidebar" type="button">
+                  <div class="tpl-preview" style="flex-direction:row;padding:0;gap:0;">
+                    <div style="background:#37474F;width:32%;padding:5px;height:100%;">
+                      <div class="tpl-line" style="background:#fff;"></div>
+                      <div class="tpl-line short" style="background:#999;"></div>
+                    </div>
+                    <div style="padding:5px;flex:1;">
+                      <div class="tpl-line" style="background:#37474F;"></div>
+                      <div class="tpl-line short"></div>
+                    </div>
+                  </div>
+                  <div class="tpl-card-name">Slate Sidebar</div>
+                  <div class="tpl-card-tag">Cool-toned two column</div>
+                </button>
+
+                <button class="template-card" data-template="condensed-grid" type="button">
+                  <div class="tpl-preview" style="gap:2px;">
+                    <div class="tpl-line" style="width:45%;height:6px;background:#1A1A1A;"></div>
+                    <div class="tpl-line short" style="height:3px;"></div>
+                    <div class="tpl-line" style="height:3px;"></div>
+                    <div class="tpl-line short" style="height:3px;"></div>
+                  </div>
+                  <div class="tpl-card-name">Condensed Grid</div>
+                  <div class="tpl-card-tag">Tight, high-density one-pager</div>
+                </button>
+
+                <button class="template-card" data-template="soft-rounded" type="button">
+                  <div class="tpl-preview">
+                    <div class="tpl-line" style="width:50%;height:8px;background:#E07A5F;border-radius:4px;"></div>
+                    <div style="border:1px solid #E07A5F33;border-radius:6px;padding:4px;width:100%;margin-top:4px;">
+                      <div class="tpl-line short"></div>
+                    </div>
+                  </div>
+                  <div class="tpl-card-name">Soft Rounded</div>
+                  <div class="tpl-card-tag">Friendly, boxed sections</div>
+                </button>
+
+                <button class="template-card" data-template="mono-grid" type="button">
+                  <div class="tpl-preview" style="flex-direction:row;padding:0;gap:0;">
+                    <div style="padding:5px;flex:1;font-family:monospace;">
+                      <div class="tpl-line" style="width:60%;height:6px;background:#1A1A1A;"></div>
+                      <div class="tpl-line short"></div>
+                    </div>
+                    <div style="background:#f2f2f2;width:38%;padding:5px;">
+                      <div class="tpl-line short" style="background:#999;"></div>
+                    </div>
+                  </div>
+                  <div class="tpl-card-name">Mono Grid</div>
+                  <div class="tpl-card-tag">Monospace, boxed titles, dense</div>
+                </button>
+
+                <button class="template-card" data-template="gold-classic" type="button">
+                  <div class="tpl-preview" style="align-items:center;">
+                    <div class="tpl-line" style="width:50%;height:8px;background:#B8860B;"></div>
+                    <div class="tpl-line short" style="width:35%;background:#bbb;"></div>
+                    <div class="tpl-line" style="width:85%;margin-top:6px;border-top:1px solid #B8860B;height:0;background:none;"></div>
+                    <div class="tpl-line" style="width:70%;"></div>
+                  </div>
+                  <div class="tpl-card-name">Gold Classic</div>
+                  <div class="tpl-card-tag">Warm accent, generous spacing</div>
+                </button>
+
+                <button class="template-card" data-template="wide-photo-sidebar" type="button">
+                  <div class="tpl-preview" style="flex-direction:row;padding:0;gap:0;">
+                    <div style="background:#2E5339;width:40%;padding:5px;height:100%;">
+                      <div style="width:16px;height:16px;border-radius:50%;background:#fff;margin-bottom:3px;"></div>
+                      <div class="tpl-line short" style="background:#fff;"></div>
+                    </div>
+                    <div style="padding:5px;flex:1;">
+                      <div class="tpl-line" style="background:#2E5339;"></div>
+                      <div class="tpl-line short"></div>
+                    </div>
+                  </div>
+                  <div class="tpl-card-name">Wide Photo Sidebar</div>
+                  <div class="tpl-card-tag">Large sidebar, roomy gap</div>
+                </button>
+
+                <button class="template-card" data-template="petite-classic" type="button">
+                  <div class="tpl-preview" style="gap:2px;">
+                    <div class="tpl-line" style="width:40%;height:6px;background:#3A3A3A;"></div>
+                    <div class="tpl-line short" style="height:3px;"></div>
+                    <div class="tpl-line" style="height:3px;"></div>
+                  </div>
+                  <div class="tpl-card-name">Petite Classic</div>
+                  <div class="tpl-card-tag">Small type, clean serif, compact</div>
+                </button>
+
               </div>
             </div>
           </div>
@@ -428,12 +651,47 @@
             </button>
             <div class="form-section-content">
               <div class="customize-group">
+                <p class="customize-label">Document Size</p>
+                <div class="option-pill-row" data-target="pageSize">
+                  <button class="option-pill" data-value="letter">Letter</button>
+                  <button class="option-pill" data-value="a4">A4</button>
+                  <button class="option-pill" data-value="legal">Legal</button>
+                </div>
+                <p class="customize-hint">Sets the exported PDF's page size and the canvas dimensions to match.</p>
+              </div>
+              <div class="customize-group">
                 <p class="customize-label">Columns</p>
                 <div class="option-pill-row" data-target="layout">
                   <button class="option-pill" data-value="1">Single</button>
                   <button class="option-pill" data-value="2">Two Column</button>
                 </div>
                 <p class="customize-hint">In two-column layouts, use the ⇥ icon next to a section (under "Sections") to move it into the sidebar.</p>
+              </div>
+              <div class="customize-group" id="colSplitGroup" data-layout2-only="1">
+                <p class="customize-label">Column Split <span id="colSplitLabel" class="customize-label-value">34%</span></p>
+                <div class="customize-range-wrap" style="--tick-pos: 34%;">
+                  <input type="range" id="inColSplit" class="customize-range" min="20" max="50" step="1" value="34" />
+                  <div class="customize-range-tick"></div>
+                </div>
+                <span class="customize-range-tick-label">Recommended: 34%</span>
+                <p class="customize-hint">Width of the sidebar column, as a share of the page.</p>
+              </div>
+              <div class="customize-group" id="colGapGroup" data-layout2-only="1">
+                <p class="customize-label">Column Gap <span id="colGapLabel" class="customize-label-value">2rem</span></p>
+                <div class="customize-range-wrap" style="--tick-pos: 50%;">
+                  <input type="range" id="inColGap" class="customize-range" min="0" max="4" step="0.25" value="2" />
+                  <div class="customize-range-tick"></div>
+                </div>
+                <span class="customize-range-tick-label">Recommended: 2rem</span>
+              </div>
+              <div class="customize-group" id="colBorderGroup" data-layout2-only="1">
+                <div class="customize-toggle-row">
+                  <p class="customize-label" style="margin:0;">Border Between Columns</p>
+                  <label class="customize-toggle">
+                    <input type="checkbox" id="inColBorder" checked />
+                    <span class="customize-toggle-slider"></span>
+                  </label>
+                </div>
               </div>
               <div class="customize-group">
                 <p class="customize-label">Header Alignment</p>
@@ -500,20 +758,54 @@
             </button>
             <div class="form-section-content">
               <div class="customize-group">
-                <p class="customize-label">Text Size</p>
-                <div class="option-pill-row" data-target="fontSize">
-                  <button class="option-pill" data-value="90">Small</button>
-                  <button class="option-pill" data-value="100">Medium</button>
-                  <button class="option-pill" data-value="115">Large</button>
+                <p class="customize-label">Text Size <span id="fontSizeLabel" class="customize-label-value">100%</span></p>
+                <div class="customize-range-wrap" style="--tick-pos: 50%;">
+                  <input type="range" id="inFontSize" class="customize-range" min="80" max="130" step="1" value="100" />
+                  <div class="customize-range-tick"></div>
                 </div>
+                <span class="customize-range-tick-label">Recommended: 100%</span>
               </div>
               <div class="customize-group">
-                <p class="customize-label">Line Spacing</p>
-                <div class="option-pill-row" data-target="lineHeight">
-                  <button class="option-pill" data-value="compact">Compact</button>
-                  <button class="option-pill" data-value="normal">Normal</button>
-                  <button class="option-pill" data-value="relaxed">Relaxed</button>
+                <p class="customize-label">Line Spacing <span id="lineHeightLabel" class="customize-label-value">1.45</span></p>
+                <div class="customize-range-wrap" style="--tick-pos: 41.7%;">
+                  <input type="range" id="inLineHeight" class="customize-range" min="1.1" max="2" step="0.05" value="1.45" />
+                  <div class="customize-range-tick"></div>
                 </div>
+                <span class="customize-range-tick-label">Recommended: 1.45</span>
+              </div>
+              <div class="customize-group">
+                <p class="customize-label">Section Spacing <span id="sectionGapLabel" class="customize-label-value">1rem</span></p>
+                <div class="customize-range-wrap" style="--tick-pos: 33.3%;">
+                  <input type="range" id="inSectionGap" class="customize-range" min="0.25" max="3" step="0.25" value="1" />
+                  <div class="customize-range-tick"></div>
+                </div>
+                <span class="customize-range-tick-label">Recommended: 1rem</span>
+                <p class="customize-hint">Gap between one section/entry and the next, down the page.</p>
+              </div>
+              <div class="customize-group">
+                <p class="customize-label">Block Padding <span id="blockPadLabel" class="customize-label-value">0.5rem</span></p>
+                <div class="customize-range-wrap" style="--tick-pos: 25%;">
+                  <input type="range" id="inBlockPad" class="customize-range" min="0" max="2" step="0.1" value="0.5" />
+                  <div class="customize-range-tick"></div>
+                </div>
+                <span class="customize-range-tick-label">Recommended: 0.5rem</span>
+                <p class="customize-hint">Inner padding around each entry (job, degree, project…).</p>
+              </div>
+              <div class="customize-group">
+                <p class="customize-label">Bullet Point Size <span id="bulletSizeLabel" class="customize-label-value">100%</span></p>
+                <div class="customize-range-wrap" style="--tick-pos: 50%;">
+                  <input type="range" id="inBulletSize" class="customize-range" min="70" max="130" step="5" value="100" />
+                  <div class="customize-range-tick"></div>
+                </div>
+                <span class="customize-range-tick-label">Recommended: 100%</span>
+              </div>
+              <div class="customize-group">
+                <p class="customize-label">Page Margins <span id="pageMarginLabel" class="customize-label-value">2.5rem</span></p>
+                <div class="customize-range-wrap" style="--tick-pos: 62.5%;">
+                  <input type="range" id="inPageMargin" class="customize-range" min="0.5" max="4" step="0.25" value="2.5" />
+                  <div class="customize-range-tick"></div>
+                </div>
+                <span class="customize-range-tick-label">Recommended: 2.5rem</span>
               </div>
               <div class="customize-group">
                 <p class="customize-label">Section Title Style</p>
@@ -523,6 +815,25 @@
                   <button class="option-pill" data-value="bar">Bar</button>
                   <button class="option-pill" data-value="boxed">Boxed</button>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section active" data-viewmode-only="resume">
+            <button class="form-section-toggle" type="button">
+              <span class="fs-title">Portfolio Link</span>
+              <span class="fs-chevron">▼</span>
+            </button>
+            <div class="form-section-content">
+              <div class="customize-group">
+                <div class="customize-toggle-row">
+                  <p class="customize-label" style="margin:0;" id="portfolioLinkLabel">Include <span id="portfolioLinkUrlPreview">yourname.proves.work</span></p>
+                  <label class="customize-toggle">
+                    <input type="checkbox" id="inIncludePortfolioLink" disabled />
+                    <span class="customize-toggle-slider"></span>
+                  </label>
+                </div>
+                <p class="customize-plan-lock" id="portfolioLinkLockMsg">Publish and get approved on a paid plan to add your live portfolio link to your résumé's contact line.</p>
               </div>
             </div>
           </div>

@@ -68,6 +68,35 @@ const el = {
   selBodyFont: document.getElementById('selBodyFont'),
   inTextPadding: document.getElementById('inTextPadding'),
   textPaddingLabel: document.getElementById('textPaddingLabel'),
+
+  // Resume: numeric customization sliders
+  inFontSize: document.getElementById('inFontSize'),
+  fontSizeLabel: document.getElementById('fontSizeLabel'),
+  inLineHeight: document.getElementById('inLineHeight'),
+  lineHeightLabel: document.getElementById('lineHeightLabel'),
+  inSectionGap: document.getElementById('inSectionGap'),
+  sectionGapLabel: document.getElementById('sectionGapLabel'),
+  inBlockPad: document.getElementById('inBlockPad'),
+  blockPadLabel: document.getElementById('blockPadLabel'),
+  inBulletSize: document.getElementById('inBulletSize'),
+  bulletSizeLabel: document.getElementById('bulletSizeLabel'),
+  inPageMargin: document.getElementById('inPageMargin'),
+  pageMarginLabel: document.getElementById('pageMarginLabel'),
+  inColSplit: document.getElementById('inColSplit'),
+  colSplitLabel: document.getElementById('colSplitLabel'),
+  inColGap: document.getElementById('inColGap'),
+  colGapLabel: document.getElementById('colGapLabel'),
+  inColBorder: document.getElementById('inColBorder'),
+  colSplitGroup: document.getElementById('colSplitGroup'),
+  colGapGroup: document.getElementById('colGapGroup'),
+  colBorderGroup: document.getElementById('colBorderGroup'),
+
+  // Resume: portfolio-link + copy-link
+  inIncludePortfolioLink: document.getElementById('inIncludePortfolioLink'),
+  portfolioLinkUrlPreview: document.getElementById('portfolioLinkUrlPreview'),
+  portfolioLinkLockMsg: document.getElementById('portfolioLinkLockMsg'),
+  btnCopyPortfolioLink: document.getElementById('btnCopyPortfolioLink'),
+  btnCopyResumeText: document.getElementById('btnCopyResumeText'),
   templateGallery: document.getElementById('templateGallery'),
   portfolioTemplateGallery: document.getElementById('portfolioTemplateGallery'),
 
@@ -1427,6 +1456,77 @@ function filterVisibleBlocksHidingOrphanSections(blocks) {
   return result;
 }
 
+// Builds a clean, ATS-friendly plain-text version of the résumé — no
+// markup, no styling, just readable text in reading order. Used by
+// "Copy as Plain Text" for pasting straight into job-application
+// forms and ATS upload fields that mangle rich formatting.
+function buildResumePlainText() {
+  const resume = Store.state.resume;
+  const design = resume.design || {};
+  const profile = resume.profile || {};
+  const blocks = filterVisibleBlocksHidingOrphanSections(resume.blocks || []);
+
+  const lines = [];
+  const fullName = [profile.firstName, profile.lastName].filter(Boolean).join(' ');
+  if (fullName) lines.push(fullName.toUpperCase());
+  const contactBits = [profile.email, profile.phone, profile.location].filter(Boolean);
+  if (design.includePortfolioLink) {
+    const username = getSavedUsername();
+    if (username) contactBits.push(`${username}.${PUBLISH_APEX}`);
+  }
+  if (contactBits.length) lines.push(contactBits.join(' | '));
+  lines.push('');
+
+  const blockToText = (block) => {
+    switch (block.type) {
+      case 'section':
+        return [`\n${(block.data.title || '').toUpperCase()}`];
+      case 'summary':
+        return [block.data.text || ''];
+      case 'custom':
+        return [block.data.title || '', block.data.text || ''];
+      case 'experience':
+        return [
+          `${block.data.company || ''} — ${block.data.role || ''}`,
+          [block.data.location, block.data.dates].filter(Boolean).join(' | '),
+          ...(block.data.bullets || []).map(b => `• ${b}`)
+        ];
+      case 'education':
+        return [
+          `${block.data.school || ''} — ${block.data.degree || ''}`,
+          [block.data.location, block.data.year].filter(Boolean).join(' | '),
+          block.data.gpa || ''
+        ];
+      case 'projects':
+        return [
+          `${block.data.name || ''}${block.data.dates ? ' — ' + block.data.dates : ''}`,
+          block.data.description || '',
+          ...(block.data.bullets || []).map(b => `• ${b}`)
+        ];
+      case 'skills':
+        return [(block.data.items || []).join(', ')];
+      case 'certifications':
+        return (block.data.items || []).map(it => [it.name, it.issuer, it.date].filter(Boolean).join(' — '));
+      case 'languages':
+        return (block.data.items || []).map(it => [it.name, it.level].filter(Boolean).join(' — '));
+      default:
+        return [];
+    }
+  };
+
+  // Two-column layouts still read top-to-bottom, main column first,
+  // then sidebar — plain text has no room for side-by-side columns.
+  const ordered = design.layout === '2'
+    ? [...blocks.filter(b => b.col === 'main'), ...blocks.filter(b => b.col === 'side')]
+    : blocks;
+
+  ordered.forEach(block => {
+    blockToText(block).forEach(l => { if (l !== '') lines.push(l); });
+  });
+
+  return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
 function renderStaticResumeBlock(block) {
   const bulletsHTML = (bullets) => `<ul class="rb-bullets">${(bullets || []).map(b => `<li>${esc(b)}</li>`).join('')}</ul>`;
   switch (block.type) {
@@ -2313,12 +2413,11 @@ function verdictForScore(score) {
 function initResumeReview() {
   const btn = document.getElementById('btnReviewResume');
   if (!btn) return;
-  btn.addEventListener('click', () => {
-    const { score, issues, improvements } = scoreResume();
 
+  function paint(score, verdict, issues, improvements) {
     document.getElementById('aiReviewResults').classList.remove('hidden');
     document.getElementById('aiReviewScoreNum').textContent = score;
-    document.getElementById('aiReviewVerdict').textContent = verdictForScore(score);
+    document.getElementById('aiReviewVerdict').textContent = verdict;
 
     const issuesBox = document.getElementById('aiReviewIssuesBox');
     const issuesList = document.getElementById('aiReviewIssuesList');
@@ -2331,6 +2430,180 @@ function initResumeReview() {
     impList.innerHTML = improvements.map(i => `<li>${esc(i)}</li>`).join('');
     impBox.classList.toggle('hidden', improvements.length === 0);
     document.getElementById('aiReviewImprovementsTitle').textContent = `${improvements.length} Improvement${improvements.length === 1 ? '' : 's'}`;
+  }
+
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    const originalLabel = btn.textContent;
+    btn.textContent = 'Checking…';
+    try {
+      const res = await fetch('/api/ai/resume-check', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ resumeText: buildResumePlainText() })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || 'AI check failed');
+      paint(data.score, data.verdict || verdictForScore(data.score), data.issues || [], data.improvements || []);
+    } catch {
+      // AI endpoint unavailable (e.g. not deployed yet, or the daily free
+      // quota was hit) — fall back to the local heuristic scorer so the
+      // feature never just breaks.
+      const { score, issues, improvements } = scoreResume();
+      paint(score, verdictForScore(score), issues, improvements);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    }
+  });
+}
+
+// ── 5e. Tailor résumé to a pasted job posting — in-browser keyword
+// matcher. Same non-network approach as the Résumé Check above: no
+// text ever leaves the device. Pulls the most meaningful terms out of
+// the posting, checks which already appear in the résumé, and surfaces
+// the gap plus a few common wording swaps so the person can edit their
+// own bullets to mirror the posting's language.
+const TAILOR_STOPWORDS = new Set(['the','and','for','are','with','that','this','you','your','will','have','has','from','our','about','into','their','they','them','than','then','also','who','what','when','where','which','while','able','not','all','any','can','may','must','should','would','could','been','being','was','were','role','job','work','team','company','years','year','experience','experienced','strong','excellent','ability','skills','skill','required','requirements','requirement','responsibilities','responsibility','including','include','includes','looking','ideal','candidate','plus','etc','using','used','use','per','each','other','more','most','some','such','within','across','over','under','both','well','high','level','including','position','apply','join','new','across','ensure','ensuring','help','helping']);
+
+function extractKeywords(text) {
+  const counts = {};
+  (text.toLowerCase().match(/[a-z][a-z0-9+.#/-]{2,}/g) || []).forEach(w => {
+    const word = w.replace(/^[-+.#/]+|[-+.#/]+$/g, '');
+    if (word.length < 4 || TAILOR_STOPWORDS.has(word)) return;
+    counts[word] = (counts[word] || 0) + 1;
+  });
+  return counts;
+}
+
+function buildResumeSearchText() {
+  const r = Store.state.resume;
+  const parts = [r.profile.jobTitle || ''];
+  (r.blocks || []).forEach(b => {
+    if (b.data.text) parts.push(b.data.text);
+    if (Array.isArray(b.data.bullets)) parts.push(...b.data.bullets);
+    if (Array.isArray(b.data.items)) parts.push(...b.data.items.map(i => (typeof i === 'string' ? i : i.name || '')));
+    if (b.data.description) parts.push(b.data.description);
+    if (b.data.role) parts.push(b.data.role);
+  });
+  return parts.join(' \n ');
+}
+
+function getResumeBullets() {
+  const r = Store.state.resume;
+  return (r.blocks || []).filter(b => Array.isArray(b.data.bullets)).flatMap(b => b.data.bullets || []);
+}
+
+// A short list of common wording pairs where job postings and résumés
+// often favor different terms for the same underlying skill. If the
+// posting leans on one side and the résumé uses the other, we flag it.
+const TAILOR_SYNONYM_PAIRS = [
+  ['developed', 'built'], ['engineered', 'built'], ['spearheaded', 'led'], ['directed', 'led'],
+  ['collaborated', 'worked'], ['leveraged', 'used'], ['utilized', 'used'], ['implemented', 'built'],
+  ['optimized', 'improved'], ['streamlined', 'improved'], ['enhanced', 'improved'], ['increased', 'grew'],
+  ['communication', 'communicating'], ['stakeholders', 'clients'], ['stakeholder', 'client'],
+  ['cross-functional', 'cross-team'], ['analytics', 'data analysis'], ['management', 'managing'],
+  ['strategy', 'planning'], ['automation', 'automated'], ['mentored', 'trained'], ['coordinated', 'organized']
+];
+
+function tailorResumeToPosting(postingText) {
+  const postingCounts = extractKeywords(postingText);
+  const resumeText = buildResumeSearchText().toLowerCase();
+  const bullets = getResumeBullets();
+
+  const rankedKeywords = Object.entries(postingCounts).sort((a, b) => b[1] - a[1]);
+  const matched = rankedKeywords.filter(([kw]) => resumeText.includes(kw));
+  const missing = rankedKeywords.filter(([kw]) => !resumeText.includes(kw)).slice(0, 12).map(([kw]) => kw);
+
+  const totalConsidered = Math.min(rankedKeywords.length, 40) || 1;
+  const matchScore = Math.round((matched.filter(([kw]) => rankedKeywords.slice(0, 40).some(([k]) => k === kw)).length / totalConsidered) * 100);
+
+  const emphasize = bullets.filter(b => {
+    const lower = (b || '').toLowerCase();
+    return rankedKeywords.slice(0, 25).some(([kw]) => lower.includes(kw));
+  }).slice(0, 6);
+
+  const swaps = [];
+  TAILOR_SYNONYM_PAIRS.forEach(([a, b]) => {
+    const postingHasA = postingText.toLowerCase().includes(a);
+    const postingHasB = postingText.toLowerCase().includes(b);
+    const resumeHasA = resumeText.includes(a);
+    const resumeHasB = resumeText.includes(b);
+    if (postingHasA && !postingHasB && resumeHasB && !resumeHasA) swaps.push(`Swap "${b}" → "${a}" to mirror the posting's wording.`);
+    else if (postingHasB && !postingHasA && resumeHasA && !resumeHasB) swaps.push(`Swap "${a}" → "${b}" to mirror the posting's wording.`);
+  });
+
+  return { score: Math.max(0, Math.min(100, matchScore || 0)), missing, emphasize, swaps: swaps.slice(0, 8) };
+}
+
+function tailorVerdictForScore(score) {
+  if (score >= 75) return 'Strong alignment with this posting';
+  if (score >= 50) return 'Decent overlap — a few tweaks would help';
+  if (score >= 25) return 'Light overlap — worth tailoring your wording';
+  return 'Low overlap — consider reworking key sections';
+}
+
+function initTailorToPosting() {
+  const btn = document.getElementById('btnTailorResume');
+  const input = document.getElementById('jobPostingInput');
+  if (!btn || !input) return;
+
+  function paint(score, verdict, missing, emphasize, swaps) {
+    document.getElementById('tailorResults').classList.remove('hidden');
+    document.getElementById('tailorScoreNum').textContent = `${score}%`;
+    document.getElementById('tailorVerdict').textContent = verdict;
+
+    const missingBox = document.getElementById('tailorMissingBox');
+    const missingList = document.getElementById('tailorMissingList');
+    missingList.innerHTML = missing.map(kw => `<li>${esc(kw)}</li>`).join('');
+    missingBox.classList.toggle('hidden', missing.length === 0);
+    document.getElementById('tailorMissingTitle').textContent = missing.length
+      ? `${missing.length} Keyword${missing.length === 1 ? '' : 's'} From The Posting Not Found In Your Résumé`
+      : 'Keywords Missing From Your Résumé';
+
+    const emphasizeBox = document.getElementById('tailorEmphasizeBox');
+    const emphasizeList = document.getElementById('tailorEmphasizeList');
+    emphasizeList.innerHTML = emphasize.map(b => `<li>${esc(b)}</li>`).join('');
+    emphasizeBox.classList.toggle('hidden', emphasize.length === 0);
+
+    const swapBox = document.getElementById('tailorSwapBox');
+    const swapList = document.getElementById('tailorSwapList');
+    swapList.innerHTML = swaps.map(s => `<li>${esc(s)}</li>`).join('');
+    swapBox.classList.toggle('hidden', swaps.length === 0);
+  }
+
+  btn.addEventListener('click', async () => {
+    const posting = input.value.trim();
+    if (!posting) {
+      input.focus();
+      return;
+    }
+    btn.disabled = true;
+    const originalLabel = btn.textContent;
+    btn.textContent = 'Matching…';
+    try {
+      const res = await fetch('/api/ai/tailor-resume', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ resumeText: buildResumePlainText(), postingText: posting })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || 'AI tailor failed');
+      paint(
+        data.score,
+        data.verdict || tailorVerdictForScore(data.score),
+        data.missingKeywords || [],
+        data.emphasize || [],
+        data.suggestions || []
+      );
+    } catch {
+      // AI endpoint unavailable — fall back to the local keyword matcher.
+      const { score, missing, emphasize, swaps } = tailorResumeToPosting(posting);
+      paint(score, tailorVerdictForScore(score), missing, emphasize, swaps);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    }
   });
 }
 
@@ -2474,6 +2747,14 @@ function populatePortfolioTemplateGallery() {
   `;
 }
 
+// Page sizes in mm, matched between the on-screen canvas and the
+// exported PDF so what you design is exactly what prints.
+const PAGE_SIZES_MM = {
+  letter: { w: 215.9, h: 279.4 },
+  a4: { w: 210, h: 297 },
+  legal: { w: 215.9, h: 355.6 }
+};
+
 function applyResumeDesign(design) {
   el.resumePaper.setAttribute('data-template', Store.state.resume.template);
   el.resumePaper.setAttribute('data-layout', design.layout);
@@ -2484,7 +2765,38 @@ function applyResumeDesign(design) {
   el.resumePaper.style.setProperty('--rp-heading-font', FONT_STACKS[design.headingFont] || FONT_STACKS.sans);
   el.resumePaper.style.setProperty('--rp-body-font', FONT_STACKS[design.bodyFont] || FONT_STACKS.sans);
   el.resumePaper.style.setProperty('--rp-font-scale', Number(design.fontSize) / 100);
-  el.resumePaper.style.setProperty('--rp-line-height', design.lineHeight === 'compact' ? '1.25' : design.lineHeight === 'relaxed' ? '1.7' : '1.45');
+  el.resumePaper.style.setProperty('--rp-line-height', Number(design.lineHeight) || 1.45);
+
+  const page = PAGE_SIZES_MM[design.pageSize] || PAGE_SIZES_MM.letter;
+  el.resumePaper.style.setProperty('--rp-page-w', page.w + 'mm');
+  el.resumePaper.style.setProperty('--rp-page-min-h', page.h + 'mm');
+  el.resumePaper.style.setProperty('--rp-margin', (Number(design.pageMargin) || 2.5) + 'rem');
+  el.resumePaper.style.setProperty('--rp-section-gap', (Number(design.sectionGap) ?? 1) + 'rem');
+  el.resumePaper.style.setProperty('--rp-block-pad', (Number(design.blockPad) ?? 0.5) + 'rem');
+  el.resumePaper.style.setProperty('--rp-bullet-scale', (Number(design.bulletSize) || 100) / 100);
+  el.resumePaper.style.setProperty('--rp-col-gap', (Number(design.colGap) ?? 2) + 'rem');
+  el.resumePaper.style.setProperty('--rp-side-width', (Number(design.colSplit) || 34) + '%');
+  el.resumePaper.style.setProperty('--rp-col-border-w', design.colBorder === false ? '0px' : '2px');
+
+  applyPortfolioLinkToResume(design);
+}
+
+// Appends "yourname.proves.work" to the résumé's contact line when
+// the checkbox is on — only meaningful once the site is actually
+// live under the person's own username, so it's re-derived every
+// time design/site-status changes rather than baked into content.
+function applyPortfolioLinkToResume(design) {
+  if (!el.canvasContactLine) return;
+  const marker = el.canvasContactLine.querySelector('[data-portfolio-link-chip]');
+  if (marker) marker.remove();
+  if (!design.includePortfolioLink) return;
+  const username = getSavedUsername && getSavedUsername();
+  const eligible = lastSiteStatusData && lastSiteStatusData.status === 'live' && lastSiteStatusData.paid && username;
+  if (!eligible) return;
+  const chip = document.createElement('span');
+  chip.setAttribute('data-portfolio-link-chip', '');
+  chip.textContent = ` · ${username}.${PUBLISH_APEX}`;
+  el.canvasContactLine.appendChild(chip);
 }
 
 let portfolioAnimObserver = null;
@@ -2560,6 +2872,62 @@ function syncCustomizeControls(design) {
     if (el.textPaddingLabel) el.textPaddingLabel.textContent = pad + 'rem';
   }
 
+  if (el.inFontSize) {
+    const v = Number(design.fontSize) || 100;
+    el.inFontSize.value = v;
+    el.fontSizeLabel.textContent = v + '%';
+  }
+  if (el.inLineHeight) {
+    const v = Number(design.lineHeight) || 1.45;
+    el.inLineHeight.value = v;
+    el.lineHeightLabel.textContent = v.toFixed(2).replace(/\.?0+$/, '') || v;
+  }
+  if (el.inSectionGap) {
+    const v = Number(design.sectionGap) ?? 1;
+    el.inSectionGap.value = v;
+    el.sectionGapLabel.textContent = v + 'rem';
+  }
+  if (el.inBlockPad) {
+    const v = Number(design.blockPad) ?? 0.5;
+    el.inBlockPad.value = v;
+    el.blockPadLabel.textContent = v + 'rem';
+  }
+  if (el.inBulletSize) {
+    const v = Number(design.bulletSize) || 100;
+    el.inBulletSize.value = v;
+    el.bulletSizeLabel.textContent = v + '%';
+  }
+  if (el.inPageMargin) {
+    const v = Number(design.pageMargin) ?? 2.5;
+    el.inPageMargin.value = v;
+    el.pageMarginLabel.textContent = v + 'rem';
+  }
+  if (el.inColSplit) {
+    const v = Number(design.colSplit) || 34;
+    el.inColSplit.value = v;
+    el.colSplitLabel.textContent = v + '%';
+  }
+  if (el.inColGap) {
+    const v = Number(design.colGap) ?? 2;
+    el.inColGap.value = v;
+    el.colGapLabel.textContent = v + 'rem';
+  }
+  if (el.inColBorder) el.inColBorder.checked = design.colBorder !== false;
+
+  const isTwoCol = Store.state.viewMode === 'resume' && String(design.layout) === '2';
+  [el.colSplitGroup, el.colGapGroup, el.colBorderGroup].forEach(g => { if (g) g.classList.toggle('hidden', !isTwoCol); });
+
+  if (el.inIncludePortfolioLink && Store.state.viewMode === 'resume') {
+    const username = getSavedUsername();
+    const eligible = !!(lastSiteStatusData && lastSiteStatusData.status === 'live' && lastSiteStatusData.paid && username);
+    el.inIncludePortfolioLink.disabled = !eligible;
+    el.inIncludePortfolioLink.checked = eligible && !!design.includePortfolioLink;
+    if (el.portfolioLinkUrlPreview) el.portfolioLinkUrlPreview.textContent = `${username || 'yourname'}.${PUBLISH_APEX}`;
+    if (el.portfolioLinkLockMsg) {
+      el.portfolioLinkLockMsg.classList.toggle('hidden', eligible);
+    }
+  }
+
   const knownSwatches = Array.from(document.querySelectorAll('#optAccentColor .color-swatch[data-value]'));
   let matched = false;
   knownSwatches.forEach(sw => {
@@ -2613,6 +2981,73 @@ function initCustomizePanel() {
       const pad = Math.min(2, Math.max(0, Number(e.target.value) || 0));
       if (el.textPaddingLabel) el.textPaddingLabel.textContent = pad + 'rem';
       Store.setDesign('textPaddingRem', pad);
+    });
+  }
+
+  // Numeric résumé sliders — every one of these is a raw, directly
+  // editable number (no named presets) per-spec, each with a quiet
+  // "recommended" tick mark rather than a hard default.
+  const bindRangeSlider = (input, label, key, unit, parseFn = Number) => {
+    if (!input) return;
+    input.addEventListener('input', (e) => {
+      const v = parseFn(e.target.value);
+      if (label) label.textContent = (unit === '%' ? v : v) + unit;
+      Store.setDesign(key, v);
+    });
+  };
+  bindRangeSlider(el.inFontSize, el.fontSizeLabel, 'fontSize', '%');
+  bindRangeSlider(el.inLineHeight, el.lineHeightLabel, 'lineHeight', '');
+  bindRangeSlider(el.inSectionGap, el.sectionGapLabel, 'sectionGap', 'rem');
+  bindRangeSlider(el.inBlockPad, el.blockPadLabel, 'blockPad', 'rem');
+  bindRangeSlider(el.inBulletSize, el.bulletSizeLabel, 'bulletSize', '%');
+  bindRangeSlider(el.inPageMargin, el.pageMarginLabel, 'pageMargin', 'rem');
+  bindRangeSlider(el.inColSplit, el.colSplitLabel, 'colSplit', '%');
+  bindRangeSlider(el.inColGap, el.colGapLabel, 'colGap', 'rem');
+
+  if (el.inColBorder) {
+    el.inColBorder.addEventListener('change', (e) => Store.setDesign('colBorder', e.target.checked));
+  }
+
+  if (el.inIncludePortfolioLink) {
+    el.inIncludePortfolioLink.addEventListener('change', (e) => Store.setDesign('includePortfolioLink', e.target.checked));
+  }
+
+  if (el.btnCopyPortfolioLink) {
+    el.btnCopyPortfolioLink.addEventListener('click', async () => {
+      const username = getSavedUsername();
+      if (!username) {
+        alertModal('Publish your portfolio first — you\'ll need a claimed address before there\'s a link to copy.');
+        return;
+      }
+      const url = `https://${username}.${PUBLISH_APEX}`;
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch (err) {
+        // Clipboard API unavailable (insecure context, permissions) —
+        // fall back to a manual-copy prompt instead of failing silently.
+        window.prompt('Copy your portfolio link:', url);
+        return;
+      }
+      const btn = el.btnCopyPortfolioLink;
+      const original = btn.textContent;
+      btn.textContent = '✓ Copied!';
+      setTimeout(() => { btn.textContent = original; }, 1600);
+    });
+  }
+
+  if (el.btnCopyResumeText) {
+    el.btnCopyResumeText.addEventListener('click', async () => {
+      const text = buildResumePlainText();
+      const btn = el.btnCopyResumeText;
+      const original = btn.textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (err) {
+        window.prompt('Copy your résumé text:', text);
+        return;
+      }
+      btn.textContent = '✓ Copied!';
+      setTimeout(() => { btn.textContent = original; }, 1600);
     });
   }
 
@@ -2969,6 +3404,7 @@ function init() {
   initSidebarResizer();
   initFormSectionToggles();
   initResumeReview();
+  initTailorToPosting();
   initCustomizePanel();
   initZoomControls();
   initCanvasDelegation();
