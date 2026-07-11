@@ -427,7 +427,7 @@ function confirmHardDelete(username) {
   });
 }
 
-async function setPaid(username, paid, referenceNumber, durationMonths, amount) {
+async function setPaid(username, paid, referenceNumber, durationMonths, amount, alsoApprove) {
   const account = getSavedAdminAccount();
   const res = await fetch('/api/admin/set-paid', {
     method: 'POST',
@@ -438,6 +438,19 @@ async function setPaid(username, paid, referenceNumber, durationMonths, amount) 
   if (!data.ok) {
     alertModal(data.error || 'Something went wrong.');
     return;
+  }
+  // Marking paid and approving-to-live are separate fields on the
+  // record, so a site marked paid while still 'pending' used to just
+  // sit there paid-but-invisible — no portfolio, no ★ Active Job
+  // Hunter badge on /showcase, nothing — until someone remembered to
+  // also click Approve. Since confirming payment is itself a form of
+  // sign-off, fold the approval into this same action.
+  if (alsoApprove) {
+    await fetch('/api/admin/set-status', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ googleCredential: account.credential, username, status: 'live' })
+    });
   }
   loadSites();
 }
@@ -462,8 +475,9 @@ function priceForMonths(kind, months) {
   return kind === 'domain' ? domainPriceForMonths(months) : sitePriceForMonths(months);
 }
 
-function openMarkPaidModal(username, currentRef, kind = 'site', requestedMonths) {
+function openMarkPaidModal(username, currentRef, kind = 'site', requestedMonths, currentStatus) {
   const isDomain = kind === 'domain';
+  const needsApproval = currentStatus === 'pending';
   const defaultMonths = isDomain ? (Number(requestedMonths) || 12) : 4;
   const defaultAmount = priceForMonths(kind, defaultMonths);
   openModal(`
@@ -471,6 +485,7 @@ function openMarkPaidModal(username, currentRef, kind = 'site', requestedMonths)
     <p class="modal-sub">${isDomain
       ? `Domain-only reservation — scaling rate from ₱199 (1 mo) to ₱599 (12 mo, max). ${requestedMonths ? `They requested ${requestedMonths} month${requestedMonths > 1 ? 's' : ''}.` : ''} Adjust if this was a promo or partial payment.`
       : 'Active Job Hunter — standard rate is ₱399 for 4 months. Record what was actually received, how long it covers, and optionally a reference number for your own records.'}</p>
+    ${needsApproval ? `<p class="modal-sub" style="font-size:0.8rem;">This site is still <strong>pending</strong> — marking it paid will also approve it live, otherwise it stays invisible (no showcase badge) despite being paid.</p>` : ''}
     <div class="admin-modal-field">
       <label for="paidAmountInput" style="display:block;font-size:0.8rem;color:var(--color-text-muted);margin-bottom:0.3rem;">Amount received (${CURRENCY})</label>
       <input type="number" id="paidAmountInput" min="0" step="1" value="${defaultAmount}" autocomplete="off" />
@@ -490,7 +505,7 @@ function openMarkPaidModal(username, currentRef, kind = 'site', requestedMonths)
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost btn-sm" id="cancelPaidBtn" type="button">Cancel</button>
-      <button class="btn btn-secondary btn-sm" id="confirmPaidBtn" type="button">Mark paid</button>
+      <button class="btn btn-secondary btn-sm" id="confirmPaidBtn" type="button">Mark paid${needsApproval ? ' & approve' : ''}</button>
     </div>
   `, (root) => {
     root.querySelector('#cancelPaidBtn').addEventListener('click', closeModal);
@@ -503,7 +518,7 @@ function openMarkPaidModal(username, currentRef, kind = 'site', requestedMonths)
       const ref = root.querySelector('#paidRefInput').value.trim();
       const durationMonths = Number(root.querySelector('#paidDurationSelect').value) || (isDomain ? 12 : 4);
       const amount = Number(root.querySelector('#paidAmountInput').value) || 0;
-      setPaid(username, true, ref, durationMonths, amount);
+      setPaid(username, true, ref, durationMonths, amount, needsApproval);
       closeModal();
     });
   });
@@ -551,7 +566,7 @@ el.adminSitesList.addEventListener('click', (e) => {
   // close to its last published version as possible.
   else if (action === 'restore') setStatus(username, 'live');
   else if (action === 'hard-delete') confirmHardDelete(username);
-  else if (action === 'mark-paid') openMarkPaidModal(username, (site && (site.referenceNumber || site.buyerReferenceNumber)) || '', (site && site.kind) || 'site', site && site.requestedMonths);
+  else if (action === 'mark-paid') openMarkPaidModal(username, (site && (site.referenceNumber || site.buyerReferenceNumber)) || '', (site && site.kind) || 'site', site && site.requestedMonths, site && site.status);
   else if (action === 'unmark-paid') setPaid(username, false, '');
 });
 

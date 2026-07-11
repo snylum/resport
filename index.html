@@ -547,6 +547,13 @@
     <div class="domain-modal" id="domainModalContent"></div>
   </div>
 
+  <!-- PRICE LIST POPUP — reached from "Price list" button on the
+       "I'll do this later" success step, so an undecided buyer still
+       has the price + QR + redirect-vs-adaptation explanation on hand. -->
+  <div class="domain-modal-overlay hidden" id="pricelistOverlay" style="z-index:1001;">
+    <div class="domain-modal" id="pricelistContent"></div>
+  </div>
+
   <style>
     .domain-modal-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.45);
@@ -829,12 +836,48 @@
         <p class="sub"><strong>${username}.proves.work</strong> is reserved for you pending payment confirmation (₱${domainPrice(m)} one-time, ${m} month${m > 1 ? 's' : ''}). An admin reviews and confirms every payment by hand${refSubmitted ? ' — we have your reference number' : ''}; once confirmed, the address goes live automatically.</p>
         <p class="sub">Anytime after that, come back to <strong>proves.work/manage</strong> to point this address at an existing page (Carrd, Gumroad, Vercel, etc.) or check your payment status.</p>
         <div class="actions">
+          ${!refSubmitted ? `<button type="button" class="btn btn-ghost btn-sm" id="pricelistBtn">Price list</button>` : ''}
           <a href="manage.html" class="btn btn-ghost btn-sm">Go to /manage</a>
           <button type="button" class="btn btn-primary btn-sm" id="domainDoneBtn">Got it</button>
         </div>
       `;
       document.getElementById('domainCloseBtn2').addEventListener('click', closeDomainModal);
       document.getElementById('domainDoneBtn').addEventListener('click', closeDomainModal);
+      const pricelistBtn = document.getElementById('pricelistBtn');
+      if (pricelistBtn) pricelistBtn.addEventListener('click', () => openPricelistPopup(username, months));
+    }
+
+    // Reference popup shown from "Price list" — reminds a buyer who said
+    // "I'll do this later" what they still owe and how to pay it, plus
+    // clarifies the two things a domain-only purchase can mean.
+    const pricelistOverlay = document.getElementById('pricelistOverlay');
+    const pricelistContent = document.getElementById('pricelistContent');
+    function closePricelistPopup() {
+      pricelistOverlay.classList.add('hidden');
+      pricelistContent.innerHTML = '';
+    }
+    pricelistOverlay.addEventListener('click', (e) => { if (e.target === pricelistOverlay) closePricelistPopup(); });
+
+    function openPricelistPopup(username, months) {
+      const m = Number(months) || 1;
+      const amount = domainPrice(m);
+      pricelistContent.innerHTML = `
+        <button type="button" class="close-x" id="pricelistCloseBtn" aria-label="Close">✕</button>
+        <h3>Price list</h3>
+        <p class="sub">For reference — <strong>${username}.proves.work</strong>, ${m} month${m > 1 ? 's' : ''}: <strong>₱${amount}</strong> one-time. (₱199 for 1 month, up to ₱599 for a full 12 months.)</p>
+        <img src="payment-qr.png" alt="Payment QR code" width="180" height="180" style="display:block;margin:0 auto 1rem;border-radius:12px;border:1px solid rgba(0,0,0,0.08);" />
+        <p class="sub" style="margin-bottom:0.5rem"><strong>Two ways this can go once it's paid:</strong></p>
+        <ul style="margin:0 0 1.25rem;padding-left:1.1rem;font-size:0.85rem;color:var(--color-text-muted,#6b7280);">
+          <li style="margin-bottom:0.5rem"><strong>Just a redirect</strong> — ${username}.proves.work forwards visitors to a page you already have elsewhere (Carrd, Gumroad, Vercel, etc.). No portfolio is built on our end.</li>
+          <li><strong>Full adaptation</strong> — we build the actual page that lives at ${username}.proves.work, so it's a real site on the domain itself, not a forward to somewhere else.</li>
+        </ul>
+        <div class="actions">
+          <button type="button" class="btn btn-primary btn-sm" id="pricelistOkBtn">Got it</button>
+        </div>
+      `;
+      pricelistOverlay.classList.remove('hidden');
+      document.getElementById('pricelistCloseBtn').addEventListener('click', closePricelistPopup);
+      document.getElementById('pricelistOkBtn').addEventListener('click', closePricelistPopup);
     }
 
     document.getElementById('domainClaimOpenBtn').addEventListener('click', () => {

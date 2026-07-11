@@ -134,6 +134,65 @@ function pendingPage(username) {
 </body></html>`;
 }
 
+// Shown at <username>.proves.work once a paid plan's paidUntil date
+// has passed — the address itself isn't lost, but the Free tier never
+// includes live hosting at username.proves.work (see index.html's
+// pricing card), so an expired portfolio drops out of serving here
+// until it's republished/renewed from the editor.
+function expiredPortfolioPage(username) {
+  return `<!DOCTYPE html><html><head><meta charset="utf-8" />
+<title>@${escapeHtml(username)}'s plan has ended — ${APP_HOST}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+  body{font-family:-apple-system,'Inter',system-ui,sans-serif;background:#FDF7FA;color:#1A1A1A;
+       display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:0 1.5rem;}
+  a{color:#7C4DFF;font-weight:700;text-decoration:none;}
+  h1{font-size:1.4rem;margin:0 0 0.5rem;}
+  p{color:#4b5563;margin:0.25rem 0;}
+</style></head>
+<body>
+  <div>
+    <h1>@${escapeHtml(username)}'s Active Job Hunter plan has ended</h1>
+    <p>This address dropped back to the Free tier, which doesn't include live hosting here.</p>
+    <p><a href="https://${APP_HOST}">Renew at ${APP_HOST} →</a></p>
+  </div>
+</body></html>`;
+}
+
+// Same idea, for a domain-only reservation whose paid window lapsed —
+// distinct copy since there's no "free tier" fallback for a reserved
+// name the way there is for a portfolio.
+function expiredDomainPage(username) {
+  return `<!DOCTYPE html><html><head><meta charset="utf-8" />
+<title>Reservation lapsed — ${APP_HOST}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+  body{font-family:-apple-system,'Inter',system-ui,sans-serif;background:#FDF7FA;color:#1A1A1A;
+       display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:0 1.5rem;}
+  a{color:#7C4DFF;font-weight:700;text-decoration:none;}
+  h1{font-size:1.4rem;margin:0 0 0.5rem;}
+  p{color:#4b5563;margin:0.25rem 0;}
+</style></head>
+<body>
+  <div>
+    <h1>@${escapeHtml(username)}.${APP_HOST} reservation has lapsed</h1>
+    <p>Its paid window ended and hasn't been renewed yet.</p>
+    <p><a href="https://${APP_HOST}/manage.html">Renew at ${APP_HOST}/manage →</a></p>
+  </div>
+</body></html>`;
+}
+
+// Whether a record's payment currently covers *right now* — records
+// with no paidUntil at all (older records, lifetime promos) are
+// treated as always-active, matching how the showcase's `starred`
+// flag and the editor's publish-fee check already read this field.
+// Deliberately computed on read rather than written back on expiry:
+// this runs on every visitor request, and flipping stored `paid` to
+// false here would mean a KV write per pageview.
+function isPaidActive(record) {
+  return !!(record && record.paid && (!record.paidUntil || new Date(record.paidUntil).getTime() > Date.now()));
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -328,13 +387,26 @@ async function serveSite(username, env, pathAndQuery) {
   // existing page elsewhere (Carrd, Gumroad, Vercel, etc.) serves
   // that page's content right here at username.proves.work — the
   // address bar never changes to the other host, unlike a normal
-  // redirect. Gated on `paid` (an admin's manual payment
-  // confirmation), not on the owner's own edits to redirectUrl — so
-  // setting/changing the target from /manage never itself needs a
-  // second admin review, but nothing can be shown before an admin
-  // has confirmed payment by hand.
-  if (record.kind === 'domain' && record.paid && record.redirectUrl) {
-    return proxyRedirectTarget(record.redirectUrl, pathAndQuery || '/');
+  // redirect. Gated on the payment still being *currently* active
+  // (not just having been paid once), so a lapsed reservation stops
+  // masking/redirecting until it's renewed.
+  if (record.kind === 'domain') {
+    if (!isPaidActive(record)) {
+      return new Response(expiredDomainPage(username), { status: 200, headers: { 'content-type': 'text/html;charset=UTF-8' } });
+    }
+    if (record.redirectUrl) {
+      return proxyRedirectTarget(record.redirectUrl, pathAndQuery || '/');
+    }
+    return new Response(domainReservedPage(username), { status: 200, headers: { 'content-type': 'text/html;charset=UTF-8' } });
+  }
+
+  // A portfolio's live hosting is itself the paid perk — the Free
+  // tier only ever gets the editor + Showcase listing, never the
+  // subdomain (see index.html's pricing card). Once paidUntil passes,
+  // stop serving the real site here until it's renewed, rather than
+  // keeping it up for free indefinitely.
+  if (!isPaidActive(record)) {
+    return new Response(expiredPortfolioPage(username), { status: 200, headers: { 'content-type': 'text/html;charset=UTF-8' } });
   }
 
   // Serve the last *approved* snapshot (liveHtml) when we have one —

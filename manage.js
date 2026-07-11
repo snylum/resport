@@ -79,6 +79,47 @@ function paidStatusLine(site) {
   return `<p class="manage-site-status ok">✓ Paid${until ? ` · active until ${esc(until)}` : ''}</p>`;
 }
 
+// Warns the owner, in a dismissible popup, when a paid address is
+// within 2 weeks of lapsing — a portfolio drops back to the (no live
+// hosting) Free tier, and a domain-only reservation stops
+// redirecting/masking, until it's renewed. Shown at most once per
+// address per calendar day so it doesn't nag on every visit; already-
+// expired addresses are covered by the "Payment not yet confirmed"-
+// style status line on the card instead, not this popup.
+const RENEWAL_REMINDER_KEY_PREFIX = 'proveswork_renewal_reminder_shown';
+function daysUntil(dateStr) {
+  return Math.ceil((new Date(dateStr).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+}
+function maybeShowRenewalReminders(sites) {
+  const soon = sites.filter(s => s.paid && s.paidUntil && daysUntil(s.paidUntil) > 0 && daysUntil(s.paidUntil) <= 14);
+  if (!soon.length) return;
+  const todayKey = `${RENEWAL_REMINDER_KEY_PREFIX}:${soon.map(s => s.username).sort().join(',')}:${new Date().toISOString().slice(0, 10)}`;
+  if (localStorage.getItem(todayKey)) return;
+  localStorage.setItem(todayKey, '1');
+  const overlay = document.getElementById('renewalReminderOverlay');
+  const content = document.getElementById('renewalReminderContent');
+  if (!overlay || !content) return;
+  const isDomain = (s) => s.kind === 'domain';
+  const rows = soon.map(s => {
+    const d = daysUntil(s.paidUntil);
+    return `<li style="margin-bottom:0.4rem"><strong>${esc(s.username)}.proves.work</strong> — ${d} day${d === 1 ? '' : 's'} left${isDomain(s) ? ' (reservation)' : ''}</li>`;
+  }).join('');
+  content.innerHTML = `
+    <button type="button" class="close-x" id="renewalReminderCloseBtn" aria-label="Close">✕</button>
+    <h3>Coming up on renewal</h3>
+    <p class="sub">${soon.length > 1 ? 'These addresses are' : 'This address is'} within 2 weeks of running out. After that${soon.length > 1 ? ' each drops' : ' it drops'} back to Free tier (portfolios) or stops redirecting (domain-only) until renewed.</p>
+    <ul style="margin:0 0 1.25rem;padding-left:1.1rem;font-size:0.9rem;">${rows}</ul>
+    <div class="actions">
+      <button type="button" class="btn btn-primary btn-sm" id="renewalReminderOkBtn">Got it</button>
+    </div>
+  `;
+  overlay.classList.remove('hidden');
+  const close = () => { overlay.classList.add('hidden'); content.innerHTML = ''; };
+  document.getElementById('renewalReminderCloseBtn').addEventListener('click', close);
+  document.getElementById('renewalReminderOkBtn').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); }, { once: true });
+}
+
 function siteCardHtml(site) {
   const isDomain = site.kind === 'domain';
   return `
@@ -200,6 +241,7 @@ async function renderPanel(account) {
     el.listStatus.textContent = '';
     el.sitesList.innerHTML = data.sites.map(siteCardHtml).join('');
     el.sitesList.querySelectorAll('.manage-site-card').forEach(card => wireCard(card, account));
+    maybeShowRenewalReminders(data.sites);
   } catch {
     el.listStatus.textContent = 'Network error — try refreshing.';
   }

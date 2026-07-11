@@ -1099,6 +1099,14 @@ function decodeGoogleCredential(credential) {
 
 function handleGoogleCredential(response) {
   const payload = decodeGoogleCredential(response.credential);
+  // If a username is cached locally but it belongs to a *different*
+  // email than the one signing in now, it's stale — drop it so this
+  // account doesn't briefly show someone else's username.proves.work
+  // before loadServerDraft() below fills in this account's real state.
+  const cachedOwner = localStorage.getItem(USERNAME_OWNER_EMAIL_KEY);
+  if (cachedOwner && cachedOwner !== payload.email) {
+    clearLocalUsernameState();
+  }
   saveGoogleAccount({ email: payload.email, name: payload.name, credential: response.credential });
   renderPublishAccountBox();
   refreshNavUsername();
@@ -1142,6 +1150,10 @@ function renderPublishAccountBox() {
     `;
     box.querySelector('#googleSignOutBtn').addEventListener('click', () => {
       clearGoogleAccount();
+      // Also drop the cached username on sign-out — otherwise it sits
+      // in localStorage with no account attached and can get picked up
+      // by whichever Google account signs in next on this browser.
+      clearLocalUsernameState();
       renderPublishAccountBox();
       lockPublishUsernameField();
       refreshNavUsername();
@@ -1190,12 +1202,34 @@ function lockPublishUsernameField() {
   if (confirmBtn) confirmBtn.disabled = true;
 }
 
+// BUG FIX: PUBLISH_USERNAME_KEY used to be a single global localStorage
+// value with no link to *which* Google account it belonged to. Server
+// side, a username is correctly scoped to the signed-in email
+// (draft:<email>, ownerEmail on publish) — but this front-end cache
+// wasn't, so signing out and signing back in with a different Google
+// account on the same browser kept showing the previous account's
+// username.proves.work in the nav bar / publish field. It wasn't a real
+// ownership bypass (the Worker still checks the credential on every
+// write), just a stale, mismatched local display. Fix: remember which
+// email the cached username belongs to, and wipe the cache whenever the
+// signed-in account differs from that owner (see handleGoogleCredential
+// and the sign-out handler below).
+const USERNAME_OWNER_EMAIL_KEY = 'proveswork_username_owner_email';
+
+function clearLocalUsernameState() {
+  localStorage.removeItem(PUBLISH_USERNAME_KEY);
+  localStorage.removeItem(USERNAME_CHANGE_COUNT_KEY);
+  localStorage.removeItem(USERNAME_OWNER_EMAIL_KEY);
+}
+
 function getSavedUsername() {
   return localStorage.getItem(PUBLISH_USERNAME_KEY) || '';
 }
 
 function saveUsername(u) {
   localStorage.setItem(PUBLISH_USERNAME_KEY, u);
+  const account = getSavedGoogleAccount();
+  if (account) localStorage.setItem(USERNAME_OWNER_EMAIL_KEY, account.email);
 }
 
 // Claiming your first address doesn't count as a "change" — only
@@ -1255,7 +1289,38 @@ function paidCountdownSuffix(data) {
 // back through the fee modal just to push a content update.
 let lastSiteStatusData = null;
 
-async function refreshSiteStatusBadge() {
+// Warns the owner, inside a dismissible popup, when their paid window
+// is closing in on running out — so "back to Free tier, offline until
+// renewed" doesn't happen as a surprise. Fires once the countdown is
+// 14 days or fewer (and hasn't already hit zero — that state already
+// shows via the toolbar badge/expired page instead of a popup) and at
+// most once per address per calendar day, so it doesn't nag on every
+// visit.
+const RENEWAL_REMINDER_KEY_PREFIX = 'proveswork_renewal_reminder_shown';
+function maybeShowRenewalReminder(data, username) {
+  if (!data || !data.paid || data.status !== 'live' || !data.paidUntil || !username) return;
+  const daysLeft = Math.ceil((new Date(data.paidUntil).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+  if (daysLeft > 14 || daysLeft <= 0) return;
+  const dismissKey = `${RENEWAL_REMINDER_KEY_PREFIX}:${username}:${new Date().toISOString().slice(0, 10)}`;
+  if (localStorage.getItem(dismissKey)) return;
+  localStorage.setItem(dismissKey, '1');
+  openModal(`
+    <h3 class="modal-title">Your plan ends soon</h3>
+    <p class="modal-sub"><strong>${esc(username)}.${PUBLISH_APEX}</strong> stays live for ${daysLeft} more day${daysLeft === 1 ? '' : 's'}. After that it drops back to the Free tier and comes down from ${esc(username)}.${PUBLISH_APEX} until you republish and renew (₱${PUBLISH_FEE.amount} for another ${PUBLISH_FEE.validityMonths} months).</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="renewalLaterBtn" type="button">Remind me later</button>
+      <button class="btn btn-secondary btn-sm" id="renewalNowBtn" type="button">Renew now</button>
+    </div>
+  `, (root) => {
+    root.querySelector('#renewalLaterBtn').addEventListener('click', closeModal);
+    root.querySelector('#renewalNowBtn').addEventListener('click', () => {
+      closeModal();
+      openPublishModal();
+    });
+  });
+}
+
+
   if (!el.siteStatusBadge) return;
   const username = getSavedUsername();
   if (!username) {
@@ -1275,6 +1340,7 @@ async function refreshSiteStatusBadge() {
     el.siteStatusBadge.className = `site-status-badge status-${status}`;
     el.siteStatusBadge.textContent = (SITE_STATUS_LABELS[status] || SITE_STATUS_LABELS.draft) + paidCountdownSuffix(data);
     el.siteStatusBadge.classList.remove('hidden');
+    maybeShowRenewalReminder(data, username);
   } catch (err) {
     // No backend reachable from here — don't claim a status we can't
     // verify.
@@ -2892,7 +2958,8 @@ function applyPortfolioLinkToResume(design) {
   if (marker) marker.remove();
   if (!design.includePortfolioLink) return;
   const username = getSavedUsername && getSavedUsername();
-  const eligible = lastSiteStatusData && lastSiteStatusData.status === 'live' && lastSiteStatusData.paid && username;
+  const eligible = lastSiteStatusData && lastSiteStatusData.status === 'live' && lastSiteStatusData.paid && username &&
+    (!lastSiteStatusData.paidUntil || new Date(lastSiteStatusData.paidUntil).getTime() > Date.now());
   if (!eligible) return;
   const chip = document.createElement('span');
   chip.setAttribute('data-portfolio-link-chip', '');
@@ -3020,7 +3087,8 @@ function syncCustomizeControls(design) {
 
   if (el.inIncludePortfolioLink && Store.state.viewMode === 'resume') {
     const username = getSavedUsername();
-    const eligible = !!(lastSiteStatusData && lastSiteStatusData.status === 'live' && lastSiteStatusData.paid && username);
+    const eligible = !!(lastSiteStatusData && lastSiteStatusData.status === 'live' && lastSiteStatusData.paid && username &&
+      (!lastSiteStatusData.paidUntil || new Date(lastSiteStatusData.paidUntil).getTime() > Date.now()));
     el.inIncludePortfolioLink.disabled = !eligible;
     el.inIncludePortfolioLink.checked = eligible && !!design.includePortfolioLink;
     if (el.portfolioLinkUrlPreview) el.portfolioLinkUrlPreview.textContent = `${username || 'yourname'}.${PUBLISH_APEX}`;
