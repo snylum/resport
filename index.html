@@ -131,23 +131,30 @@
     }
 
     /* Pricing cards: fit 3 cards without wrapping/overflowing the
-       fixed-height panel. Slightly narrower cards + smaller gap/padding
-       than before, with a horizontal scroll fallback for genuinely
-       narrow viewports instead of letting cards wrap and spill past
-       the bottom of the slide. */
+       fixed-height panel. Cards flex-shrink together to fit whatever
+       width the row actually has (instead of a fixed px width that
+       can force a horizontal scrollbar on narrower/unmaximized
+       windows) — a proper mobile stack still takes over below 768px
+       via home.css. */
     .panel-pricing .pricing-cards {
       flex-wrap: nowrap;
-      overflow-x: auto;
-      padding: 2.5rem 3vw;
-      gap: 1.5rem;
+      overflow: visible;
+      padding: 2rem 2vw;
+      gap: 1rem;
       align-items: stretch;
     }
 
     .panel-pricing .price-card {
-      width: 250px;
-      flex: 0 0 auto;
-      padding: 1.75rem;
+      flex: 1 1 0;
+      min-width: 0;
+      max-width: 240px;
+      padding: 1.5rem 1.25rem;
+      gap: 1rem;
     }
+
+    .panel-pricing .price-name { font-size: 1rem; }
+    .panel-pricing .price-amount { font-size: 1.9rem; }
+    .panel-pricing .price-features { font-size: 0.78rem; gap: 0.4rem; }
 
     .price-tagline {
       font-size: 0.78rem;
@@ -158,6 +165,23 @@
 
     .price-tagline s {
       opacity: 0.6;
+    }
+
+    /* The "was ₱1,999" figure sits beside the real price in the same
+       display font, just smaller and struck through, so it reads as
+       an active discount rather than a footnote. */
+    .price-was {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: var(--color-text-muted);
+      text-decoration: line-through;
+      opacity: 0.65;
+      margin-right: 0.3rem;
+    }
+
+    .price-amount span {
+      white-space: nowrap;
     }
 
     .price-duration-row {
@@ -179,7 +203,7 @@
     }
 
     @media (max-width: 768px) {
-      .panel-pricing .price-card { width: 82vw; }
+      .panel-pricing .price-card { width: 82vw; max-width: none; }
     }
   </style>
 </head>
@@ -363,7 +387,7 @@
         <div class="price-card price-featured">
           <div class="price-badge">Most popular</div>
           <div class="price-name">Active Job Hunter</div>
-          <div class="price-amount">₱399 <span>one-time · 4 mo</span></div>
+          <div class="price-amount">₱399 <span>one-time · 4mo</span></div>
           <p class="price-tagline">Perfect length for a job hunt — no subscription.</p>
           <ul class="price-features">
             <li>✓ Everything in Free</li>
@@ -375,8 +399,8 @@
         </div>
         <div class="price-card">
           <div class="price-name">Just the name</div>
-          <div class="price-amount" id="homeDomainPriceDisplay">₱199 <span>/ 1 mo</span></div>
-          <p class="price-tagline"><s>₱1,999</s> — lock in longer, pay less overall. Max ₱599 for a full year.</p>
+          <div class="price-amount" id="homeDomainPriceDisplay"><s class="price-was">₱1,999</s>₱199 <span>/ 1 mo</span></div>
+          <p class="price-tagline">Lock in longer, pay less overall — max ₱599 for a full year.</p>
           <div class="price-duration-row">
             <input type="range" min="1" max="12" step="1" value="1" id="homeDomainMonthsSlider" aria-label="Reservation length in months" />
             <div class="price-duration-label"><span id="homeDomainMonthsLabel">1 month</span><span>one-time</span></div>
@@ -533,7 +557,7 @@
     if (homeSlider) {
       homeSlider.addEventListener('input', () => {
         const m = Number(homeSlider.value);
-        homePriceDisplay.innerHTML = `₱${domainPrice(m)} <span>/ ${m} mo${m > 1 ? 's' : ''}</span>`;
+        homePriceDisplay.innerHTML = `<s class="price-was">₱1,999</s>₱${domainPrice(m)} <span>/ ${m} mo${m > 1 ? 's' : ''}</span>`;
         homeMonthsLabel.textContent = `${m} month${m > 1 ? 's' : ''}`;
       });
     }

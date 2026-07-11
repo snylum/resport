@@ -44,10 +44,10 @@ const CORS_HEADERS = {
   'access-control-allow-headers': 'content-type'
 };
 
-function json(obj, status = 200) {
+function json(obj, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(obj), {
     status,
-    headers: { 'content-type': 'application/json', ...CORS_HEADERS }
+    headers: { 'content-type': 'application/json', ...CORS_HEADERS, ...extraHeaders }
   });
 }
 
@@ -448,7 +448,11 @@ ${resumeText}
       if (a.tier !== b.tier) return a.tier === 'starred' ? -1 : 1;
       return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0);
     });
-    return json({ ok: true, sites: filtered });
+    // Deliberately uncached: an admin marking a site paid should be
+    // reflected the very next time this loads, not stuck behind a
+    // stale browser/edge/CDN cache — this list changes on every
+    // payment/approval, so nothing here should ever be cached.
+    return json({ ok: true, sites: filtered }, 200, { 'cache-control': 'no-store' });
   }
 
   if (url.pathname === '/api/publish' && request.method === 'POST') {

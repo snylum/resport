@@ -80,7 +80,7 @@ searchInput.addEventListener('input', render);
 
 async function loadShowcase() {
   try {
-    const res = await fetch('/api/showcase');
+    const res = await fetch('/api/showcase', { cache: 'no-store' });
     const data = await res.json();
     if (!data.ok) throw new Error('bad-response');
     allSites = data.sites || [];

@@ -955,15 +955,15 @@ const PUBLISH_APEX = 'proves.work';
 const PUBLISH_USERNAME_KEY = 'proveswork_username';
 
 // ── Cross-device autosave (drafts) ──────────────────────────────
-// Everyone gets local autosave — no account needed, works offline,
-// and never loses work on refresh (previously there was NO
-// persistence at all; a refresh silently wiped the whole document).
-// Signed-in users additionally sync the exact same state to the
-// server, keyed by their Google account (see worker's
+// Progress is NOT saved locally unless you're signed in with Google —
+// that's what the sign-in popup on load is for. Once signed in,
+// autosave writes to this browser's localStorage AND syncs the same
+// state to the server, keyed by the Google account (see worker's
 // /api/draft/save + /api/draft/load) — that's what makes edits
-// follow you to any device, independent of publish/paid/approval
-// status. Publishing (a separate, explicit action) is unaffected —
-// this only ever writes to the draft: key, never to a live site.
+// follow you to any device. Signed-out visitors can still edit in
+// this session, but nothing persists past a refresh until they sign
+// in. Publishing (a separate, explicit action) is unaffected — this
+// only ever writes to the draft: key, never to a live site.
 const LOCAL_DRAFT_KEY = 'proveswork_editor_draft';
 
 function saveLocalDraft() {
@@ -997,8 +997,11 @@ function syncDraftToServer() {
 
 // Local save is synchronous and immediate (never lost even if the tab
 // closes a moment later); the server sync is debounced so rapid
-// typing doesn't fire a request per keystroke.
+// typing doesn't fire a request per keystroke. Signed-out visitors
+// get neither — there is no local saving unless you're signed in, so
+// this is a no-op until then (see the sign-in popup shown on load).
 function scheduleAutosave() {
+  if (!getSavedGoogleAccount()) return;
   saveLocalDraft();
   if (draftSyncTimer) clearTimeout(draftSyncTimer);
   draftSyncTimer = setTimeout(syncDraftToServer, 1200);
@@ -1242,6 +1245,7 @@ async function refreshSiteStatusBadge() {
     el.siteStatusBadge.textContent = SITE_STATUS_LABELS.draft;
     el.siteStatusBadge.classList.remove('hidden');
     refreshNavUsername();
+    refreshSaveOrPreviewButton();
     return;
   }
   try {
@@ -1260,6 +1264,7 @@ async function refreshSiteStatusBadge() {
     el.siteStatusBadge.classList.add('hidden');
   }
   refreshNavUsername();
+  refreshSaveOrPreviewButton();
 }
 
 // Reflects the logo in the toolbar as either the placeholder
@@ -1740,34 +1745,81 @@ function buildPublishedSiteHTML() {
 </html>`;
 }
 
-// Keeps the toolbar action in sync with sign-in state: signed-out
-// visitors see "Sign in to Google" (publishing requires an account to
-// own the address against); once signed in it flips to the normal
-// "Publish" action. Called on load, right after sign-in, and right
-// after sign-out.
+// The toolbar button is permanently labelled "Publish" — it no longer
+// flips to "Sign in to Google" when signed out. Clicking it while
+// signed out still opens the sign-in flow first (see the click
+// handler in initToolbar), but the label itself never changes.
 function refreshPublishToolbarButton() {
   const btn = document.getElementById('btnPublishShowcase');
   if (!btn) return;
-  const signedIn = !!getSavedGoogleAccount();
-  btn.textContent = signedIn ? '✦ Publish' : 'Sign in to Google';
-  btn.classList.toggle('btn-secondary', signedIn);
-  btn.classList.toggle('btn-ghost', !signedIn);
+  btn.textContent = '✦ Publish';
+  btn.classList.add('btn-secondary');
+  btn.classList.remove('btn-ghost');
+}
+
+// Signed-out / not-yet-published visitors don't have a live site to
+// preview, so the "Preview" toolbar button doubles as "Save" for
+// them — an explicit, manual save of the current draft to the
+// person's Google account (separate from autosave, which only runs
+// once signed in — see scheduleAutosave). Once a site is actually
+// live, the button reverts to its normal Preview behavior. Called on
+// load and any time site status is refreshed.
+function refreshSaveOrPreviewButton() {
+  const btn = document.getElementById('btnPreviewShowcase');
+  if (!btn) return;
+  const isLive = !!(lastSiteStatusData && lastSiteStatusData.status === 'live');
+  if (isLive) {
+    btn.textContent = '👀 Preview';
+    btn.dataset.mode = 'preview';
+    btn.title = '';
+  } else {
+    btn.textContent = '💾 Save';
+    btn.dataset.mode = 'save';
+    btn.title = 'Save your progress to your Google account';
+  }
+}
+
+// Explicit manual save, used by the "Save" toolbar button for anyone
+// who hasn't published yet (free tier or otherwise). Requires being
+// signed in — there is no local saving unless you're signed in — so
+// signed-out visitors are routed to sign in first.
+function manualSaveProgress() {
+  if (!getSavedGoogleAccount()) {
+    openSignInModal();
+    return;
+  }
+  saveLocalDraft();
+  syncDraftToServer();
+  const btn = document.getElementById('btnPreviewShowcase');
+  if (btn) {
+    const original = btn.textContent;
+    btn.textContent = '✓ Saved';
+    setTimeout(() => { if (btn.dataset.mode === 'save') btn.textContent = original; }, 1400);
+  }
 }
 
 // A focused, single-purpose modal for signing in — shown when the
-// toolbar button is clicked while signed out. On success it hands
-// straight off into the normal Publish modal, so "sign in" flows
-// directly into "publish" in one motion rather than making the person
-// click the toolbar button a second time.
-function openSignInModal() {
+// toolbar button is clicked while signed out, or automatically when
+// /editor first loads (see maybeShowSignInOnLoad). On success it
+// hands straight off into the normal Publish modal, so "sign in"
+// flows directly into "publish" in one motion rather than making the
+// person click the toolbar button a second time. Pass
+// { onLoad: true } for the automatic, on-page-load version, which
+// just closes and lets autosave pick up instead of jumping into
+// Publish — someone who just landed on the page hasn't asked to
+// publish anything yet.
+function openSignInModal(opts) {
+  const onLoad = !!(opts && opts.onLoad);
   openModal(`
     <h3 class="modal-title" id="modalTitle">Sign in to Google</h3>
-    <p class="modal-sub">Sign in to save your progress and publish your portfolio to ${PUBLISH_APEX}.</p>
+    <p class="modal-sub">${onLoad
+      ? `Sign in with Google so any progress you make here can be saved and loaded again later — on this device or any other.`
+      : `Sign in to save your progress and publish your portfolio to ${PUBLISH_APEX}.`}</p>
     <div class="field-box full-width" id="signInAccountBox"></div>
   `, (root) => {
     const box = root.querySelector('#signInAccountBox');
     if (!(window.google && window.google.accounts && window.google.accounts.id)) {
-      box.innerHTML = `<p class="username-status warn">Google sign-in script hasn't loaded (offline, or blocked) — try again in a moment.</p>`;
+      box.innerHTML = `<p class="username-status warn">Google sign-in script hasn't loaded (offline, or blocked) — you can still edit, but nothing will be saved until you sign in.</p>`;
       return;
     }
     window.google.accounts.id.initialize({
@@ -1776,11 +1828,23 @@ function openSignInModal() {
         handleGoogleCredential(response);
         closeModal();
         await refreshSiteStatusBadge();
-        openPublishModal();
+        if (!onLoad) openPublishModal();
       }
     });
     window.google.accounts.id.renderButton(box, { theme: 'outline', size: 'large', text: 'signin_with' });
   });
+}
+
+// Shown once, automatically, every time /editor is opened while
+// signed out — this is how people find out sign-in is what makes
+// their progress saveable at all. It's fully dismissible: the
+// modal's own × close button, clicking outside it, or Escape all
+// cross it out and drop straight into editing with no account
+// required for that session (see scheduleAutosave for what that
+// does and doesn't persist).
+function maybeShowSignInOnLoad() {
+  if (getSavedGoogleAccount()) return;
+  openSignInModal({ onLoad: true });
 }
 
 function openPublishModal() {
@@ -2647,9 +2711,9 @@ function initToolbar() {
   });
 
   document.getElementById('btnPublishShowcase').addEventListener('click', async () => {
-    // Signed-out visitors don't get straight to the Publish modal —
-    // there's no account yet to own the address against — so the
-    // button itself doubles as "Sign in to Google" until one exists.
+    // The button always reads "Publish" now, but signed-out visitors
+    // still need an account to own the address against — so it opens
+    // the sign-in flow first, then hands off to the Publish modal.
     if (!getSavedGoogleAccount()) {
       openSignInModal();
       return;
@@ -2663,8 +2727,13 @@ function initToolbar() {
     openPublishModal();
   });
   refreshPublishToolbarButton();
+  refreshSaveOrPreviewButton();
   refreshSiteStatusBadge();
-  document.getElementById('btnPreviewShowcase').addEventListener('click', () => {
+  document.getElementById('btnPreviewShowcase').addEventListener('click', (e) => {
+    if (e.currentTarget.dataset.mode === 'save') {
+      manualSaveProgress();
+      return;
+    }
     const blob = new Blob([buildPublishedSiteHTML()], { type: 'text/html' });
     window.open(URL.createObjectURL(blob), '_blank', 'noopener');
   });
@@ -3397,6 +3466,12 @@ function init() {
 
   renderActiveCanvas();
   applyActiveDesign();
+
+  // Shown last, on top of the fully-rendered editor: a centered
+  // "Sign in with Google" popup, since there is no local saving unless
+  // you're signed in. Dismissible (cross it out) — it never blocks
+  // editing, it just means nothing will persist until sign-in happens.
+  maybeShowSignInOnLoad();
 }
 
 document.addEventListener('DOMContentLoaded', init);
