@@ -1320,7 +1320,7 @@ function maybeShowRenewalReminder(data, username) {
   });
 }
 
-
+async function refreshSiteStatusBadge() {
   if (!el.siteStatusBadge) return;
   const username = getSavedUsername();
   if (!username) {
