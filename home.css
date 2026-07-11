@@ -406,6 +406,155 @@ body {
   background: var(--color-surface-alt);
 }
 
+/* Editor-dashboard + live-preview mockup (replaces the old floating
+   block-list demo) — a mini browser chrome containing a sidebar of
+   blocks next to a scaled-down preview of the resulting page. Sized
+   to sit comfortably inside .split-right at any panel width. */
+.editor-preview-demo {
+  width: 100%;
+  max-width: 460px;
+  padding: 0 2rem;
+}
+
+.epd-window {
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg, 6px 6px 0 0 var(--color-border));
+  overflow: hidden;
+}
+
+.epd-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.75rem;
+  background: var(--color-bg, #f4f4f6);
+  border-bottom: 2px solid var(--color-border);
+}
+
+.epd-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.epd-titlebar-label {
+  margin-left: 0.5rem;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+.epd-body {
+  display: flex;
+  min-height: 260px;
+}
+
+.epd-sidebar {
+  flex: 0 0 34%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.85rem 0.6rem;
+  background: var(--color-surface-alt);
+  border-right: 2px solid var(--color-border);
+}
+
+.epd-sidebar-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  margin-bottom: 0.15rem;
+}
+
+.epd-block {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.55rem;
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  font-family: var(--font-display);
+  line-height: 1.15;
+}
+
+.epd-block-active {
+  border-color: var(--color-primary);
+  box-shadow: 3px 3px 0 0 var(--color-primary);
+}
+
+.epd-icon { font-size: 0.85rem; }
+
+.epd-canvas {
+  flex: 1;
+  position: relative;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  background: var(--color-bg, #fff);
+}
+
+.epd-preview-badge {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.7rem;
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #fff;
+  background: var(--color-primary);
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+}
+
+.epd-preview-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--gradient);
+  margin-bottom: 0.15rem;
+}
+
+.epd-preview-line {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--color-border);
+  opacity: 0.55;
+}
+
+.epd-preview-line-title { width: 60%; height: 12px; opacity: 0.8; }
+.epd-preview-line-sub { width: 40%; }
+.epd-preview-line-wide { width: 90%; }
+
+.epd-preview-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+  margin: 0.2rem 0 0.3rem;
+}
+
+.epd-tile {
+  aspect-ratio: 1;
+  border-radius: 6px;
+  background: var(--color-surface-alt);
+  border: 2px solid var(--color-border);
+}
+
+@media (max-width: 768px) {
+  .editor-preview-demo { padding: 0 1.25rem; max-width: 380px; }
+  .epd-body { min-height: 220px; }
+}
+
 /* Animated block stack */
 .block-demo {
   display: flex;
@@ -537,6 +686,15 @@ body {
   gap: 0.45rem;
   font-size: 0.82rem;
   flex: 1;
+}
+
+/* Keeps "your-name.proves.work reserved" on a single line instead of
+   breaking awkwardly between the domain and the word "reserved" —
+   shrinks just enough to fit the 280px card (and its 100%-width
+   mobile version) without needing to touch the rest of the list. */
+.price-feature-nowrap {
+  white-space: nowrap;
+  font-size: 0.74rem;
 }
 
 /* ── SLIDE 6: CTA ────────────────────────────────────────── */

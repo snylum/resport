@@ -184,6 +184,30 @@
       white-space: nowrap;
     }
 
+    /* "Just the name" card only: price and duration ("/ 8 mos") are
+       laid out as two deliberate rows instead of one wrapping inline
+       line. A plain inline layout would only break onto a second line
+       once the duration text got long enough (e.g. double-digit
+       months), so the card's height — and where things sat — shifted
+       depending on which month value was selected. Making it always
+       two rows means it looks identical at 1 month and at 12. */
+    #homeDomainPriceDisplay {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .price-amount-row {
+      line-height: 1;
+    }
+
+    .price-amount-duration {
+      font-size: 0.875rem;
+      font-weight: 400;
+      color: var(--color-text-muted);
+      white-space: nowrap;
+    }
+
     .price-duration-row {
       display: flex;
       flex-direction: column;
@@ -346,21 +370,48 @@
         <button class="btn btn-gradient" onclick="scrollToSlide(4)">See pricing →</button>
       </div>
       <div class="split-right">
-        <div class="block-demo" id="liveBlockDemo">
-          <div class="demo-block" data-label="Experience" data-icon="📌">
-            <span class="demo-grip">⠿</span>
-            <span class="demo-icon">📌</span>
-            <span>Profile Header Block</span>
-          </div>
-          <div class="demo-block" data-label="Education" data-icon="🎓">
-            <span class="demo-grip">⠿</span>
-            <span class="demo-icon">🎓</span>
-            <span>PDF Résumé Template</span>
-          </div>
-          <div class="demo-block demo-block-active" data-label="Skills" data-icon="⚡">
-            <span class="demo-grip">⠿</span>
-            <span class="demo-icon">⚡</span>
-            <span>Custom Portfolio Section</span>
+        <div class="editor-preview-demo" id="liveBlockDemo">
+          <div class="epd-window">
+            <div class="epd-titlebar">
+              <span class="epd-dot" style="background:#FF5F57"></span>
+              <span class="epd-dot" style="background:#FEBC2E"></span>
+              <span class="epd-dot" style="background:#28C840"></span>
+              <span class="epd-titlebar-label">editor.proves.work</span>
+            </div>
+            <div class="epd-body">
+              <div class="epd-sidebar">
+                <div class="epd-sidebar-label">Blocks</div>
+                <div class="epd-block epd-block-active">
+                  <span class="epd-icon">📌</span>
+                  <span>Profile Header</span>
+                </div>
+                <div class="epd-block">
+                  <span class="epd-icon">🎓</span>
+                  <span>Experience</span>
+                </div>
+                <div class="epd-block">
+                  <span class="epd-icon">⚡</span>
+                  <span>Portfolio Grid</span>
+                </div>
+                <div class="epd-block">
+                  <span class="epd-icon">📄</span>
+                  <span>Résumé PDF</span>
+                </div>
+              </div>
+              <div class="epd-canvas">
+                <div class="epd-preview-badge">Live preview</div>
+                <div class="epd-preview-avatar"></div>
+                <div class="epd-preview-line epd-preview-line-title"></div>
+                <div class="epd-preview-line epd-preview-line-sub"></div>
+                <div class="epd-preview-tiles">
+                  <div class="epd-tile"></div>
+                  <div class="epd-tile"></div>
+                  <div class="epd-tile"></div>
+                </div>
+                <div class="epd-preview-line epd-preview-line-wide"></div>
+                <div class="epd-preview-line epd-preview-line-wide" style="width:70%"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -376,7 +427,7 @@
       <div class="pricing-cards">
         <div class="price-card">
           <div class="price-name">Free</div>
-          <div class="price-amount">₱0 <span>/forever</span></div>
+          <div class="price-amount">₱0 <span>forever</span></div>
           <ul class="price-features">
             <li>✓ Blockcraft canvas editor</li>
             <li>✓ Edit &amp; preview your portfolio</li>
@@ -400,14 +451,14 @@
         </div>
         <div class="price-card">
           <div class="price-name">Just the name</div>
-          <div class="price-amount" id="homeDomainPriceDisplay"><s class="price-was">₱1,999</s>₱199 <span>/ 1 mo</span></div>
+          <div class="price-amount" id="homeDomainPriceDisplay"><div class="price-amount-row"><s class="price-was">₱1,999</s>₱199</div><span class="price-amount-duration">/ 1 mo</span></div>
           <p class="price-tagline">Lock in longer, pay less overall — max ₱599 for a full year.</p>
           <div class="price-duration-row">
             <input type="range" min="1" max="12" step="1" value="1" id="homeDomainMonthsSlider" aria-label="Reservation length in months" />
             <div class="price-duration-label"><span id="homeDomainMonthsLabel">1 month</span><span>one-time</span></div>
           </div>
           <ul class="price-features">
-            <li>✓ your-name.proves.work reserved</li>
+            <li class="price-feature-nowrap">✓ your-name.proves.work reserved</li>
             <li>✓ Cheaper than a real domain + host</li>
             <li>✓ No Cloudflare setup needed</li>
             <li>✓ Add a portfolio anytime</li>
@@ -558,7 +609,7 @@
     if (homeSlider) {
       homeSlider.addEventListener('input', () => {
         const m = Number(homeSlider.value);
-        homePriceDisplay.innerHTML = `<s class="price-was">₱1,999</s>₱${domainPrice(m)} <span>/ ${m} mo${m > 1 ? 's' : ''}</span>`;
+        homePriceDisplay.innerHTML = `<div class="price-amount-row"><s class="price-was">₱1,999</s>₱${domainPrice(m)}</div><span class="price-amount-duration">/ ${m} mo${m > 1 ? 's' : ''}</span>`;
         homeMonthsLabel.textContent = `${m} month${m > 1 ? 's' : ''}`;
       });
     }
