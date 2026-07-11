@@ -971,6 +971,21 @@
   line-height: 1.5;
 }
 
+/* Sign-in modal only — everything else in .modal-box (Publish's form
+   fields, etc.) stays left-aligned as normal; this class is scoped to
+   openSignInModal()'s markup specifically. */
+.signin-modal-centered {
+  text-align: center;
+}
+.signin-modal-centered .modal-sub {
+  margin-left: auto;
+  margin-right: auto;
+}
+.signin-modal-centered #signInAccountBox {
+  display: flex;
+  justify-content: center;
+}
+
 /* view-proof content */
 .verify-modal-body {
   text-align: center;

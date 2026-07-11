@@ -1777,7 +1777,7 @@ function buildHorizontalSectionsHTML(blocks) {
 // Builds a complete, standalone HTML document for the published site.
 // Always snapshots state.portfolio — publishing never reads from the
 // résumé/PDF document.
-function buildPublishedSiteHTML() {
+function buildPublishedSiteHTML(username) {
   const p = Store.state.portfolio.profile;
   const design = Store.state.portfolio.design;
   const blocks = filterVisibleBlocksHidingOrphanSections(Store.state.portfolio.blocks);
@@ -1789,13 +1789,36 @@ function buildPublishedSiteHTML() {
     ? buildHorizontalSectionsHTML(blocks)
     : `<div class="pf-sections">${blocks.map(renderStaticPortfolioBlock).join('\n')}</div>`;
 
+  const pageTitle = `${esc(fullName)}${p.jobTitle ? ' — ' + esc(p.jobTitle) : ''}`;
+  const pageDescription = esc(p.tagline || (fullName + ' — portfolio, built with ' + PUBLISH_APEX));
+  const siteUrl = username ? `https://${esc(username)}.${PUBLISH_APEX}` : '';
+  // The profile photo doubles as the favicon/social preview image when
+  // there is one — it's already a data: URI (see FileReader usage in
+  // initInputListeners), which every modern browser accepts directly
+  // as a <link rel="icon"> href, no separate upload/resize step
+  // needed. Falls back to the site's own favicon when no photo is set.
+  const iconHref = p.photo || `https://${PUBLISH_APEX}/favicon.png`;
+  const ogImage = p.photo || `https://${PUBLISH_APEX}/favicon.png`;
+
   return `<!DOCTYPE html>
 <html lang="en" data-theme="dazed">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>${esc(fullName)}${p.jobTitle ? ' — ' + esc(p.jobTitle) : ''}</title>
-<meta name="description" content="${esc(p.tagline || (fullName + ' — portfolio, built with ' + PUBLISH_APEX))}" />
+<title>${pageTitle}</title>
+<meta name="description" content="${pageDescription}" />
+${siteUrl ? `<link rel="canonical" href="${esc(siteUrl)}" />` : ''}
+<link rel="icon" href="${esc(iconHref)}" />
+<link rel="apple-touch-icon" href="${esc(iconHref)}" />
+<meta property="og:type" content="profile" />
+${siteUrl ? `<meta property="og:url" content="${esc(siteUrl)}" />` : ''}
+<meta property="og:title" content="${pageTitle}" />
+<meta property="og:description" content="${pageDescription}" />
+<meta property="og:image" content="${esc(ogImage)}" />
+<meta name="twitter:card" content="${p.photo ? 'summary_large_image' : 'summary'}" />
+<meta name="twitter:title" content="${pageTitle}" />
+<meta name="twitter:description" content="${pageDescription}" />
+<meta name="twitter:image" content="${esc(ogImage)}" />
 <link rel="stylesheet" href="https://${PUBLISH_APEX}/dazed.css" />
 <link rel="stylesheet" href="https://${PUBLISH_APEX}/portfolio.css" />
 <style>
@@ -1895,11 +1918,13 @@ function manualSaveProgress() {
 function openSignInModal(opts) {
   const onLoad = !!(opts && opts.onLoad);
   openModal(`
-    <h3 class="modal-title" id="modalTitle">Sign in to Google</h3>
-    <p class="modal-sub">${onLoad
-      ? `Sign in with Google so any progress you make here can be saved and loaded again later — on this device or any other.`
-      : `Sign in to save your progress and publish your portfolio to ${PUBLISH_APEX}.`}</p>
-    <div class="field-box full-width" id="signInAccountBox"></div>
+    <div class="signin-modal-centered">
+      <h3 class="modal-title" id="modalTitle">Sign in to Google</h3>
+      <p class="modal-sub">${onLoad
+        ? `Sign in with Google so any progress you make here can be saved and loaded again later — on this device or any other.`
+        : `Sign in to save your progress and publish your portfolio to ${PUBLISH_APEX}.`}</p>
+      <div class="field-box full-width" id="signInAccountBox"></div>
+    </div>
   `, (root) => {
     const box = root.querySelector('#signInAccountBox');
     if (!(window.google && window.google.accounts && window.google.accounts.id)) {
@@ -2102,7 +2127,7 @@ async function doPublish(username, confirmBtn) {
         // rejected server-side too (the UI already prevents reaching
         // this point unless signed in).
         googleCredential: account ? account.credential : null,
-        html: buildPublishedSiteHTML()
+        html: buildPublishedSiteHTML(username)
       })
     });
     if (!res.ok) throw new Error('no-backend');
@@ -2126,7 +2151,7 @@ async function doPublish(username, confirmBtn) {
     // network error. Swap this branch out once the worker in
     // /worker is actually deployed and reachable at PUBLISH_APEX.
     saveUsername(username);
-    const blob = new Blob([buildPublishedSiteHTML()], { type: 'text/html' });
+    const blob = new Blob([buildPublishedSiteHTML(username)], { type: 'text/html' });
     const blobUrl = URL.createObjectURL(blob);
     openPublishSuccessModal(blobUrl, 'local');
   }
@@ -2818,7 +2843,7 @@ function initToolbar() {
       manualSaveProgress();
       return;
     }
-    const blob = new Blob([buildPublishedSiteHTML()], { type: 'text/html' });
+    const blob = new Blob([buildPublishedSiteHTML(getSavedUsername())], { type: 'text/html' });
     window.open(URL.createObjectURL(blob), '_blank', 'noopener');
   });
 
