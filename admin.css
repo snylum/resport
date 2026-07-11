@@ -157,6 +157,8 @@
 
 .admin-site-proof {
   color: #B8860B;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 
 .admin-paid-soon { color: #B8860B; }

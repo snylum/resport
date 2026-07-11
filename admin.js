@@ -364,7 +364,7 @@ function renderList() {
         <div class="admin-site-meta">${s.ownerEmail ? esc(s.ownerEmail) : 'anonymous'} · updated ${s.updatedAt ? new Date(s.updatedAt).toLocaleString() : '—'}</div>
         ${s.paid ? `<div class="admin-site-meta admin-site-paid">✓ Paid${s.amountPaid != null ? ` ${money(s.amountPaid)}` : ''}${s.referenceNumber ? ` · ref: ${esc(s.referenceNumber)}` : ''}${paidCountdownLabel(s)}</div>` : ''}
         ${!s.paid && s.buyerReferenceNumber ? `<div class="admin-site-meta admin-site-proof">💳 Buyer submitted proof of payment — ref: <strong>${esc(s.buyerReferenceNumber)}</strong> (unverified, check it against your payment provider before marking paid)</div>` : ''}
-        ${s.redirectUrl ? `<div class="admin-site-meta">↪ redirects to ${esc(s.redirectUrl)}</div>` : ''}
+        ${s.redirectUrl ? `<div class="admin-site-meta">🎭 masking ${esc(s.redirectUrl)}</div>` : ''}
       </div>
       <span class="admin-status-pill ${s.status}">${s.status}</span>
       <div class="admin-site-actions">

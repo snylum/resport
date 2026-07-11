@@ -151,7 +151,7 @@ export default {
 
     if (!isApex) {
       const username = host.split('.')[0];
-      return serveSite(username, env);
+      return serveSite(username, env, url.pathname + url.search);
     }
 
     // Apex + non-API path should never reach this Worker if routes are
@@ -161,7 +161,151 @@ export default {
   }
 };
 
-async function serveSite(username, env) {
+// Fetches an owner's external page (Carrd, Gumroad, a Vercel app, etc.)
+// and serves its content directly, so the browser's address bar keeps
+// showing username.proves.work instead of jumping to the other host —
+// this is a mask/proxy, not a redirect.
+//
+// `pathAndQuery` is whatever the visitor actually requested on our
+// domain (e.g. "/about?ref=x") — for anything other than the root, we
+// ask the target site for that same path, so internal pages like
+// /about or /pricing keep working instead of every URL just re-showing
+// the target's homepage.
+//
+// Internal links (<a>, <form action>, ...) that point back at the
+// target's own site are rewritten to same-path relative URLs, so
+// clicking around the target site keeps the visitor on our domain and
+// re-triggers this same proxy for the next page. Asset URLs (images,
+// stylesheets, scripts, fonts, iframes) are instead rewritten to full
+// absolute URLs on the *real* host — there's no benefit to masking a
+// resource fetch, and letting the browser load those directly is
+// faster and avoids proxying binary content through here at all.
+async function proxyRedirectTarget(redirectUrl, pathAndQuery) {
+  let targetOrigin;
+  try {
+    targetOrigin = new URL(redirectUrl).origin;
+  } catch {
+    return new Response('This address is not configured correctly.', {
+      status: 502,
+      headers: { 'content-type': 'text/plain;charset=UTF-8' }
+    });
+  }
+
+  // The root path reuses whatever the owner actually pasted (which may
+  // itself include a path/query, e.g. a specific landing page) — any
+  // other path is resolved fresh against the target's origin.
+  const targetPageUrl = (!pathAndQuery || pathAndQuery === '/')
+    ? redirectUrl
+    : targetOrigin + pathAndQuery;
+
+  let upstream;
+  try {
+    upstream = await fetch(targetPageUrl, {
+      redirect: 'follow',
+      headers: { 'user-agent': 'Mozilla/5.0 (compatible; proves.work-proxy/1.0)' }
+    });
+  } catch {
+    return new Response('The connected page could not be reached right now.', {
+      status: 502,
+      headers: { 'content-type': 'text/plain;charset=UTF-8' }
+    });
+  }
+
+  const contentType = upstream.headers.get('content-type') || '';
+  const finalUrl = upstream.url || targetPageUrl; // after any upstream redirects
+
+  // Only HTML gets rewritten — a visitor landing directly on a
+  // non-HTML path (an image someone linked straight to, etc.) just
+  // streams through untouched.
+  if (!contentType.includes('text/html')) {
+    const headers = new Headers(upstream.headers);
+    headers.delete('x-frame-options');
+    headers.delete('content-security-policy');
+    headers.set('cache-control', 'public, max-age=10, must-revalidate');
+    return new Response(upstream.body, { status: upstream.status, headers });
+  }
+
+  // Resolves a possibly-relative attribute value against the page we
+  // actually fetched, so both root-relative ("/about") and
+  // page-relative ("../img.png") links come out as full, correct URLs
+  // no matter how deep the target's own URL structure goes.
+  function resolve(value) {
+    try { return new URL(value, finalUrl); } catch { return null; }
+  }
+
+  class LinkAttrRewriter {
+    constructor(attr) { this.attr = attr; }
+    element(el) {
+      const value = el.getAttribute(this.attr);
+      if (!value || value.startsWith('#') || value.startsWith('mailto:') || value.startsWith('tel:') || value.startsWith('javascript:')) return;
+      const resolved = resolve(value);
+      if (!resolved) return;
+      // Same site as the target → keep the visitor on our domain by
+      // rewriting to a same-path relative URL; a different site →
+      // leave it as a normal absolute link to wherever it really goes.
+      if (resolved.origin === targetOrigin) {
+        el.setAttribute(this.attr, resolved.pathname + resolved.search + resolved.hash);
+      } else {
+        el.setAttribute(this.attr, resolved.toString());
+      }
+    }
+  }
+
+  class AssetAttrRewriter {
+    constructor(attr) { this.attr = attr; }
+    element(el) {
+      const value = el.getAttribute(this.attr);
+      if (!value || value.startsWith('data:') || value.startsWith('#')) return;
+      const resolved = resolve(value);
+      if (resolved) el.setAttribute(this.attr, resolved.toString());
+    }
+  }
+
+  // srcset holds one-or-more "<url> <descriptor>" pairs — rewrite just
+  // the URL part of each.
+  class SrcsetRewriter {
+    element(el) {
+      const value = el.getAttribute('srcset');
+      if (!value) return;
+      const rewritten = value.split(',').map(part => {
+        const trimmed = part.trim();
+        const spaceIdx = trimmed.indexOf(' ');
+        const url = spaceIdx === -1 ? trimmed : trimmed.slice(0, spaceIdx);
+        const descriptor = spaceIdx === -1 ? '' : trimmed.slice(spaceIdx);
+        const resolved = resolve(url);
+        return (resolved ? resolved.toString() : url) + descriptor;
+      }).join(', ');
+      el.setAttribute('srcset', rewritten);
+    }
+  }
+
+  const rewriter = new HTMLRewriter()
+    .on('a[href]', new LinkAttrRewriter('href'))
+    .on('area[href]', new LinkAttrRewriter('href'))
+    .on('form[action]', new LinkAttrRewriter('action'))
+    .on('img[src]', new AssetAttrRewriter('src'))
+    .on('img[srcset]', new SrcsetRewriter())
+    .on('source[src]', new AssetAttrRewriter('src'))
+    .on('source[srcset]', new SrcsetRewriter())
+    .on('link[href]', new AssetAttrRewriter('href'))
+    .on('script[src]', new AssetAttrRewriter('src'))
+    .on('video[src]', new AssetAttrRewriter('src'))
+    .on('video[poster]', new AssetAttrRewriter('poster'))
+    .on('audio[src]', new AssetAttrRewriter('src'))
+    .on('iframe[src]', new AssetAttrRewriter('src'));
+
+  const rewritten = rewriter.transform(new Response(upstream.body, upstream));
+
+  const headers = new Headers();
+  headers.set('content-type', 'text/html;charset=UTF-8');
+  // Short cache only — changing the redirect target from /manage
+  // should show up within seconds, same as a normal republish.
+  headers.set('cache-control', 'public, max-age=10, must-revalidate');
+
+  return new Response(rewritten.body, { status: upstream.status, headers });
+}
+
+async function serveSite(username, env, pathAndQuery) {
   if (!USERNAME_RE.test(username) || RESERVED.has(username)) {
     return new Response(notFoundPage(username), { status: 404, headers: { 'content-type': 'text/html;charset=UTF-8' } });
   }
@@ -181,15 +325,16 @@ async function serveSite(username, env) {
   }
 
   // A domain-only reservation whose owner has pointed it at an
-  // existing page elsewhere (Carrd, Gumroad, Vercel, etc.) redirects
-  // there instead of showing the placeholder "reserved" page. Gated
-  // on `paid` (an admin's manual payment confirmation), not on the
-  // owner's own edits to redirectUrl — so setting/changing the target
-  // from /manage never itself needs a second admin review, but the
-  // redirect can never go live before an admin has confirmed payment
-  // by hand.
+  // existing page elsewhere (Carrd, Gumroad, Vercel, etc.) serves
+  // that page's content right here at username.proves.work — the
+  // address bar never changes to the other host, unlike a normal
+  // redirect. Gated on `paid` (an admin's manual payment
+  // confirmation), not on the owner's own edits to redirectUrl — so
+  // setting/changing the target from /manage never itself needs a
+  // second admin review, but nothing can be shown before an admin
+  // has confirmed payment by hand.
   if (record.kind === 'domain' && record.paid && record.redirectUrl) {
-    return Response.redirect(record.redirectUrl, 302);
+    return proxyRedirectTarget(record.redirectUrl, pathAndQuery || '/');
   }
 
   // Serve the last *approved* snapshot (liveHtml) when we have one —

@@ -564,6 +564,11 @@
     }
     .domain-modal h3 { margin: 0 0 0.5rem; font-family: var(--font-display); font-size: 1.2rem; }
     .domain-modal p.sub { margin: 0 0 1.25rem; color: var(--color-text-muted, #6b7280); font-size: 0.9rem; }
+    .domain-signin-slot {
+      display: flex;
+      justify-content: center;
+      margin: 0.25rem 0 1.5rem;
+    }
     .domain-modal input[type="text"] {
       width: 100%; padding: 0.65rem 0.85rem; border: 2px solid var(--color-border, #000);
       font-size: 1rem; font-family: inherit; margin-bottom: 0.5rem; box-sizing: border-box;
@@ -663,6 +668,9 @@
         <button type="button" class="close-x" id="domainCloseBtn" aria-label="Close">✕</button>
         <h3>Reserve your name</h3>
         <p class="sub">Just the address, no portfolio required — add one later anytime.</p>
+        ${account
+          ? `<p class="sub" style="margin-bottom:1.25rem">Signed in as <strong>${account.email}</strong></p>`
+          : `<div id="domainSignInSlot" class="domain-signin-slot"></div>`}
         <input type="text" id="domainNameInput" placeholder="yourname" autocomplete="off" />
         <div class="domain-suffix">.proves.work</div>
         <div class="status-line" id="domainStatusLine"></div>
@@ -673,9 +681,6 @@
             <span id="domainAmountLabel">₱${domainPrice(initialMonths)} one-time</span>
           </div>
         </div>
-        ${account
-          ? `<p class="sub" style="margin-bottom:0.5rem">Signed in as <strong>${account.email}</strong></p>`
-          : `<div id="domainSignInSlot"></div>`}
         <div class="actions">
           <button type="button" class="btn btn-ghost btn-sm" id="domainCancelBtn">Cancel</button>
           <button type="button" class="btn btn-primary btn-sm" id="domainSubmitBtn" ${account ? '' : 'disabled'}>Reserve it</button>

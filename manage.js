@@ -91,7 +91,7 @@ function siteCardHtml(site) {
           <button type="button" class="btn btn-primary btn-sm manage-redirect-save" ${site.paid ? '' : 'disabled'}>Save</button>
         </div>
         <p class="manage-field-note">${site.paid
-          ? 'Point this address at an existing page — Carrd, Gumroad, a Vercel app, anything. Changes go live immediately, no re-approval needed. Leave it blank to show the plain "reserved" page instead.'
+          ? "Point this address at an existing page — Carrd, Gumroad, a Vercel app, anything. Visitors see that page's content, but the address bar keeps showing your username.proves.work — it's not a redirect. Changes go live immediately, no re-approval needed. Leave it blank to show the plain \"reserved\" page instead."
           : 'You can set this once an admin has confirmed your payment.'}</p>
         <div class="manage-status-line manage-redirect-status"></div>
       ` : ''}
@@ -129,7 +129,7 @@ function wireCard(card, account) {
           redirectStatus.textContent = data.error || 'Something went wrong.';
           redirectStatus.className = 'manage-status-line warn';
         } else {
-          redirectStatus.textContent = data.redirectUrl ? 'Saved — your address now redirects there.' : 'Cleared — showing the default reserved page.';
+          redirectStatus.textContent = data.redirectUrl ? 'Saved — your address now shows that page.' : 'Cleared — showing the default reserved page.';
           redirectStatus.className = 'manage-status-line ok';
         }
       } catch {
