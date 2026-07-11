@@ -1,0 +1,149 @@
+/* Reuses the site's global button/card styles, softened to a normal
+   drop shadow the same way admin.css does — this is a data-entry page,
+   not a marketing one. Only affects this page. */
+:root[data-theme="dazed"] {
+  --shadow: 0 2px 6px rgba(0,0,0,0.12);
+  --shadow-lg: 0 6px 16px rgba(0,0,0,0.16);
+}
+
+.btn:hover,
+.btn:active {
+  transform: none !important;
+}
+
+.manage-main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+}
+
+.manage-heading {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin: 0 0 0.5rem;
+}
+
+.manage-sub {
+  color: var(--color-text-muted, #6b7280);
+  margin: 0 0 1.25rem;
+}
+
+.manage-gate {
+  max-width: 420px;
+  margin: 3rem auto 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.manage-panel.hidden,
+.manage-gate.hidden {
+  display: none;
+}
+
+.manage-toolbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.manage-account-email {
+  color: var(--color-text-muted, #6b7280);
+  font-size: 0.9rem;
+}
+
+.manage-sites-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.manage-site-card {
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: var(--radius, 12px);
+  box-shadow: var(--shadow);
+  padding: 1.25rem 1.4rem;
+}
+
+.manage-site-name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.1rem;
+  margin: 0 0 0.35rem;
+}
+
+.manage-site-name .manage-kind-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  background: rgba(124, 77, 255, 0.12);
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+}
+
+.manage-site-status {
+  font-size: 0.88rem;
+  margin: 0 0 0.9rem;
+}
+
+.manage-site-status.ok { color: var(--color-success, #1f9d55); font-weight: 700; }
+.manage-site-status.warn { color: #B8860B; font-weight: 700; }
+
+.manage-redirect-row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.manage-redirect-row input[type="text"] {
+  flex: 1;
+  min-width: 220px;
+  border: 2px solid var(--color-border);
+  background: var(--color-bg, #fff);
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.9rem;
+}
+
+.manage-field-note {
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #6b7280);
+  margin: 0.5rem 0 0;
+}
+
+.manage-status-line {
+  font-size: 0.85rem;
+  min-height: 1.2em;
+  margin-top: 0.5rem;
+}
+
+.manage-status-line.warn { color: #c0392b; }
+.manage-status-line.ok { color: #1f9d55; }
+
+.manage-proof-row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+  padding-top: 0.9rem;
+  border-top: 1px dashed var(--color-border);
+}
+
+.manage-proof-row input[type="text"] {
+  flex: 1;
+  min-width: 220px;
+  border: 2px solid var(--color-border);
+  background: var(--color-bg, #fff);
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.9rem;
+}

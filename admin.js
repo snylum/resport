@@ -46,8 +46,21 @@ function decodeGoogleCredential(credential) {
 }
 
 function getSavedAdminAccount() {
-  try { return JSON.parse(localStorage.getItem(ADMIN_ACCOUNT_KEY) || 'null'); }
+  let account;
+  try { account = JSON.parse(localStorage.getItem(ADMIN_ACCOUNT_KEY) || 'null'); }
   catch { return null; }
+  if (!account || !account.credential) return null;
+  try {
+    const payload = decodeGoogleCredential(account.credential);
+    if (!payload.exp || payload.exp * 1000 <= Date.now()) {
+      localStorage.removeItem(ADMIN_ACCOUNT_KEY);
+      return null;
+    }
+  } catch {
+    localStorage.removeItem(ADMIN_ACCOUNT_KEY);
+    return null;
+  }
+  return account;
 }
 function saveAdminAccount(account) {
   localStorage.setItem(ADMIN_ACCOUNT_KEY, JSON.stringify({ ...account, lastActiveAt: Date.now() }));
@@ -350,6 +363,8 @@ function renderList() {
         <div class="admin-site-username">${esc(s.username)}.proves.work${s.kind === 'domain' ? ` <span class="admin-kind-badge">Domain only</span>` : ''}${(s.status === 'live' && s.ownerEmail) ? ` <span class="admin-owner-chip">${esc(s.ownerEmail)}</span>` : ''}</div>
         <div class="admin-site-meta">${s.ownerEmail ? esc(s.ownerEmail) : 'anonymous'} · updated ${s.updatedAt ? new Date(s.updatedAt).toLocaleString() : '—'}</div>
         ${s.paid ? `<div class="admin-site-meta admin-site-paid">✓ Paid${s.amountPaid != null ? ` ${money(s.amountPaid)}` : ''}${s.referenceNumber ? ` · ref: ${esc(s.referenceNumber)}` : ''}${paidCountdownLabel(s)}</div>` : ''}
+        ${!s.paid && s.buyerReferenceNumber ? `<div class="admin-site-meta admin-site-proof">💳 Buyer submitted proof of payment — ref: <strong>${esc(s.buyerReferenceNumber)}</strong> (unverified, check it against your payment provider before marking paid)</div>` : ''}
+        ${s.redirectUrl ? `<div class="admin-site-meta">↪ redirects to ${esc(s.redirectUrl)}</div>` : ''}
       </div>
       <span class="admin-status-pill ${s.status}">${s.status}</span>
       <div class="admin-site-actions">
@@ -536,7 +551,7 @@ el.adminSitesList.addEventListener('click', (e) => {
   // close to its last published version as possible.
   else if (action === 'restore') setStatus(username, 'live');
   else if (action === 'hard-delete') confirmHardDelete(username);
-  else if (action === 'mark-paid') openMarkPaidModal(username, site && site.referenceNumber, (site && site.kind) || 'site', site && site.requestedMonths);
+  else if (action === 'mark-paid') openMarkPaidModal(username, (site && (site.referenceNumber || site.buyerReferenceNumber)) || '', (site && site.kind) || 'site', site && site.requestedMonths);
   else if (action === 'unmark-paid') setPaid(username, false, '');
 });
 

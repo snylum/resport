@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dazed">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>proves.work — Manage your address</title>
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <link rel="stylesheet" href="dazed.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="manage.css" />
+</head>
+<body>
+  <nav class="site-nav">
+    <a href="index.html" class="nav-logo">proves.work <span style="opacity:.55;font-weight:600;">/ manage</span></a>
+    <ul class="nav-links">
+      <li><a href="editor.html">Editor</a></li>
+      <li><a href="showcase.html">Showcase</a></li>
+    </ul>
+  </nav>
+
+  <main class="manage-main">
+    <div id="manageGate" class="manage-gate">
+      <h1 class="manage-heading">Manage your address</h1>
+      <p class="manage-sub">Sign in with the Google account you used to reserve your username.proves.work address to check your payment status or point it at an existing page.</p>
+      <div id="manageSignInSlot"></div>
+      <p class="username-status" id="manageGateStatus"></p>
+    </div>
+
+    <div id="managePanel" class="manage-panel hidden">
+      <div class="manage-toolbar">
+        <h1 class="manage-heading">Your addresses</h1>
+        <span id="manageAccountEmail" class="manage-account-email"></span>
+      </div>
+      <p class="username-status" id="manageListStatus"></p>
+      <div id="manageSitesList" class="manage-sites-list"></div>
+    </div>
+  </main>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script type="module" src="manage.js"></script>
+</body>
+</html>

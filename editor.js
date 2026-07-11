@@ -1054,9 +1054,27 @@ function initPersistence() {
 const GOOGLE_CLIENT_ID = '41010460965-oti1phnr8kdbij312qijrg82bc2japj7.apps.googleusercontent.com';
 const GOOGLE_ACCOUNT_KEY = 'proveswork_google_account';
 
+// Google ID tokens expire (usually ~1hr) — without this check, a long
+// editing session would still show "signed in" locally while the
+// Worker silently rejects the now-stale token on publish/save. Treat
+// an expired token as no account at all, and clear it so sign-in is
+// prompted again.
 function getSavedGoogleAccount() {
-  try { return JSON.parse(localStorage.getItem(GOOGLE_ACCOUNT_KEY) || 'null'); }
+  let account;
+  try { account = JSON.parse(localStorage.getItem(GOOGLE_ACCOUNT_KEY) || 'null'); }
   catch (err) { return null; }
+  if (!account || !account.credential) return null;
+  try {
+    const payload = decodeGoogleCredential(account.credential);
+    if (!payload.exp || payload.exp * 1000 <= Date.now()) {
+      localStorage.removeItem(GOOGLE_ACCOUNT_KEY);
+      return null;
+    }
+  } catch (err) {
+    localStorage.removeItem(GOOGLE_ACCOUNT_KEY);
+    return null;
+  }
+  return account;
 }
 
 function saveGoogleAccount(account) {

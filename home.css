@@ -308,8 +308,19 @@ body {
   flex-shrink: 0;
 }
 
-.step h3 { font-size: 1rem; margin-bottom: 0.2rem; }
-.step p  { font-size: 0.8rem; color: var(--color-text-muted); line-height: 1.6; }
+.step h3 {
+  font-size: 1rem;
+  margin-bottom: 0.2rem;
+  flex: 0 0 160px;
+  width: 160px;
+}
+.step p {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  flex: 1;
+  min-width: 0;
+}
 
 /* ── SLIDE 3: FEATURES ───────────────────────────────────── */
 .panel-features {

@@ -155,6 +155,10 @@
   font-weight: 700;
 }
 
+.admin-site-proof {
+  color: #B8860B;
+}
+
 .admin-paid-soon { color: #B8860B; }
 .admin-paid-expired { color: var(--color-danger, #C0392B); }
 

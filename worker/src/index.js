@@ -180,6 +180,18 @@ async function serveSite(username, env) {
     return new Response(pendingPage(username), { status: 200, headers: { 'content-type': 'text/html;charset=UTF-8' } });
   }
 
+  // A domain-only reservation whose owner has pointed it at an
+  // existing page elsewhere (Carrd, Gumroad, Vercel, etc.) redirects
+  // there instead of showing the placeholder "reserved" page. Gated
+  // on `paid` (an admin's manual payment confirmation), not on the
+  // owner's own edits to redirectUrl — so setting/changing the target
+  // from /manage never itself needs a second admin review, but the
+  // redirect can never go live before an admin has confirmed payment
+  // by hand.
+  if (record.kind === 'domain' && record.paid && record.redirectUrl) {
+    return Response.redirect(record.redirectUrl, 302);
+  }
+
   // Serve the last *approved* snapshot (liveHtml) when we have one —
   // record.html may be a newer, not-yet-approved draft that was
   // uploaded after this site went live (edits don't go public until
@@ -377,6 +389,14 @@ ${resumeText}
     const requestedMonths = Math.min(Math.max(Number(body.months) || 1, 1), 12);
     const expectedAmount = Math.round(199 + (599 - 199) * (requestedMonths - 1) / 11);
 
+    // A buyer can optionally paste their payment reference number right
+    // away if they've already paid against the QR shown in the claim
+    // modal; they can also add/change it later via /manage using
+    // /api/domain/submit-proof. Either way this is only ever the
+    // buyer's own claim of proof — an admin still confirms the actual
+    // payment by hand (set-paid) before anything goes live.
+    const buyerReferenceNumber = String(body.referenceNumber || '').trim().slice(0, 120);
+
     await env.SITES.put(`site:${username}`, JSON.stringify({
       kind: 'domain', // distinguishes a name-only reservation from a real portfolio ('kind' absent/'site') in the admin dashboard
       ownerEmail,
@@ -384,13 +404,122 @@ ${resumeText}
       liveHtml: null,
       status: 'pending',
       paid: false,
+      redirectUrl: '',
       requestedMonths,
       requestedAmount: expectedAmount,
+      buyerReferenceNumber,
+      buyerReferenceSubmittedAt: buyerReferenceNumber ? new Date().toISOString() : null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }));
 
     return json({ ok: true, status: 'pending', url: `https://${username}.${APP_HOST}` });
+  }
+
+  // Lets a buyer submit (or update) their payment reference number after
+  // the fact — e.g. they closed the claim modal before paying, or paid
+  // via a different reference than the one they first typed. Purely a
+  // claim from the buyer's side; an admin still has to manually confirm
+  // the real payment (see /api/admin/set-paid) before anything changes
+  // for the site itself.
+  if (url.pathname === '/api/domain/submit-proof' && request.method === 'POST') {
+    let body;
+    try { body = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON body.' }, 400); }
+    const ownerEmail = await verifyGoogleCredential(body.googleCredential);
+    if (!ownerEmail) return json({ ok: false, error: 'Sign in with Google first.' }, 401);
+
+    const username = String(body.username || '').toLowerCase().trim();
+    const referenceNumber = String(body.referenceNumber || '').trim().slice(0, 120);
+    if (!referenceNumber) return json({ ok: false, error: 'Enter a reference number.' }, 400);
+
+    const existing = await env.SITES.get(`site:${username}`, 'json');
+    if (!existing) return json({ ok: false, error: 'Not found.' }, 404);
+    if (existing.ownerEmail !== ownerEmail) {
+      return json({ ok: false, error: 'Not authorized — sign in with the account that reserved this address.' }, 403);
+    }
+
+    await env.SITES.put(`site:${username}`, JSON.stringify({
+      ...existing,
+      buyerReferenceNumber: referenceNumber,
+      buyerReferenceSubmittedAt: new Date().toISOString()
+    }));
+    return json({ ok: true });
+  }
+
+  // Lets a signed-in owner see every proves.work address tied to their
+  // account (domain-only reservations and full portfolios alike) for
+  // the /manage page — their payment status, and the redirect target
+  // if they've set one.
+  if (url.pathname === '/api/domain/my-sites' && request.method === 'POST') {
+    let body;
+    try { body = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON body.' }, 400); }
+    const ownerEmail = await verifyGoogleCredential(body.googleCredential);
+    if (!ownerEmail) return json({ ok: false, error: 'Sign in with Google first.' }, 401);
+
+    const list = await env.SITES.list({ prefix: 'site:' });
+    const sites = await Promise.all(list.keys.map(async (k) => {
+      const record = await env.SITES.get(k.name, 'json');
+      if (!record || record.status === 'deleted' || record.ownerEmail !== ownerEmail) return null;
+      return {
+        username: k.name.slice('site:'.length),
+        kind: record.kind || 'site',
+        status: record.status || 'live',
+        paid: !!record.paid,
+        paidUntil: record.paidUntil || null,
+        requestedAmount: record.requestedAmount || null,
+        requestedMonths: record.requestedMonths || null,
+        redirectUrl: record.redirectUrl || '',
+        buyerReferenceNumber: record.buyerReferenceNumber || ''
+      };
+    }));
+    return json({ ok: true, sites: sites.filter(Boolean) }, 200, { 'cache-control': 'no-store' });
+  }
+
+  // Lets a signed-in owner point their address at an existing page
+  // elsewhere (username.carrd.co, username.gumroad.com, a Vercel app,
+  // etc.) instead of/until they build a portfolio here. Deliberately
+  // not gated behind a second admin review the way a portfolio publish
+  // is — an admin already reviews and confirms the *purchase itself*
+  // (see /api/admin/set-paid); this just lets the owner change where
+  // an already-paid-for address points, any time, without waiting on
+  // someone to click Approve again. It's still gated on `paid`, though:
+  // an unconfirmed reservation can't redirect anywhere yet.
+  if (url.pathname === '/api/domain/set-redirect' && request.method === 'POST') {
+    let body;
+    try { body = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON body.' }, 400); }
+    const ownerEmail = await verifyGoogleCredential(body.googleCredential);
+    if (!ownerEmail) return json({ ok: false, error: 'Sign in with Google first.' }, 401);
+
+    const username = String(body.username || '').toLowerCase().trim();
+    const rawUrl = String(body.redirectUrl || '').trim();
+
+    const existing = await env.SITES.get(`site:${username}`, 'json');
+    if (!existing) return json({ ok: false, error: 'Not found.' }, 404);
+    if (existing.ownerEmail !== ownerEmail) {
+      return json({ ok: false, error: 'Not authorized — sign in with the account that reserved this address.' }, 403);
+    }
+    if (!existing.paid) {
+      return json({ ok: false, error: "Payment hasn't been confirmed yet — an admin needs to verify it first." }, 403);
+    }
+
+    // Clearing the field (empty string) is allowed — it just turns the
+    // redirect off and falls back to the placeholder "reserved" page.
+    let redirectUrl = '';
+    if (rawUrl) {
+      let parsed;
+      try { parsed = new URL(rawUrl); } catch { parsed = null; }
+      if (!parsed || !['http:', 'https:'].includes(parsed.protocol)) {
+        return json({ ok: false, error: 'Enter a full URL starting with https://' }, 400);
+      }
+      redirectUrl = parsed.toString();
+    }
+
+    await env.SITES.put(`site:${username}`, JSON.stringify({
+      ...existing,
+      redirectUrl,
+      redirectUpdatedAt: new Date().toISOString()
+    }));
+    return json({ ok: true, redirectUrl });
   }
 
   // Lets the editor show "Draft / Pending approval / Live / Rejected"
@@ -626,6 +755,8 @@ ${resumeText}
         deletedAt: record.deletedAt || null,
         paid: !!record.paid,
         referenceNumber: record.referenceNumber || '',
+        buyerReferenceNumber: record.buyerReferenceNumber || '',
+        redirectUrl: record.redirectUrl || '',
         paidAt: record.paidAt || null,
         paidUntil: record.paidUntil || null,
         paidDurationMonths: record.paidDurationMonths || null,

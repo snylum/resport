@@ -217,6 +217,7 @@
     <ul class="nav-links">
       <li><a href="showcase.html">Showcase</a></li>
       <li><a href="#" onclick="scrollToSlide(4);return false;">Pricing</a></li>
+      <li><a href="manage.html">Manage</a></li>
       <li><a href="editor.html" class="btn btn-primary btn-sm">Open Editor →</a></li>
     </ul>
   </nav>
@@ -562,16 +563,35 @@
       });
     }
 
-    function getSavedGoogleAccount() {
-      try { return JSON.parse(localStorage.getItem(GOOGLE_ACCOUNT_KEY) || 'null'); }
-      catch { return null; }
-    }
-    function saveGoogleAccount(account) {
-      localStorage.setItem(GOOGLE_ACCOUNT_KEY, JSON.stringify(account));
-    }
     function decodeGoogleCredential(credential) {
       const payload = credential.split('.')[1];
       return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    }
+    // Google ID tokens expire (usually ~1hr) — without this check, an
+    // account saved earlier in the session would still show "Signed in
+    // as ..." here while the server silently rejects the now-stale
+    // token, producing exactly the confusing "signed in, but told to
+    // sign in" state. Treat an expired token as no account at all, and
+    // clear it so the sign-in button reappears.
+    function getSavedGoogleAccount() {
+      let account;
+      try { account = JSON.parse(localStorage.getItem(GOOGLE_ACCOUNT_KEY) || 'null'); }
+      catch { return null; }
+      if (!account || !account.credential) return null;
+      try {
+        const payload = decodeGoogleCredential(account.credential);
+        if (!payload.exp || payload.exp * 1000 <= Date.now()) {
+          localStorage.removeItem(GOOGLE_ACCOUNT_KEY);
+          return null;
+        }
+      } catch {
+        localStorage.removeItem(GOOGLE_ACCOUNT_KEY);
+        return null;
+      }
+      return account;
+    }
+    function saveGoogleAccount(account) {
+      localStorage.setItem(GOOGLE_ACCOUNT_KEY, JSON.stringify(account));
     }
 
     const overlay = document.getElementById('domainModalOverlay');
@@ -680,7 +700,7 @@
             submitBtn.textContent = 'Reserve it';
             return;
           }
-          renderSuccessStep(val, months);
+          renderPaymentStep(val, months, acc);
         } catch {
           statusLine.textContent = 'Network error — try again.';
           statusLine.className = 'status-line warn';
@@ -690,13 +710,70 @@
       });
     }
 
-    function renderSuccessStep(username, months) {
+    // Shown right after a name is reserved: the buyer still needs to
+    // actually pay (scan the QR) and tell us how, so an admin can match
+    // the payment to this reservation and confirm it by hand. Nothing
+    // here makes the address live on its own — this only records the
+    // buyer's own claim of payment for the admin to verify.
+    function renderPaymentStep(username, months, account) {
+      const m = Number(months) || 1;
+      const amount = domainPrice(m);
+      content.innerHTML = `
+        <button type="button" class="close-x" id="domainCloseBtn3" aria-label="Close">✕</button>
+        <h3>Pay to confirm your reservation</h3>
+        <p class="sub"><strong>${username}.proves.work</strong> is held for you. Scan the QR below to pay <strong>₱${amount}</strong> (${m} month${m > 1 ? 's' : ''}), then enter the reference number from your payment so an admin can confirm it.</p>
+        <img src="payment-qr.png" alt="Payment QR code" width="220" height="220" style="display:block;margin:0 auto 1rem;border-radius:12px;border:1px solid rgba(0,0,0,0.08);" />
+        <input type="text" id="domainRefInput" placeholder="Payment reference number" autocomplete="off" />
+        <div class="status-line" id="domainRefStatus"></div>
+        <div class="actions">
+          <button type="button" class="btn btn-ghost btn-sm" id="domainRefLaterBtn">I'll do this later</button>
+          <button type="button" class="btn btn-primary btn-sm" id="domainRefSubmitBtn">Submit reference</button>
+        </div>
+      `;
+      document.getElementById('domainCloseBtn3').addEventListener('click', closeDomainModal);
+      document.getElementById('domainRefLaterBtn').addEventListener('click', () => renderSuccessStep(username, months, false));
+
+      document.getElementById('domainRefSubmitBtn').addEventListener('click', async () => {
+        const refInput = document.getElementById('domainRefInput');
+        const refStatus = document.getElementById('domainRefStatus');
+        const ref = refInput.value.trim();
+        if (!ref) { refStatus.textContent = 'Enter your payment reference number.'; refStatus.className = 'status-line warn'; return; }
+        const btn = document.getElementById('domainRefSubmitBtn');
+        btn.disabled = true;
+        btn.textContent = 'Submitting…';
+        try {
+          const res = await fetch('/api/domain/submit-proof', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ username, googleCredential: account.credential, referenceNumber: ref })
+          });
+          const data = await res.json();
+          if (!data.ok) {
+            refStatus.textContent = data.error || 'Something went wrong.';
+            refStatus.className = 'status-line warn';
+            btn.disabled = false;
+            btn.textContent = 'Submit reference';
+            return;
+          }
+          renderSuccessStep(username, months, true);
+        } catch {
+          refStatus.textContent = 'Network error — try again.';
+          refStatus.className = 'status-line warn';
+          btn.disabled = false;
+          btn.textContent = 'Submit reference';
+        }
+      });
+    }
+
+    function renderSuccessStep(username, months, refSubmitted) {
       const m = Number(months) || 1;
       content.innerHTML = `
         <button type="button" class="close-x" id="domainCloseBtn2" aria-label="Close">✕</button>
         <h3>Request received 🎉</h3>
-        <p class="sub"><strong>${username}.proves.work</strong> is reserved for you pending payment confirmation (₱${domainPrice(m)} one-time, ${m} month${m > 1 ? 's' : ''}). An admin reviews and approves every reservation by hand — once approved, the address goes live automatically, no further setup needed.</p>
+        <p class="sub"><strong>${username}.proves.work</strong> is reserved for you pending payment confirmation (₱${domainPrice(m)} one-time, ${m} month${m > 1 ? 's' : ''}). An admin reviews and confirms every payment by hand${refSubmitted ? ' — we have your reference number' : ''}; once confirmed, the address goes live automatically.</p>
+        <p class="sub">Anytime after that, come back to <strong>proves.work/manage</strong> to point this address at an existing page (Carrd, Gumroad, Vercel, etc.) or check your payment status.</p>
         <div class="actions">
+          <a href="manage.html" class="btn btn-ghost btn-sm">Go to /manage</a>
           <button type="button" class="btn btn-primary btn-sm" id="domainDoneBtn">Got it</button>
         </div>
       `;
