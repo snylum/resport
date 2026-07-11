@@ -210,7 +210,13 @@ function renderSkillTags(items, blockId, field) {
 function renderEntryList(items, blockId, field, cols) {
   const rows = (items || []).map((it, i) => `
     <div class="rb-entry-row">
-      ${cols.map(c => ceField(it[c.key] || '', field, blockId, { index: i, subfield: c.key, cls: c.cls })).join('')}
+      <div class="rb-entry-fields">
+        ${cols.map(c => `
+          <div class="rb-entry-subfield">
+            ${c.label ? `<span class="rb-entry-subfield-label">${esc(c.label)}</span>` : ''}
+            ${ceField(it[c.key] || '', field, blockId, { index: i, subfield: c.key, cls: c.cls })}
+          </div>`).join('')}
+      </div>
       <button class="li-remove-btn" data-action="remove-item" data-block="${blockId}" data-field="${field}" data-index="${i}" title="Remove" type="button">✕</button>
     </div>`).join('');
   return `<div class="rb-entry-list">${rows}</div>
@@ -332,11 +338,11 @@ function blockEditFieldsHTML(block) {
       return field('Skills', renderSkillTags(d.items, block.id, 'items'));
     case 'certifications':
       return field('Certifications', renderEntryList(d.items, block.id, 'items', [
-        { key: 'name', cls: 'ce-strong' }, { key: 'issuer', cls: 'ce-muted' }, { key: 'date', cls: 'ce-muted' }
+        { key: 'name', cls: 'ce-strong', label: 'Name' }, { key: 'issuer', cls: 'ce-muted', label: 'Issuer' }, { key: 'date', cls: 'ce-muted', label: 'Date' }
       ]));
     case 'languages':
       return field('Languages', renderEntryList(d.items, block.id, 'items', [
-        { key: 'name', cls: 'ce-strong' }, { key: 'level', cls: 'ce-muted' }
+        { key: 'name', cls: 'ce-strong', label: 'Language' }, { key: 'level', cls: 'ce-muted', label: 'Level' }
       ]));
     case 'gallery': {
       const thumbs = (d.photos || []).map((p, i) => `
@@ -358,7 +364,7 @@ function blockEditFieldsHTML(block) {
         + field('Caption (optional)', ceField(d.caption, 'caption', block.id));
     case 'links':
       return field('Links', renderEntryList(d.items, block.id, 'items', [
-        { key: 'label', cls: 'ce-strong' }, { key: 'url', cls: 'ce-muted' }
+        { key: 'label', cls: 'ce-strong', label: 'Label' }, { key: 'url', cls: 'ce-muted', label: 'URL' }
       ]));
     default:
       return '';
@@ -375,13 +381,15 @@ function canvasVerifyBadge(block) {
 }
 
 // Small "✓" pin shown in the corner of a gallery photo that has its
-// own proof attached — clicking it opens that photo's verification,
-// same view-only modal as the block-level badge above, just scoped
-// to one photo via data-photo-index instead of the whole block.
-function canvasPhotoVerifyBadge(block, photo, index) {
+// own proof attached. It's purely a visual indicator now — clicking
+// the photo (badge included, since it sits inside the same tile)
+// zooms the photo itself; for photo-type proof the zoom popup shows
+// the "Verified" + caption footer, and for link-type proof the whole
+// tile is a link that opens straight to that URL in a new tab.
+function canvasPhotoVerifyBadge(photo) {
   const v = photo.verify || { type: 'none' };
   if (v.type === 'none') return '';
-  return `<button class="pf-photo-verify-badge" data-action="view-verify" data-block="${block.id}" data-photo-index="${index}" title="View proof for this photo" type="button">✓</button>`;
+  return `<span class="pf-photo-verify-badge" title="Verified">✓</span>`;
 }
 
 function createResumeBlock(block) {
@@ -474,10 +482,12 @@ function createPortfolioBlock(block) {
         ? `<div class="pf-gallery-grid">${(block.data.photos || []).map((p, i) => {
             const pv = p.verify || { type: 'none' };
             const photoHref = pv.type === 'link' && pv.link ? (/^https?:\/\//i.test(pv.link) ? pv.link : `https://${pv.link}`) : null;
-            const badge = canvasPhotoVerifyBadge(block, p, i);
+            const badge = canvasPhotoVerifyBadge(p);
+            const hasProof = pv.type === 'photo' && !!pv.photo;
+            const captionAttr = hasProof && pv.label ? ` data-caption="${esc(pv.label)}"` : '';
             return photoHref
               ? `<a class="pf-gallery-item" href="${esc(photoHref)}" target="_blank" rel="noopener noreferrer" title="Open verification link">${badge}<img src="${esc(p.src)}" alt="" /></a>`
-              : `<div class="pf-gallery-item" data-action="zoom-photo" data-src="${esc(p.src)}" title="Click to zoom">${badge}<img src="${esc(p.src)}" alt="" /></div>`;
+              : `<div class="pf-gallery-item" data-action="zoom-photo" data-src="${esc(p.src)}" data-verified="${hasProof ? '1' : '0'}"${captionAttr} title="Click to zoom">${badge}<img src="${esc(p.src)}" alt="" /></div>`;
           }).join('')}</div>`
         : `<div class="pf-gallery-empty">No photos yet — add some from the sidebar.</div>`;
       break;
@@ -729,7 +739,7 @@ function handleTrackClick(e) {
     } else if (action === 'toggle-expand') {
       toggleBlockExpand(blockId);
     } else if (action === 'zoom-photo') {
-      openPhotoZoomModal(actionBtn.dataset.src);
+      openPhotoZoomModal(actionBtn.dataset.src, actionBtn.dataset.verified === '1', actionBtn.dataset.caption || '');
     }
     return;
   }
@@ -814,9 +824,15 @@ function openInfoModal(title, message) {
 }
 
 // ── 4a-i. Gallery photo zoom (lightbox) ────────────────────────
-function openPhotoZoomModal(src) {
+// The larger pop-up view of a gallery photo. If that photo has a
+// photo-type proof attached, a "✓ Verified" footer (plus its caption,
+// if any) is shown underneath the enlarged image.
+function openPhotoZoomModal(src, verified, caption) {
   if (!src) return;
-  openModal(`<div class="verify-modal-body pf-zoom-modal-body"><img src="${esc(src)}" alt="" class="pf-zoom-img" /></div>`);
+  const footer = verified
+    ? `<div class="pf-zoom-verified"><span class="pf-zoom-verified-check">✓ Verified</span>${caption ? `<p class="pf-zoom-caption">${esc(caption)}</p>` : ''}</div>`
+    : '';
+  openModal(`<div class="verify-modal-body pf-zoom-modal-body"><img src="${esc(src)}" alt="" class="pf-zoom-img" />${footer}</div>`);
 }
 
 // ── 4a. Verification: view proof ──────────────────────────────
@@ -1320,6 +1336,7 @@ function maybeShowRenewalReminder(data, username) {
   });
 }
 
+
 async function refreshSiteStatusBadge() {
   if (!el.siteStatusBadge) return;
   const username = getSavedUsername();
@@ -1404,7 +1421,12 @@ document.addEventListener('click', function (e) {
     var overlay = document.getElementById('modalOverlay');
     var content = document.getElementById('modalContent');
     var src = zoomEl.getAttribute('data-src');
-    content.innerHTML = '<div class="verify-modal-body pf-zoom-modal-body"><img src="' + src + '" class="pf-zoom-img" alt=""/></div>';
+    var verified = zoomEl.getAttribute('data-verified') === '1';
+    var caption = zoomEl.getAttribute('data-caption') || '';
+    var footer = verified
+      ? '<div class="pf-zoom-verified"><span class="pf-zoom-verified-check">\\u2713 Verified</span>' + (caption ? '<p class="pf-zoom-caption">' + caption + '</p>' : '') + '</div>'
+      : '';
+    content.innerHTML = '<div class="verify-modal-body pf-zoom-modal-body"><img src="' + src + '" class="pf-zoom-img" alt=""/>' + footer + '</div>';
     overlay.classList.remove('hidden');
     return;
   }
@@ -1652,6 +1674,92 @@ function renderStaticResumeBlock(block) {
   }
 }
 
+// Templates whose CSS ([data-template="..."] rules in editor.css)
+// specifically restyles the side column — these need layout "2" on
+// the thumbnail clone or their side-track styling never shows up.
+// Keep in sync with editor.css's .resume-paper[data-template="..."]
+// blocks that touch .side-track.
+const TEMPLATE_TWO_COL = new Set(['lasalle', 'creative', 'modern-sidebar', 'slate-sidebar', 'mono-grid', 'wide-photo-sidebar']);
+
+// Small, fixed sample content shared by every thumbnail — enough to
+// show name/header styling, a section title, and a couple of bullet
+// lines, which is where most templates' distinguishing rules live.
+function templateThumbSampleBlocks() {
+  return {
+    main: [
+      { id: 'th-sec', type: 'section', data: { title: 'Experience' } },
+      { id: 'th-exp', type: 'experience', data: {
+        company: 'Acme Co.', dates: '2022 — Now', role: 'Product Designer', location: 'Remote',
+        bullets: ['Led redesign of the core product', 'Grew activation by 24%']
+      } }
+    ],
+    side: [
+      { id: 'th-sec2', type: 'section', data: { title: 'Skills' } },
+      { id: 'th-skills', type: 'skills', data: { items: ['Figma', 'React'] } }
+    ]
+  };
+}
+
+// Builds one real .resume-paper element per template card — same
+// classes/markup renderStaticResumeBlock() feeds the actual canvas —
+// and scales it down with a CSS transform to fit the small thumbnail
+// box. Because it's the *real* element under the *real* CSS rules
+// (.resume-paper[data-template="..."] in editor.css), this can never
+// drift out of sync with what the canvas actually renders — unlike
+// the old hand-drawn tpl-line mockups, which were a second,
+// independently-maintained approximation.
+function renderTemplateThumbnails() {
+  const sample = templateThumbSampleBlocks();
+  document.querySelectorAll('.template-card[data-template]').forEach(card => {
+    const holder = card.querySelector('.tpl-live-thumb');
+    if (!holder) return;
+    const tpl = card.dataset.template;
+    const layout = TEMPLATE_TWO_COL.has(tpl) ? '2' : '1';
+    const mainHTML = sample.main.map(b => `<div class="resume-block block-${b.type}">${renderStaticResumeBlock(b)}</div>`).join('');
+    const sideHTML = layout === '2'
+      ? sample.side.map(b => `<div class="resume-block block-${b.type}">${renderStaticResumeBlock(b)}</div>`).join('')
+      : '';
+
+    const paper = document.createElement('div');
+    paper.className = 'resume-paper tpl-thumb-paper';
+    paper.setAttribute('data-template', tpl);
+    paper.setAttribute('data-layout', layout);
+    paper.setAttribute('data-header-align', 'left');
+    paper.setAttribute('data-date-align', 'right');
+    paper.setAttribute('data-title-style', 'plain');
+    paper.innerHTML = `
+      <header class="rb-header">
+        <div class="rb-header-text">
+          <h1 class="rb-name">Jamie Rivera</h1>
+          <div class="rb-title">Product Designer</div>
+          <div class="rb-contact-line">jamie@email.com • (555) 010-0101</div>
+        </div>
+      </header>
+      <div class="tracks-layout-${layout}">
+        <div class="col-track main-track">${mainHTML}</div>
+        <div class="col-track side-track">${sideHTML}</div>
+      </div>`;
+
+    holder.innerHTML = '';
+    holder.appendChild(paper);
+
+    // Scale the real, full-size paper down to fit the thumbnail box.
+    // Measured after append (needs real layout), and re-measured on
+    // resize since the card's own width can change with the sidebar.
+    const fit = () => {
+      const naturalWidth = paper.getBoundingClientRect().width / (paper._tplScale || 1);
+      const targetWidth = holder.clientWidth || 1;
+      const scale = naturalWidth ? targetWidth / naturalWidth : 1;
+      paper._tplScale = scale;
+      paper.style.transform = `scale(${scale})`;
+    };
+    fit();
+    if (window.ResizeObserver) {
+      new ResizeObserver(fit).observe(holder);
+    }
+  });
+}
+
 function renderStaticPortfolioBlock(block) {
   const bulletsHTML = (bullets) => `<ul class="rb-bullets">${(bullets || []).map(b => `<li>${esc(b)}</li>`).join('')}</ul>`;
 
@@ -1702,19 +1810,21 @@ function renderStaticPortfolioBlock(block) {
       if (!(block.data.photos || []).length) return '';
       const itemsHTML = block.data.photos.map((p, i) => {
         const pv = p.verify || { type: 'none' };
-        const photoHref = pv.type === 'link' && pv.link ? (/^https?:\/\//i.test(pv.link) ? pv.link : `https://${pv.link}`) : null;
-        let badge = '';
-        if (pv.type === 'photo' && pv.photo) {
-          const labelHTML = pv.label ? `<span class="pf-verify-label">${esc(pv.label)}</span>` : '';
-          badge = `<button class="pf-photo-verify-badge" data-verify-type="photo" data-verify-photo="${esc(pv.photo)}" data-verify-label="${esc(pv.label || '')}" type="button" title="View proof">✓${labelHTML}</button>`;
-        } else if (pv.type === 'link' && pv.link) {
+        // Link-type proof: no popup at all — the whole photo is just a
+        // link straight out to that URL in a new tab.
+        if (pv.type === 'link' && pv.link) {
           const safeHref = /^https?:\/\//i.test(pv.link) ? pv.link : `https://${pv.link}`;
-          const labelHTML = pv.label ? `<span class="pf-verify-label">${esc(pv.label)}</span>` : '';
-          badge = `<button class="pf-photo-verify-badge" data-verify-type="link" data-verify-link="${esc(safeHref)}" data-verify-label="${esc(pv.label || '')}" type="button" title="View proof">✓${labelHTML}</button>`;
+          const badge = `<span class="pf-photo-verify-badge" title="Verified">✓</span>`;
+          return `<a class="pf-gallery-item" href="${esc(safeHref)}" target="_blank" rel="noopener noreferrer">${badge}<img src="${esc(p.src)}" alt="" /></a>`;
         }
-        return photoHref
-          ? `<a class="pf-gallery-item" href="${esc(photoHref)}" target="_blank" rel="noopener noreferrer">${badge}<img src="${esc(p.src)}" alt="" /></a>`
-          : `<div class="pf-gallery-item" data-action="zoom-photo" data-src="${esc(p.src)}">${badge}<img src="${esc(p.src)}" alt="" /></div>`;
+        // Photo-type proof (or no proof): the photo just zooms into the
+        // usual larger pop-up. No caption/label sits on the thumbnail
+        // itself — only the checkmark. If there's a proof, the caption
+        // (if any) shows under a "✓ Verified" line inside that pop-up.
+        const hasProof = pv.type === 'photo' && !!pv.photo;
+        const badge = hasProof ? `<span class="pf-photo-verify-badge" title="Verified">✓</span>` : '';
+        const captionAttr = hasProof && pv.label ? ` data-caption="${esc(pv.label)}"` : '';
+        return `<div class="pf-gallery-item" data-action="zoom-photo" data-src="${esc(p.src)}" data-verified="${hasProof ? '1' : '0'}"${captionAttr}>${badge}<img src="${esc(p.src)}" alt="" /></div>`;
       }).join('');
       return `<div class="pf-card pf-gallery-card"><div class="pf-gallery-grid">${itemsHTML}</div></div>`;
     }
@@ -1864,26 +1974,17 @@ function refreshPublishToolbarButton() {
   btn.classList.remove('btn-ghost');
 }
 
-// Signed-out / not-yet-published visitors don't have a live site to
-// preview, so the "Preview" toolbar button doubles as "Save" for
-// them — an explicit, manual save of the current draft to the
-// person's Google account (separate from autosave, which only runs
-// once signed in — see scheduleAutosave). Once a site is actually
-// live, the button reverts to its normal Preview behavior. Called on
-// load and any time site status is refreshed.
+// Always a consistent, explicit manual "Save" action — saves the
+// current draft to the person's Google account. This used to flip to
+// "👀 Preview" once a site was live, which meant the same button did
+// two different things depending on state; keeping it as Save at all
+// times means people always know what clicking it will do.
 function refreshSaveOrPreviewButton() {
   const btn = document.getElementById('btnPreviewShowcase');
   if (!btn) return;
-  const isLive = !!(lastSiteStatusData && lastSiteStatusData.status === 'live');
-  if (isLive) {
-    btn.textContent = '👀 Preview';
-    btn.dataset.mode = 'preview';
-    btn.title = '';
-  } else {
-    btn.textContent = '💾 Save';
-    btn.dataset.mode = 'save';
-    btn.title = 'Save your progress to your Google account';
-  }
+  btn.textContent = '💾 Save';
+  btn.dataset.mode = 'save';
+  btn.title = 'Save your progress to your Google account';
 }
 
 // Explicit manual save, used by the "Save" toolbar button for anyone
@@ -2108,11 +2209,46 @@ function openPublishFeeModal(username) {
   `;
   openModal(html, (root) => {
     root.querySelector('#publishFeeBackBtn').addEventListener('click', () => openPublishModal());
-    root.querySelector('#publishFeeConfirmBtn').addEventListener('click', (e) => doPublish(username, e.target));
+    root.querySelector('#publishFeeConfirmBtn').addEventListener('click', () => openPublishPaymentModal(username));
   });
 }
 
-async function doPublish(username, confirmBtn) {
+// Shown right after "Pay & Publish" is confirmed — the same QR +
+// reference-number step already used for domain purchases (see
+// index.html's renderPaymentStep). Without this, clicking "Pay &
+// Publish" used to skip straight to doPublish() with no QR code and
+// no way to record a reference number, so an admin reviewing the
+// dashboard had nothing to match a payment against.
+function openPublishPaymentModal(username) {
+  const html = `
+    <h3 class="modal-title" id="modalTitle">Pay ${PUBLISH_FEE.currency}${PUBLISH_FEE.amount} to publish</h3>
+    <p class="modal-sub">Scan the QR below to pay <strong>${PUBLISH_FEE.currency}${PUBLISH_FEE.amount}</strong>, then enter the reference number from your payment so an admin can confirm it.</p>
+    <img src="payment-qr.png" alt="Payment QR code" width="220" height="220" style="display:block;margin:0 auto 1rem;border-radius:12px;border:1px solid rgba(0,0,0,0.08);" />
+    <input type="text" id="publishRefInput" class="field-input" placeholder="Payment reference number" autocomplete="off" />
+    <div class="username-status" id="publishRefStatus"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="publishRefLaterBtn" type="button">I'll do this later</button>
+      <button class="btn btn-secondary btn-sm" id="publishRefSubmitBtn" type="button">Submit reference & Publish</button>
+    </div>
+  `;
+  openModal(html, (root) => {
+    const status = root.querySelector('#publishRefStatus');
+    root.querySelector('#publishRefLaterBtn').addEventListener('click', () => {
+      doPublish(username, root.querySelector('#publishRefLaterBtn'), '');
+    });
+    root.querySelector('#publishRefSubmitBtn').addEventListener('click', (e) => {
+      const ref = root.querySelector('#publishRefInput').value.trim();
+      if (!ref) {
+        status.textContent = 'Enter your payment reference number.';
+        status.className = 'username-status warn';
+        return;
+      }
+      doPublish(username, e.target, ref);
+    });
+  });
+}
+
+async function doPublish(username, confirmBtn, referenceNumber) {
   confirmBtn.disabled = true;
   confirmBtn.textContent = 'Publishing…';
   const account = getSavedGoogleAccount();
@@ -2127,7 +2263,13 @@ async function doPublish(username, confirmBtn) {
         // rejected server-side too (the UI already prevents reaching
         // this point unless signed in).
         googleCredential: account ? account.credential : null,
-        html: buildPublishedSiteHTML(username)
+        html: buildPublishedSiteHTML(username),
+        // Purely informational — lets an admin match this submission
+        // against the payment shown on the QR step (see
+        // openPublishPaymentModal). It does NOT mark the site as paid
+        // by itself; only an admin's explicit "Mark as paid" in
+        // /admin does that (see /api/admin/set-paid).
+        buyerReferenceNumber: referenceNumber || ''
       })
     });
     if (!res.ok) throw new Error('no-backend');
@@ -2386,6 +2528,19 @@ function initSectionDragReorder() {
   let draggedId = null;
 
   items.forEach(item => {
+    // The whole item is draggable="true" so the header/handle can start
+    // a reorder from anywhere convenient — but that same draggable
+    // ancestor hijacks the browser's native text-selection drag when
+    // the mousedown starts inside a contenteditable field (bullets,
+    // company name, etc): instead of highlighting text, the browser
+    // starts dragging the item. Toggle draggable off right before that
+    // happens whenever the press starts inside an editable text field
+    // (or any other interactive control), and back on otherwise, so
+    // highlighting a bullet's text never gets mistaken for a reorder.
+    item.addEventListener('mousedown', (e) => {
+      item.draggable = !e.target.closest('.ce-field, input, textarea, button');
+    });
+
     item.addEventListener('dragstart', (e) => {
       draggedId = item.dataset.id;
       item.classList.add('dragging');
@@ -3147,6 +3302,7 @@ function syncCustomizeControls(design) {
 function initCustomizePanel() {
   populateFontSelects();
   populatePortfolioTemplateGallery();
+  renderTemplateThumbnails();
 
   document.querySelectorAll('.option-pill-row[data-target]').forEach(row => {
     const key = row.dataset.target;

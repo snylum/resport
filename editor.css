@@ -600,42 +600,29 @@ body {
   box-shadow: 0 0 0 2px var(--color-secondary) inset;
 }
 
-.tpl-preview {
+/* ── Live template thumbnails ───────────────────────────────
+   Each thumbnail is a real, scaled-down clone of .resume-paper
+   (see renderTemplateThumbnails in editor.js) so the picker is
+   always pixel-true to the actual canvas — it can no longer drift
+   out of sync the way the old hand-drawn tpl-line mockups could. */
+.tpl-live-thumb {
   height: 60px;
   background: #fff;
   border: 1px solid var(--color-border);
   margin-bottom: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 6px;
+  overflow: hidden;
+  position: relative;
 }
 
-.tpl-preview .tpl-line {
-  height: 4px;
-  background: #ccc;
-  flex-shrink: 0;
-}
-
-.tpl-preview .tpl-line.short {
-  width: 40%;
-}
-
-.tpl-preview.tpl-two-col {
-  flex-direction: row;
-  gap: 4px;
-}
-
-.tpl-preview.tpl-two-col .tpl-col {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-
-.tpl-preview.tpl-two-col .tpl-side {
-  flex: 0 0 34%;
+.tpl-thumb-paper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+  padding: 0.6rem;
+  border: 1px solid var(--color-border);
+  box-shadow: none;
+  pointer-events: none;
 }
 
 .tpl-card-name {
@@ -1295,14 +1282,16 @@ body {
   min-height: 4.5em;
 }
 
-/* Skill tags, bullets, and entry-list rows keep their own inline/pill
-   styling inside the sidebar accordion — they must NOT pick up the
-   boxed input look above (that selector only targets .ce-field that is
-   a *direct* child of .sd-field, so these nested ones are unaffected;
-   this rule is just an explicit belt-and-suspenders reset). */
+/* Skill tags and bullets keep their own inline/pill styling inside the
+   sidebar accordion — they must NOT pick up the boxed input look above
+   (that selector only targets .ce-field that is a *direct* child of
+   .sd-field, so these nested ones are unaffected; this rule is just an
+   explicit belt-and-suspenders reset). Entry-list rows (certifications,
+   languages, links) now intentionally opt INTO the boxed look instead,
+   via .rb-entry-subfield > .ce-field below, to stay visually consistent
+   with every other section's fill-in fields. */
 .sd-field .rb-skill-tag .ce-field,
-.sd-field .rb-bullets .ce-field,
-.sd-field .rb-entry-row .ce-field {
+.sd-field .rb-bullets .ce-field {
   display: inline-block;
   min-height: 0;
   padding: 0.1rem 0.15rem;
@@ -1311,6 +1300,25 @@ body {
   border-radius: 2px;
   min-width: 1.5em;
   cursor: text;
+}
+
+.rb-entry-subfield > .ce-field {
+  display: block;
+  min-height: 1.5em;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-surface);
+  font-size: 0.8rem;
+}
+
+.rb-entry-subfield > .ce-field:hover {
+  border-color: var(--rp-accent, var(--color-secondary));
+}
+
+.rb-entry-subfield > .ce-field:focus {
+  background: var(--color-surface);
+  box-shadow: 0 0 0 1px var(--rp-accent, var(--color-secondary));
 }
 
 /* ── Editable text affordances ──────────────────────────────── */
@@ -1384,22 +1392,56 @@ body {
   opacity: 1;
 }
 
-/* ── Generic entry list (certifications / languages) ──────────── */
+/* ── Generic entry list (certifications / languages / links) ───
+   Previously each row was a bare inline strip of unstyled text —
+   inconsistent with every other section's boxed inputs (Company,
+   Dates, Role, etc). Now each row is its own bordered card, and each
+   sub-field inside it gets the same small label + boxed-input
+   treatment as the rest of the sidebar form. */
 .rb-entry-list {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.5rem;
 }
 
 .rb-entry-row {
   display: flex;
-  align-items: baseline;
-  gap: 0.6rem;
-  font-size: 0.9em;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface-alt);
+}
+
+.rb-entry-fields {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.rb-entry-subfield {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1 1 120px;
+  min-width: 0;
+}
+
+.rb-entry-subfield-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
 }
 
 .rb-entry-row .li-remove-btn {
-  margin-left: auto;
+  margin-left: 0;
+  margin-top: 0.15rem;
+  flex-shrink: 0;
 }
 
 /* ── Add-item / remove-item controls (shown per block) ────────── */
@@ -1691,6 +1733,177 @@ body {
   border-bottom: 2px solid var(--rp-accent, var(--color-border));
   padding: 0.3rem 0;
   width: 100%;
+}
+
+/* Ivy Serif: traditional, tightly-kerned — a thin rule above and
+   below the header, snug name letter-spacing, underlined titles */
+.resume-paper[data-template="ivy-serif"] .rb-header {
+  border-top: 1px solid var(--rp-accent, var(--color-border));
+  border-bottom: 1px solid var(--rp-accent, var(--color-border));
+  padding: 0.6rem 0;
+}
+.resume-paper[data-template="ivy-serif"] .rb-name {
+  letter-spacing: -0.01em;
+  font-weight: 600;
+}
+.resume-paper[data-template="ivy-serif"] .rb-section-title {
+  letter-spacing: 0.01em;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.2rem;
+  display: block;
+}
+
+/* Slate Sidebar: cool-toned two column, sidebar on the LEFT this
+   time (unlike La Salle/Creative/Modern Sidebar, which sit on the
+   right) — achieved by flipping the flex order of the two tracks. */
+.resume-paper[data-template="slate-sidebar"] .side-track {
+  order: -1;
+  background: var(--rp-accent, #37474F);
+  color: #fff;
+  border-left: none;
+  border-right: var(--rp-col-border-w, 2px) solid var(--color-border);
+  padding: 1.25rem 1.5rem 1.25rem 1.25rem;
+}
+.resume-paper[data-template="slate-sidebar"] .side-track .rb-section-title,
+.resume-paper[data-template="slate-sidebar"] .side-track .rb-custom-title {
+  color: #fff;
+}
+.resume-paper[data-template="slate-sidebar"] .side-track .rb-dates,
+.resume-paper[data-template="slate-sidebar"] .side-track .rb-loc {
+  color: rgba(255,255,255,0.7);
+}
+.resume-paper[data-template="slate-sidebar"] .main-track {
+  padding-left: 0.25rem;
+}
+
+/* Condensed Grid: tight, high-density one-pager — every gap and
+   margin pulled in so more content fits per page. */
+.resume-paper[data-template="condensed-grid"] .rb-header {
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.6rem;
+}
+.resume-paper[data-template="condensed-grid"] .resume-block {
+  margin-bottom: 0.4rem;
+  padding-top: 0.15rem;
+  padding-bottom: 0.15rem;
+}
+.resume-paper[data-template="condensed-grid"] .rb-section-title {
+  margin-bottom: 0.3rem;
+  font-size: 1em;
+}
+.resume-paper[data-template="condensed-grid"] .rb-bullets {
+  margin-top: 0.15rem;
+}
+.resume-paper[data-template="condensed-grid"] .rb-bullets li {
+  margin-bottom: 0.05rem;
+}
+
+/* Soft Rounded: friendly, boxed sections — every content block
+   (except bare section-title dividers) sits in its own rounded card. */
+.resume-paper[data-template="soft-rounded"] .rb-header {
+  border-bottom: none;
+}
+.resume-paper[data-template="soft-rounded"] .rb-name {
+  font-weight: 700;
+}
+.resume-paper[data-template="soft-rounded"] .resume-block:not(.block-section) {
+  border: 1px solid var(--rp-accent, var(--color-border));
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+}
+.resume-paper[data-template="soft-rounded"] .rb-section-title {
+  border-radius: 999px;
+  background: var(--color-surface-alt);
+  padding: 0.2rem 0.75rem;
+  border-bottom: none;
+}
+
+/* Mono Grid: monospace throughout, boxed section titles, a tinted
+   boxed sidebar — dense two-column layout (sidebar stays on the
+   right, same side as the default order). */
+.resume-paper[data-template="mono-grid"] {
+  font-family: 'Courier New', ui-monospace, monospace;
+}
+.resume-paper[data-template="mono-grid"] .rb-name {
+  font-family: 'Courier New', ui-monospace, monospace;
+}
+.resume-paper[data-template="mono-grid"] .rb-section-title {
+  background: var(--color-surface-alt);
+  padding: 0.15rem 0.45rem;
+  border-bottom: none;
+}
+.resume-paper[data-template="mono-grid"] .side-track {
+  background: var(--color-surface-alt);
+  border-left: none;
+  padding: 1.1rem;
+}
+.resume-paper[data-template="mono-grid"] .resume-block {
+  margin-bottom: 0.6rem;
+}
+
+/* Gold Classic: warm accent, generous spacing — a classic centered-
+   rule header like Harvard/Elegant Serif, but roomier throughout. */
+.resume-paper[data-template="gold-classic"] .rb-header {
+  border-bottom: 1px solid var(--rp-accent, var(--color-border));
+  padding-bottom: 1.1rem;
+  margin-bottom: 1.6rem;
+}
+.resume-paper[data-template="gold-classic"] .rb-name {
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+.resume-paper[data-template="gold-classic"] .resume-block {
+  margin-bottom: 1.35rem;
+}
+.resume-paper[data-template="gold-classic"] .rb-section-title {
+  letter-spacing: 0.08em;
+  color: var(--rp-accent, var(--color-text));
+}
+
+/* Wide Photo Sidebar: sidebar on the LEFT (like Slate Sidebar) with
+   a large circular photo and roomier internal padding/gap. */
+.resume-paper[data-template="wide-photo-sidebar"] .side-track {
+  order: -1;
+  background: var(--rp-accent, #2E5339);
+  color: #fff;
+  border-left: none;
+  border-right: var(--rp-col-border-w, 2px) solid var(--color-border);
+  padding: 1.75rem 1.5rem;
+}
+.resume-paper[data-template="wide-photo-sidebar"] .side-track .rb-section-title,
+.resume-paper[data-template="wide-photo-sidebar"] .side-track .rb-custom-title {
+  color: #fff;
+}
+.resume-paper[data-template="wide-photo-sidebar"] .side-track .rb-dates,
+.resume-paper[data-template="wide-photo-sidebar"] .side-track .rb-loc {
+  color: rgba(255,255,255,0.75);
+}
+.resume-paper[data-template="wide-photo-sidebar"] .rb-header-photo-wrap {
+  border-radius: 50%;
+  width: 88px;
+  height: 88px;
+}
+.resume-paper[data-template="wide-photo-sidebar"] .rb-header {
+  gap: 1.5rem;
+}
+
+/* Petite Classic: small type, clean serif, compact rhythm. */
+.resume-paper[data-template="petite-classic"] {
+  font-size: calc(9.5pt * var(--rp-font-scale, 1));
+}
+.resume-paper[data-template="petite-classic"] .rb-name {
+  font-size: 1.6em;
+  letter-spacing: 0.01em;
+}
+.resume-paper[data-template="petite-classic"] .rb-section-title {
+  font-size: 0.95em;
+}
+.resume-paper[data-template="petite-classic"] .resume-block {
+  margin-bottom: 0.6rem;
+}
+.resume-paper[data-template="petite-classic"] .rb-header {
+  margin-bottom: 1rem;
+  padding-bottom: 0.7rem;
 }
 
 /* ── PDF export (print-to-PDF via window.print) ──────────────

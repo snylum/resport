@@ -811,6 +811,7 @@ ${resumeText}
 
     const username = String(body.username || '').toLowerCase().trim();
     const html = String(body.html || '');
+    const buyerReferenceNumber = String(body.buyerReferenceNumber || '').trim().slice(0, 120);
     // Signed in: verified Google email ties this username to an
     // account, so it can be updated later from any device by signing
     // in again. Signed out: published anonymously — same as before,
@@ -865,6 +866,11 @@ ${resumeText}
       status: nextStatus,
       updatedAt: new Date().toISOString(),
       createdAt: (existing && existing.createdAt) || new Date().toISOString(),
+      // Same idea as the domain flow's buyerReferenceNumber: the
+      // buyer's own claim of having paid, purely for an admin to match
+      // against the QR payment before calling /api/admin/set-paid.
+      // Never overwrites an existing one with a blank resubmission.
+      buyerReferenceNumber: buyerReferenceNumber || (existing && existing.buyerReferenceNumber) || '',
       ...(wasAlreadyLive ? { reviewedAt: new Date().toISOString(), reviewedBy: 'auto (already-approved update)' } : {})
     }));
 
