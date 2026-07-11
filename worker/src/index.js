@@ -367,6 +367,16 @@ ${resumeText}
       return json({ ok: false, error: 'That name is already taken.' }, 409);
     }
 
+    // Scaling one-time price: ₱199 for 1 month up to ₱599 for the max 12
+    // months (cheaper per month the longer you lock in). Requested months
+    // and the client-computed amount are recorded as what the person
+    // asked for; recomputing the amount server-side (rather than trusting
+    // the client figure outright) keeps a mismatched/tampered amount from
+    // sticking — the admin still confirms actual payment by hand before
+    // anything goes live.
+    const requestedMonths = Math.min(Math.max(Number(body.months) || 1, 1), 12);
+    const expectedAmount = Math.round(199 + (599 - 199) * (requestedMonths - 1) / 11);
+
     await env.SITES.put(`site:${username}`, JSON.stringify({
       kind: 'domain', // distinguishes a name-only reservation from a real portfolio ('kind' absent/'site') in the admin dashboard
       ownerEmail,
@@ -374,6 +384,8 @@ ${resumeText}
       liveHtml: null,
       status: 'pending',
       paid: false,
+      requestedMonths,
+      requestedAmount: expectedAmount,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }));
@@ -401,6 +413,42 @@ ${resumeText}
       paidUntil: record.paidUntil || null,
       paidDurationMonths: record.paidDurationMonths || null
     });
+  }
+
+  // Public showcase feed — every live *portfolio* (not a domain-only
+  // reservation, which has no site to show) gets listed here for the
+  // /showcase.html grid. No auth needed: this only ever exposes what's
+  // already publicly live at username.proves.work anyway. Active Job Hunter
+  // sites that are still within their paid window get flagged 'starred'
+  // so the showcase can list them first — everyone else shows as 'free'.
+  if (url.pathname === '/api/showcase' && request.method === 'GET') {
+    const list = await env.SITES.list({ prefix: 'site:' });
+    const now = Date.now();
+    const sites = await Promise.all(list.keys.map(async (k) => {
+      const record = await env.SITES.get(k.name, 'json');
+      if (!record || record.status !== 'live' || record.kind === 'domain' || !record.liveHtml) return null;
+      const starred = !!record.paid && (!record.paidUntil || new Date(record.paidUntil).getTime() > now);
+      // Pull a human-readable title/description out of the published
+      // HTML itself, since portfolios don't have separate structured
+      // metadata — falls back to the username if <title> is missing.
+      const titleMatch = record.liveHtml.match(/<title>([^<]*)<\/title>/i);
+      const descMatch = record.liveHtml.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["']/i);
+      return {
+        username: k.name.slice('site:'.length),
+        title: (titleMatch && titleMatch[1].trim()) || k.name.slice('site:'.length),
+        description: (descMatch && descMatch[1].trim()) || '',
+        tier: starred ? 'starred' : 'free',
+        updatedAt: record.updatedAt || null
+      };
+    }));
+    const filtered = sites.filter(Boolean);
+    // Starred (Active Job Hunter) portfolios first, most-recently-updated
+    // within each group after that.
+    filtered.sort((a, b) => {
+      if (a.tier !== b.tier) return a.tier === 'starred' ? -1 : 1;
+      return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0);
+    });
+    return json({ ok: true, sites: filtered });
   }
 
   if (url.pathname === '/api/publish' && request.method === 'POST') {
@@ -682,14 +730,16 @@ ${resumeText}
     const paid = !!body.paid;
     const referenceNumber = String(body.referenceNumber || '').trim().slice(0, 120);
     // How long this payment covers, in months — defaults to the
-    // standard publishing-fee validity window (see PUBLISH_FEE in
-    // editor.js) but an admin can override it per-site (e.g. a promo
-    // or a partial-period renewal).
-    const durationMonths = paid ? (Number(body.durationMonths) > 0 ? Number(body.durationMonths) : 3) : null;
+    // standard Active Job Hunter validity window (see PUBLISH_FEE in
+    // editor.js) but an admin can override it per-site (e.g. a promo,
+    // a domain-only reservation's requested months, or a partial-period
+    // renewal).
+    const durationMonths = paid ? (Number(body.durationMonths) > 0 ? Number(body.durationMonths) : 4) : null;
     // The peso (or whatever currency) amount actually received —
-    // purely a manual bookkeeping field, defaults to the standard fee
-    // but an admin can adjust it for discounts/promos/partial payments.
-    const amount = paid ? (Number(body.amount) >= 0 ? Number(body.amount) : 249) : null;
+    // purely a manual bookkeeping field, defaults to the standard Job
+    // Hunt Pass fee but an admin can adjust it for discounts/promos,
+    // partial payments, or a domain-only reservation's scaling price.
+    const amount = paid ? (Number(body.amount) >= 0 ? Number(body.amount) : 399) : null;
     const existing = await env.SITES.get(`site:${username}`, 'json');
     if (!existing) return json({ ok: false, error: 'Not found.' }, 404);
 

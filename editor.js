@@ -1894,7 +1894,7 @@ function openPublishModal() {
       // Already paid, approved, and within the paid window for THIS
       // exact address? This is just a content update, not a new
       // publish — skip the fee modal entirely and push the update
-      // straight through. Re-showing "Pay ₱249 & Publish" here would
+      // straight through. Re-showing "Pay ₱399 & Publish" here would
       // be charging someone again for something they already own.
       const alreadyPaidAndLive = (
         lastSiteStatusData &&
@@ -1916,12 +1916,12 @@ function openPublishModal() {
 // confirmation step before the actual publish request goes out.
 // (No real payment processor is wired up yet: "Pay & Publish" just
 // proceeds, the same way the rest of this prototype mocks payment.)
-const PUBLISH_FEE = { amount: 249, currency: '₱', validityMonths: 3 };
+const PUBLISH_FEE = { amount: 399, currency: '₱', validityMonths: 4 };
 
 function openPublishFeeModal(username) {
   const html = `
-    <h3 class="modal-title" id="modalTitle">One-time publishing fee</h3>
-    <p class="modal-sub">Keeping <strong>${esc(username)}.${PUBLISH_APEX}</strong> live costs a one-time fee of <strong>${PUBLISH_FEE.currency}${PUBLISH_FEE.amount}</strong>, valid for <strong>${PUBLISH_FEE.validityMonths} months</strong>. After that, republish (same fee) to keep your address live.</p>
+    <h3 class="modal-title" id="modalTitle">Active Job Hunter</h3>
+    <p class="modal-sub">Keeping <strong>${esc(username)}.${PUBLISH_APEX}</strong> live — plus a ★ starred, front-of-line spot in the Showcase — costs a one-time fee of <strong>${PUBLISH_FEE.currency}${PUBLISH_FEE.amount}</strong>, valid for <strong>${PUBLISH_FEE.validityMonths} months</strong> (perfect timing for a job hunt). After that, republish (same fee) to keep your address live.</p>
     <p class="modal-sub" style="font-size:0.8rem;">This covers review, hosting, and abuse protection for your subdomain. No recurring charge — it simply expires after ${PUBLISH_FEE.validityMonths} months unless renewed.</p>
     <div class="modal-actions">
       <button class="btn btn-ghost btn-sm" id="publishFeeBackBtn" type="button">Back</button>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dazed">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Showcase — proves.work</title>
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <link rel="stylesheet" href="dazed.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="showcase.css" />
+</head>
+<body>
+
+  <!-- NAV (fixed, always visible) -->
+  <nav class="site-nav">
+    <a href="index.html" class="nav-logo">
+      <img src="favicon.png" alt="" class="logo-dot" />proves.work
+    </a>
+    <ul class="nav-links">
+      <li><a href="showcase.html" style="color:var(--color-text)">Showcase</a></li>
+      <li><a href="index.html#slide-4">Pricing</a></li>
+      <li><a href="editor.html" class="btn btn-primary btn-sm">Open Editor →</a></li>
+    </ul>
+  </nav>
+
+  <main class="showcase-wrap">
+    <header class="showcase-hero">
+      <p class="eyebrow">Showcase</p>
+      <h1>Real people. Real proof.</h1>
+      <p class="showcase-sub">Every profile below is a live <strong>.proves.work</strong> portfolio, published by someone actually job hunting. <span class="showcase-legend-inline">★ Active Job Hunter</span> profiles get a starred, front-of-line spot.</p>
+    </header>
+
+    <div class="showcase-filters">
+      <button type="button" class="chip active" data-filter="all">All</button>
+      <button type="button" class="chip" data-filter="starred">★ Active Job Hunter</button>
+      <button type="button" class="chip" data-filter="free">Free</button>
+      <input type="text" id="showcaseSearch" class="showcase-search" placeholder="Search name or role…" autocomplete="off" />
+    </div>
+
+    <div id="showcaseState" class="showcase-state">Loading portfolios…</div>
+    <div id="showcaseGrid" class="showcase-grid" hidden></div>
+  </main>
+
+  <footer class="showcase-footer">
+    <p>© 2026 proves.work · Built with ❤️ · <a href="editor.html">Publish yours →</a></p>
+  </footer>
+
+  <script src="showcase.js"></script>
+</body>
+</html>
