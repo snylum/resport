@@ -1891,19 +1891,24 @@ function openPublishModal() {
 
     confirmBtn.addEventListener('click', () => {
       const username = slugifyUsername(input.value);
-      // Already paid, approved, and within the paid window for THIS
-      // exact address? This is just a content update, not a new
-      // publish — skip the fee modal entirely and push the update
-      // straight through. Re-showing "Pay ₱399 & Publish" here would
-      // be charging someone again for something they already own.
-      const alreadyPaidAndLive = (
+      // Already paid for THIS exact address, and not rejected/deleted?
+      // This is just a content update (or a resubmission still awaiting
+      // review), not a fresh publish — skip the fee modal entirely and
+      // push the update straight through. Re-showing "Pay ₱399 &
+      // Publish" here would be charging someone again for something
+      // they already own, which used to happen for anyone whose site
+      // was marked paid in /admin but not yet separately approved to
+      // "live" (paid + pending is still "already paid").
+      const alreadyPaid = (
         lastSiteStatusData &&
-        lastSiteStatusData.status === 'live' &&
+        lastSiteStatusData.status !== 'rejected' &&
+        lastSiteStatusData.status !== 'deleted' &&
+        lastSiteStatusData.status !== 'draft' &&
         lastSiteStatusData.paid &&
         username === getSavedUsername() &&
         (!lastSiteStatusData.paidUntil || new Date(lastSiteStatusData.paidUntil).getTime() > Date.now())
       );
-      if (alreadyPaidAndLive) {
+      if (alreadyPaid) {
         doPublish(username, confirmBtn);
       } else {
         openPublishFeeModal(username);

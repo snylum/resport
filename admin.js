@@ -435,10 +435,22 @@ function domainPriceForMonths(months) {
   return Math.round(199 + (599 - 199) * (m - 1) / 11);
 }
 
+// Active Job Hunter is priced flat at ₱399 for its standard 4-month
+// window — scaled proportionally (≈₱99.75/mo) if an admin picks a
+// different duration for a promo, partial period, or renewal.
+function sitePriceForMonths(months) {
+  const m = Math.max(Number(months) || 1, 1);
+  return Math.round((399 / 4) * m);
+}
+
+function priceForMonths(kind, months) {
+  return kind === 'domain' ? domainPriceForMonths(months) : sitePriceForMonths(months);
+}
+
 function openMarkPaidModal(username, currentRef, kind = 'site', requestedMonths) {
   const isDomain = kind === 'domain';
   const defaultMonths = isDomain ? (Number(requestedMonths) || 12) : 4;
-  const defaultAmount = isDomain ? domainPriceForMonths(defaultMonths) : 399;
+  const defaultAmount = priceForMonths(kind, defaultMonths);
   openModal(`
     <h3 class="modal-title" id="modalTitle">Mark @${esc(username)} as paid</h3>
     <p class="modal-sub">${isDomain
@@ -467,13 +479,11 @@ function openMarkPaidModal(username, currentRef, kind = 'site', requestedMonths)
     </div>
   `, (root) => {
     root.querySelector('#cancelPaidBtn').addEventListener('click', closeModal);
-    if (isDomain) {
-      // Nudge the amount to the standard scaling rate as the admin changes
-      // duration — still freely editable for promos/partial payments.
-      root.querySelector('#paidDurationSelect').addEventListener('change', (e) => {
-        root.querySelector('#paidAmountInput').value = domainPriceForMonths(e.target.value);
-      });
-    }
+    // Nudge the amount to the standard scaling rate as the admin changes
+    // duration — still freely editable for promos/partial payments.
+    root.querySelector('#paidDurationSelect').addEventListener('change', (e) => {
+      root.querySelector('#paidAmountInput').value = priceForMonths(kind, e.target.value);
+    });
     root.querySelector('#confirmPaidBtn').addEventListener('click', () => {
       const ref = root.querySelector('#paidRefInput').value.trim();
       const durationMonths = Number(root.querySelector('#paidDurationSelect').value) || (isDomain ? 12 : 4);
