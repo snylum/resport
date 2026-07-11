@@ -1,13 +1,3 @@
-/* ============================================================
-   portfolio.css — the "portfolio site" canvas + verification UI
-   ============================================================
-   This is the live, editable stand-in for what visitors see on
-   your published proves.work site. It intentionally does NOT look
-   like a sheet of paper — it's a scrollable one-page site: a hero,
-   then a stack of cards. Uses the same --color-*/--shadow tokens
-   as the rest of the app (dazed.css) so it reads as one product,
-   just a different "page" of it.
-   ============================================================ */
 
 .canvas-zoom-target {
   position: absolute;
