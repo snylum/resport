@@ -1336,10 +1336,17 @@ body {
   min-height: 0;
   padding: 0.1rem 0.15rem;
   border: none;
+  border-bottom: 1.5px dashed var(--color-border);
   background: none;
   border-radius: 2px;
-  min-width: 1.5em;
+  min-width: 3em;
   cursor: text;
+}
+
+.sd-field .rb-skill-tag .ce-field:focus,
+.sd-field .rb-bullets .ce-field:focus {
+  border-bottom-style: solid;
+  border-bottom-color: var(--rp-accent, var(--color-secondary));
 }
 
 .rb-entry-subfield > .ce-field {
@@ -1616,16 +1623,18 @@ body {
    Verified: a solid filled checkmark, the same "confirmed" language
    used elsewhere in the app (e.g. the section-toolbar ✓ button). */
 .rb-skill-tag .sd-gallery-thumb-verify {
-  width: 16px;
   height: 16px;
-  padding: 0;
-  border-radius: 50%;
+  width: auto;
+  min-width: 16px;
+  padding: 0 5px;
+  border-radius: 8px;
   border: 1.5px dashed var(--color-border);
   background: transparent;
   color: var(--color-text-muted);
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   font-weight: 700;
   line-height: 1;
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1636,6 +1645,10 @@ body {
   color: var(--pf-accent, var(--color-primary));
 }
 .rb-skill-tag .sd-gallery-thumb-verify.is-verified {
+  width: 16px;
+  min-width: 16px;
+  padding: 0;
+  border-radius: 50%;
   border-style: solid;
   border-color: var(--color-secondary, #1a8f5c);
   background: var(--color-secondary, #1a8f5c);

@@ -17,7 +17,7 @@
   <meta name="twitter:title" content="proves.work — Verifiable portfolios for modern professionals" />
   <meta name="twitter:description" content="Build a verifiable portfolio in minutes and publish it to your own yourname.proves.work address." />
   <link rel="icon" type="image/png" href="favicon.png" />
-  <link rel="icon" href="/favicon/favicon.ico" sizes="any" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
   <link rel="icon" type="image/png" sizes="192x192" href="/favicon/android-chrome-192x192.png" />
@@ -736,10 +736,18 @@
         statusLine.className = 'status-line';
         checkTimer = setTimeout(async () => {
           try {
-            const res = await fetch(`/api/check-username?u=${encodeURIComponent(val)}`);
+            const acc = getSavedGoogleAccount();
+            const res = await fetch('/api/check-username', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ username: val, googleCredential: acc ? acc.credential : undefined })
+            });
             const data = await res.json();
-            statusLine.textContent = data.available ? `${val}.proves.work is available` : 'That name is taken or invalid.';
-            statusLine.className = `status-line ${data.available ? 'ok' : 'warn'}`;
+            const isOk = data.available || data.ownedByYou;
+            statusLine.textContent = isOk
+              ? `${val}.proves.work is available`
+              : (data.reason === 'invalid' ? 'That name is invalid.' : 'That name is already taken.');
+            statusLine.className = `status-line ${isOk ? 'ok' : 'warn'}`;
           } catch {
             statusLine.textContent = "Couldn't check availability — try again.";
             statusLine.className = 'status-line warn';

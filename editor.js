@@ -348,7 +348,7 @@ function verifyControlHTML(block) {
   if (v.type !== 'none') {
     const labelHTML = v.label ? `<span class="pf-verify-label">${esc(v.label)}</span>` : '';
     return `
-      <button class="pf-verify-badge" data-action="view-verify" data-block="${block.id}" type="button">${CHECK_ICON}Verified${labelHTML}</button>
+      <button class="pf-verify-badge" data-action="view-verify" data-block="${block.id}" type="button"><span class="pf-verify-check">${CHECK_ICON}</span>Verified${labelHTML}</button>
       <button class="pf-verify-edit" data-action="edit-verify" data-block="${block.id}" title="Edit verification" type="button">✎</button>`;
   }
   return `<button class="pf-verify-add" data-action="edit-verify" data-block="${block.id}" type="button">+ Add proof</button>`;
@@ -483,7 +483,7 @@ function canvasVerifyBadge(block, index) {
   if (v.type === 'none') return '';
   const labelHTML = v.label ? `<span class="pf-verify-label">${esc(v.label)}</span>` : '';
   const idxAttr = index != null ? ` data-photo-index="${index}"` : '';
-  return `<div class="pf-verify"><button class="pf-verify-badge" data-action="view-verify" data-block="${block.id}"${idxAttr} type="button">${CHECK_ICON}Verified${labelHTML}</button></div>`;
+  return `<div class="pf-verify"><button class="pf-verify-badge" data-action="view-verify" data-block="${block.id}"${idxAttr} type="button"><span class="pf-verify-check">${CHECK_ICON}</span>Verified${labelHTML}</button></div>`;
 }
 
 // Compact inline version for entry-list rows (certifications, languages)
@@ -495,14 +495,21 @@ function canvasEntryVerifyBadge(block, index) {
 }
 
 // Small "✓" pin shown in the corner of a gallery photo that has its
-// own proof attached. It's purely a visual indicator now — clicking
-// the photo (badge included, since it sits inside the same tile)
-// zooms the photo itself; for photo-type proof the zoom popup shows
-// the "Verified" + caption footer, and for link-type proof the whole
-// tile is a link that opens straight to that URL in a new tab.
+// own proof attached. The photo tile itself always just zooms the
+// image on click. For link-type proof, the checkmark badge is its
+// own clickable control — only clicking the checkmark opens the
+// verification URL (in a new tab); clicking anywhere else on the
+// tile (including the rest of the badge's surrounding photo) still
+// zooms the photo like normal. For photo-type proof the badge stays
+// a plain, non-interactive indicator (the zoom popup itself shows
+// the "Verified" + caption footer).
 function canvasPhotoVerifyBadge(photo) {
   const v = photo.verify || { type: 'none' };
   if (v.type === 'none') return '';
+  if (v.type === 'link' && v.link) {
+    const safeHref = /^https?:\/\//i.test(v.link) ? v.link : `https://${v.link}`;
+    return `<button class="pf-photo-verify-badge is-link" data-action="open-verify-link" data-href="${esc(safeHref)}" type="button" title="Open verification link">${CHECK_ICON}</button>`;
+  }
   return `<span class="pf-photo-verify-badge" title="Verified">${CHECK_ICON}</span>`;
 }
 
@@ -601,13 +608,10 @@ function createPortfolioBlock(block) {
       innerHTML = (block.data.photos || []).length
         ? `<div class="pf-gallery-grid">${(block.data.photos || []).map((p, i) => {
             const pv = p.verify || { type: 'none' };
-            const photoHref = pv.type === 'link' && pv.link ? (/^https?:\/\//i.test(pv.link) ? pv.link : `https://${pv.link}`) : null;
             const badge = canvasPhotoVerifyBadge(p);
             const hasProof = pv.type === 'photo' && !!pv.photo;
             const captionAttr = hasProof && pv.label ? ` data-caption="${esc(pv.label)}"` : '';
-            return photoHref
-              ? `<a class="pf-gallery-item" href="${esc(photoHref)}" target="_blank" rel="noopener noreferrer" title="Open verification link">${badge}<img src="${esc(p.src)}" alt="" /></a>`
-              : `<div class="pf-gallery-item" data-action="zoom-photo" data-src="${esc(p.src)}" data-verified="${hasProof ? '1' : '0'}"${captionAttr} title="Click to zoom">${badge}<img src="${esc(p.src)}" alt="" /></div>`;
+            return `<div class="pf-gallery-item" data-action="zoom-photo" data-src="${esc(p.src)}" data-verified="${hasProof ? '1' : '0'}"${captionAttr} title="Click to zoom">${badge}<img src="${esc(p.src)}" alt="" /></div>`;
           }).join('')}</div>`
         : `<div class="pf-gallery-empty">No photos yet — add some from the sidebar.</div>`;
       break;
@@ -886,6 +890,8 @@ function handleTrackClick(e) {
       toggleBlockExpand(blockId);
     } else if (action === 'zoom-photo') {
       openPhotoZoomModal(actionBtn.dataset.src, actionBtn.dataset.verified === '1', actionBtn.dataset.caption || '');
+    } else if (action === 'open-verify-link') {
+      if (actionBtn.dataset.href) window.open(actionBtn.dataset.href, '_blank', 'noopener,noreferrer');
     }
     return;
   }
@@ -1615,6 +1621,12 @@ function slugifyUsername(str) {
 // whole editor. No dependency on Store/editor.js.
 const PUBLISHED_PAGE_SCRIPT = `
 document.addEventListener('click', function (e) {
+  var linkBadge = e.target.closest('[data-action="open-verify-link"]');
+  if (linkBadge) {
+    var href = linkBadge.getAttribute('data-href');
+    if (href) window.open(href, '_blank', 'noopener,noreferrer');
+    return;
+  }
   var zoomEl = e.target.closest('[data-action="zoom-photo"]');
   if (zoomEl) {
     var overlay = document.getElementById('modalOverlay');
@@ -2035,7 +2047,7 @@ function renderStaticPortfolioBlockInner(block) {
     if (!v || v.type === 'none') return '';
     const labelHTML = v.label ? `<span class="pf-verify-label">${esc(v.label)}</span>` : '';
     const cls = small ? 'pf-verify-badge pf-verify-badge-sm' : 'pf-verify-badge';
-    const text = small ? CHECK_ICON : `${CHECK_ICON}Verified${labelHTML}`;
+    const text = small ? CHECK_ICON : `<span class="pf-verify-check">${CHECK_ICON}</span>Verified${labelHTML}`;
     if (v.type === 'photo' && v.photo) {
       return `<button class="${cls}" data-verify-type="photo" data-verify-photo="${esc(v.photo)}" data-verify-label="${esc(v.label || '')}" type="button" title="View proof">${text}</button>`;
     }
@@ -2101,19 +2113,21 @@ function renderStaticPortfolioBlockInner(block) {
       if (!(block.data.photos || []).length) return '';
       const itemsHTML = block.data.photos.map((p, i) => {
         const pv = p.verify || { type: 'none' };
-        // Link-type proof: no popup at all — the whole photo is just a
-        // link straight out to that URL in a new tab.
+        // The photo tile always zooms into the usual larger pop-up on
+        // click. Link-type proof instead gets its own clickable
+        // checkmark badge — only clicking that checkmark opens the
+        // verification URL in a new tab; the rest of the tile still
+        // zooms. Photo-type proof keeps a plain, non-interactive
+        // checkmark, and its caption (if any) shows under a
+        // "✓ Verified" line inside the zoom pop-up.
+        let badge = '';
         if (pv.type === 'link' && pv.link) {
           const safeHref = /^https?:\/\//i.test(pv.link) ? pv.link : `https://${pv.link}`;
-          const badge = `<span class="pf-photo-verify-badge" title="Verified">${CHECK_ICON}</span>`;
-          return `<a class="pf-gallery-item" href="${esc(safeHref)}" target="_blank" rel="noopener noreferrer">${badge}<img src="${esc(p.src)}" alt="" /></a>`;
+          badge = `<button class="pf-photo-verify-badge is-link" data-action="open-verify-link" data-href="${esc(safeHref)}" type="button" title="Open verification link">${CHECK_ICON}</button>`;
+        } else if (pv.type === 'photo' && pv.photo) {
+          badge = `<span class="pf-photo-verify-badge" title="Verified">${CHECK_ICON}</span>`;
         }
-        // Photo-type proof (or no proof): the photo just zooms into the
-        // usual larger pop-up. No caption/label sits on the thumbnail
-        // itself — only the checkmark. If there's a proof, the caption
-        // (if any) shows under a "✓ Verified" line inside that pop-up.
         const hasProof = pv.type === 'photo' && !!pv.photo;
-        const badge = hasProof ? `<span class="pf-photo-verify-badge" title="Verified">${CHECK_ICON}</span>` : '';
         const captionAttr = hasProof && pv.label ? ` data-caption="${esc(pv.label)}"` : '';
         return `<div class="pf-gallery-item" data-action="zoom-photo" data-src="${esc(p.src)}" data-verified="${hasProof ? '1' : '0'}"${captionAttr}>${badge}<img src="${esc(p.src)}" alt="" /></div>`;
       }).join('');
@@ -3826,6 +3840,14 @@ function initCustomizePanel() {
 // timing to notice the canvas area changed size.
 let forceCanvasRefit = () => {};
 let resetZoomOnModeSwitch = () => {};
+// Called by the sidebar resizer drag: unlike forceCanvasRefit (which
+// only ever shrinks a manually-zoomed-in view down if it no longer
+// fits, but otherwise leaves it exactly as the person left it —
+// including happily overlapping the canvas edges), adjusting the left
+// column should always snap the preview back to the normal, fully
+// spaced-out fit-to-window view, the same as clicking the zoom
+// percentage label would.
+let refitToFitOnLayoutChange = () => {};
 
 function initZoomControls() {
   const MIN_ZOOM = 25;
@@ -4000,6 +4022,10 @@ function initZoomControls() {
     fitMode = true;
     refit();
   };
+  refitToFitOnLayoutChange = () => {
+    fitMode = true;
+    refit();
+  };
 
   // Belt-and-suspenders on top of the ResizeObservers above: content
   // (sections, photos, template swaps) can change the document's
@@ -4063,10 +4089,12 @@ function initSidebarResizer() {
     pct = Math.min(MAX_PCT, maxPctForCanvasRoom, Math.max(MIN_PCT, pct));
     el.editorSidebar.style.width = `${pct}%`;
     // Recompute the fit immediately, in the same tick as the width
-    // change — don't wait for ResizeObserver's own timing, so a
-    // manually-zoomed document shrinks to stay fully visible in
-    // real time as the sidebar (and available canvas space) changes.
-    forceCanvasRefit();
+    // change — don't wait for ResizeObserver's own timing. Dragging
+    // the left column always snaps the preview back to the normal
+    // spaced-out fit-to-window view (even if it had been manually
+    // zoomed in past the point of overlapping the canvas edges),
+    // rather than just clamping a zoomed-in view down bit by bit.
+    refitToFitOnLayoutChange();
   });
 
   document.addEventListener('mouseup', () => {

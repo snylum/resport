@@ -723,6 +723,20 @@
   max-width: min(640px, 100%);
   width: 100%;
 }
+/* The per-card width cap above is what actually made "wide"/"full"
+   content-width look identical to "contained" — every card was still
+   clamped to 640px regardless of how much extra room the page itself
+   was given (see the .pf-sections max-width rules further down), so
+   left/center/right alignment had nowhere further to spread out into.
+   Scale the cap itself along with the chosen content width instead. */
+.portfolio-site[data-content-width="wide"] .pf-sections > [data-align],
+.portfolio-site[data-content-width="wide"] .pf-slide-inner > [data-align] {
+  max-width: min(920px, 100%);
+}
+.portfolio-site[data-content-width="full"] .pf-sections > [data-align],
+.portfolio-site[data-content-width="full"] .pf-slide-inner > [data-align] {
+  max-width: 100%;
+}
 .pf-sections > [data-align="left"],
 .pf-slide-inner > [data-align="left"] {
   align-self: flex-start;
@@ -1075,6 +1089,17 @@
   box-shadow: 0 2px 6px rgba(0,0,0,0.25);
   pointer-events: none;
 }
+/* Link-proof variant: unlike the plain indicator above, this one is a
+   real button — only the checkmark itself opens the verification URL,
+   while the rest of the photo tile still zooms as usual. */
+.pf-photo-verify-badge.is-link {
+  pointer-events: auto;
+  cursor: pointer;
+  appearance: none;
+}
+.pf-photo-verify-badge.is-link:hover {
+  transform: scale(1.1);
+}
 
 /* Bigger modal-box variant for the gallery photo lightbox — the
    default 460px cap was sized for small proof-edit forms, not a
@@ -1205,22 +1230,41 @@
 .pf-verify-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  background: var(--color-success);
-  color: #fff;
-  border: 2px solid var(--color-border);
-  box-shadow: 3px 3px 0 0 var(--color-border);
-  font-weight: 700;
+  gap: 0.35rem;
+  background: transparent;
+  color: var(--color-text);
+  border: none;
+  box-shadow: none;
+  font-weight: 600;
   font-size: 0.8rem;
-  padding: 0.35rem 0.7rem;
+  padding: 0.1rem 0;
   cursor: pointer;
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  transition: opacity 0.1s ease;
   font-family: var(--font-sans);
 }
 
 .pf-verify-badge:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0 0 var(--color-border);
+  opacity: 0.75;
+}
+
+/* The round filled checkmark itself — this is the "badge" part,
+   styled after the small circular verified checkmarks on social
+   platforms like Twitter/X, rather than one big bordered rectangle
+   wrapping the whole "Verified" label. */
+.pf-verify-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--pf-accent, var(--color-primary));
+  color: #fff;
+}
+.pf-verify-check .pf-check-icon {
+  width: 9px;
+  height: 9px;
 }
 
 .pf-verify-label {
