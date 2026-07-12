@@ -892,7 +892,18 @@ ${resumeText}
     const wasAlreadyLive = !!existing && existing.status === 'live';
     const nextStatus = wasAlreadyLive ? 'live' : 'pending';
 
+    // A soft-deleted record (status: 'deleted') still holds everything
+    // that mattered before the delete — paid/paidUntil/payments/kind/
+    // redirectUrl/etc. When the original owner republishes to reclaim
+    // the same username, that history must carry forward: spread
+    // `existing` first so nothing on the record is lost, then layer the
+    // fields this publish actually changes on top. (Previously this
+    // built a brand-new object from scratch, silently wiping `paid` —
+    // so a site that had already been paid for came back from a
+    // delete+republish as unpaid, showing the expired-plan page even
+    // though it had a valid paidUntil before it was deleted.)
     await env.SITES.put(`site:${username}`, JSON.stringify({
+      ...existing,
       ownerEmail: ownerEmail || (existing ? existing.ownerEmail : null) || null,
       html,
       // liveHtml stays whatever was last *approved* unless this publish
@@ -902,6 +913,9 @@ ${resumeText}
       status: nextStatus,
       updatedAt: new Date().toISOString(),
       createdAt: (existing && existing.createdAt) || new Date().toISOString(),
+      // A republish always resurrects a soft-deleted record back into
+      // real use, so it shouldn't still read as deleted-at-some-point.
+      deletedAt: null,
       // Same idea as the domain flow's buyerReferenceNumber: the
       // buyer's own claim of having paid, purely for an admin to match
       // against the QR payment before calling /api/admin/set-paid.
@@ -1174,12 +1188,12 @@ ${resumeText}
     // editor.js) but an admin can override it per-site (e.g. a promo,
     // a domain-only reservation's requested months, or a partial-period
     // renewal).
-    const durationMonths = paid ? (Number(body.durationMonths) > 0 ? Number(body.durationMonths) : 4) : null;
+    const durationMonths = paid ? (Number(body.durationMonths) > 0 ? Number(body.durationMonths) : 3) : null;
     // The peso (or whatever currency) amount actually received —
     // purely a manual bookkeeping field, defaults to the standard Job
     // Hunt Pass fee but an admin can adjust it for discounts/promos,
     // partial payments, or a domain-only reservation's scaling price.
-    const amount = paid ? (Number(body.amount) >= 0 ? Number(body.amount) : 399) : null;
+    const amount = paid ? (Number(body.amount) >= 0 ? Number(body.amount) : 249) : null;
     const existing = await env.SITES.get(`site:${username}`, 'json');
     if (!existing) return json({ ok: false, error: 'Not found.' }, 404);
 

@@ -678,6 +678,8 @@ body {
 .price-name { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
 .price-amount { font-family: var(--font-display); font-size: 2.2rem; font-weight: 700; line-height: 1; }
 .price-amount span { font-size: 0.875rem; font-weight: 400; color: var(--color-text-muted); }
+.price-amount-row { display: flex; align-items: baseline; gap: 0.5rem; }
+.price-was { font-size: 1.1rem; font-weight: 400; color: var(--color-text-muted); text-decoration: line-through; }
 
 .price-features {
   list-style: none;

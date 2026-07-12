@@ -542,12 +542,12 @@ function domainPriceForMonths(months) {
   return Math.round(199 + (599 - 199) * (m - 1) / 11);
 }
 
-// Active Job Hunter is priced flat at ₱399 for its standard 4-month
-// window — scaled proportionally (≈₱99.75/mo) if an admin picks a
+// Active Job Hunter is priced flat at ₱249 for its standard 3-month
+// window — scaled proportionally (₱83/mo) if an admin picks a
 // different duration for a promo, partial period, or renewal.
 function sitePriceForMonths(months) {
   const m = Math.max(Number(months) || 1, 1);
-  return Math.round((399 / 4) * m);
+  return Math.round((249 / 3) * m);
 }
 
 function priceForMonths(kind, months) {
@@ -557,13 +557,13 @@ function priceForMonths(kind, months) {
 function openMarkPaidModal(username, currentRef, kind = 'site', requestedMonths, currentStatus) {
   const isDomain = kind === 'domain';
   const needsApproval = currentStatus === 'pending';
-  const defaultMonths = isDomain ? (Number(requestedMonths) || 12) : 4;
+  const defaultMonths = isDomain ? (Number(requestedMonths) || 12) : 3;
   const defaultAmount = priceForMonths(kind, defaultMonths);
   openModal(`
     <h3 class="modal-title" id="modalTitle">Mark @${esc(username)} as paid</h3>
     <p class="modal-sub">${isDomain
       ? `Domain-only reservation — scaling rate from ₱199 (1 mo) to ₱599 (12 mo, max). ${requestedMonths ? `They requested ${requestedMonths} month${requestedMonths > 1 ? 's' : ''}.` : ''} Adjust if this was a promo or partial payment.`
-      : 'Active Job Hunter — standard rate is ₱399 for 4 months. Record what was actually received, how long it covers, and optionally a reference number for your own records.'}</p>
+      : 'Active Job Hunter — standard rate is ₱249 for 3 months. Record what was actually received, how long it covers, and optionally a reference number for your own records.'}</p>
     ${needsApproval ? `<p class="modal-sub" style="font-size:0.8rem;">This site is still <strong>pending</strong> — marking it paid will also approve it live, otherwise it stays invisible (no showcase badge) despite being paid.</p>` : ''}
     <div class="admin-modal-field">
       <label for="paidAmountInput" style="display:block;font-size:0.8rem;color:var(--color-text-muted);margin-bottom:0.3rem;">Amount received (${CURRENCY})</label>
@@ -573,8 +573,8 @@ function openMarkPaidModal(username, currentRef, kind = 'site', requestedMonths,
       <label for="paidDurationSelect" style="display:block;font-size:0.8rem;color:var(--color-text-muted);margin-bottom:0.3rem;">Duration</label>
       <select id="paidDurationSelect">
         <option value="1"${defaultMonths === 1 ? ' selected' : ''}>1 month</option>
-        <option value="3"${defaultMonths === 3 ? ' selected' : ''}>3 months</option>
-        <option value="4"${defaultMonths === 4 ? ' selected' : ''}>4 months${isDomain ? '' : ' (standard)'}</option>
+        <option value="3"${defaultMonths === 3 ? ' selected' : ''}>3 months${isDomain ? '' : ' (standard)'}</option>
+        <option value="4"${defaultMonths === 4 ? ' selected' : ''}>4 months</option>
         <option value="6"${defaultMonths === 6 ? ' selected' : ''}>6 months</option>
         <option value="12"${defaultMonths === 12 ? ' selected' : ''}>12 months${isDomain ? ' (max)' : ''}</option>
       </select>
@@ -595,7 +595,7 @@ function openMarkPaidModal(username, currentRef, kind = 'site', requestedMonths,
     });
     root.querySelector('#confirmPaidBtn').addEventListener('click', () => {
       const ref = root.querySelector('#paidRefInput').value.trim();
-      const durationMonths = Number(root.querySelector('#paidDurationSelect').value) || (isDomain ? 12 : 4);
+      const durationMonths = Number(root.querySelector('#paidDurationSelect').value) || (isDomain ? 12 : 3);
       const amount = Number(root.querySelector('#paidAmountInput').value) || 0;
       setPaid(username, true, ref, durationMonths, amount, needsApproval);
       closeModal();
