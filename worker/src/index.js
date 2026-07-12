@@ -462,8 +462,24 @@ async function verifyAdminCredential(credential) {
 }
 
 async function handleApi(request, env, url) {
-  if (url.pathname === '/api/check-username' && request.method === 'GET') {
-    const username = (url.searchParams.get('u') || '').toLowerCase();
+  // POST (not GET) so an optional Google credential can travel in the
+  // body instead of the URL/query string — same pattern as every other
+  // credential-carrying call in this file, and keeps a live ID token
+  // out of server/proxy access logs.
+  //
+  // Ownership here is checked *server-side* against the record's real
+  // ownerEmail, not just inferred from whatever the browser has
+  // cached locally. That distinction matters after a restore: soft-
+  // deleting then restoring a site never touches ownerEmail, but the
+  // editor's local "is this my username" cache can easily be stale or
+  // absent (cleared because the name looked free mid-deletion, a
+  // different browser/device, cleared storage, etc.) — without a real
+  // check here, the original owner would see "already taken" and be
+  // unable to publish to their own restored address.
+  if (url.pathname === '/api/check-username' && request.method === 'POST') {
+    let body;
+    try { body = await request.json(); } catch { return json({ available: false, reason: 'invalid' }, 400); }
+    const username = String(body.username || '').toLowerCase().trim();
     if (!USERNAME_RE.test(username) || RESERVED.has(username)) {
       return json({ available: false, reason: 'invalid' });
     }
@@ -472,7 +488,11 @@ async function handleApi(request, env, url) {
     // username — it's kept around only so an admin can hard-delete or
     // restore it, not to squat the name forever.
     const isFree = !existing || existing.status === 'deleted';
-    return json({ available: isFree });
+    if (isFree) return json({ available: true });
+
+    const requesterEmail = await verifyGoogleCredential(body.googleCredential);
+    const ownedByYou = !!requesterEmail && !!existing.ownerEmail && requesterEmail === existing.ownerEmail;
+    return json({ available: false, ownedByYou });
   }
 
   // ── AI: résumé check ───────────────────────────────────────────
@@ -767,6 +787,22 @@ ${resumeText}
   // already publicly live at username.proves.work anyway. Active Job Hunter
   // sites that are still within their paid window get flagged 'starred'
   // so the showcase can list them first — everyone else shows as 'free'.
+  // The <title>/meta-description content embedded in a published page
+  // is already HTML-escaped (correctly, since it's HTML). Pulling it
+  // out with a regex gives back that escaped text as-is — e.g. a
+  // literal "&amp;" substring, not a "&" character. The showcase page
+  // then runs its own esc() over whatever this API returns to safely
+  // inject it into the DOM, which would double-escape "&amp;" into
+  // "&amp;amp;" (rendering as the literal text "&amp;" on screen)
+  // unless we decode back to real characters first. Covers the small,
+  // fixed set of entities editor.js's own esc() can actually produce.
+  const decodeHtmlEntities = (str) => String(str || '')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#0*39;|&apos;/g, "'")
+    .replace(/&amp;/g, '&');
+
   if (url.pathname === '/api/showcase' && request.method === 'GET') {
     const list = await env.SITES.list({ prefix: 'site:' });
     const now = Date.now();
@@ -781,8 +817,8 @@ ${resumeText}
       const descMatch = record.liveHtml.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["']/i);
       return {
         username: k.name.slice('site:'.length),
-        title: (titleMatch && titleMatch[1].trim()) || k.name.slice('site:'.length),
-        description: (descMatch && descMatch[1].trim()) || '',
+        title: (titleMatch && decodeHtmlEntities(titleMatch[1].trim())) || k.name.slice('site:'.length),
+        description: (descMatch && decodeHtmlEntities(descMatch[1].trim())) || '',
         tier: starred ? 'starred' : 'free',
         updatedAt: record.updatedAt || null
       };
@@ -1040,7 +1076,10 @@ ${resumeText}
   // Hard delete: permanently erases the KV record (unlike set-status
   // 'deleted', which only soft-deletes and can be restored). This is
   // the "free up the username for good" action — nothing recoverable
-  // is left behind afterward.
+  // is left behind afterward *for the site itself*, but we keep a
+  // lightweight audit-log entry (who/when/what it looked like) so an
+  // admin can still see what used to be there and who removed it.
+  // The audit entry never blocks the username from being re-claimed.
   if (url.pathname === '/api/admin/delete-site' && request.method === 'POST') {
     let body;
     try { body = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON body.' }, 400); }
@@ -1049,8 +1088,51 @@ ${resumeText}
 
     const username = String(body.username || '').toLowerCase().trim();
     if (!username) return json({ ok: false, error: 'Missing username.' }, 400);
+
+    const existing = await env.SITES.get(`site:${username}`, 'json');
+    const deletedAt = new Date().toISOString();
+    // Keyed by timestamp-then-username so a KV `list({prefix:'audit:'})`
+    // comes back roughly in chronological order; we still sort
+    // client-side to be safe. Snapshot excludes liveHtml/html (can be
+    // large, and isn't needed to know "what this was" — kind/status/
+    // owner/paid info is what matters for an audit trail).
+    const auditKey = `audit:${deletedAt}:${username}`;
+    await env.SITES.put(auditKey, JSON.stringify({
+      username,
+      deletedAt,
+      deletedBy: adminEmail,
+      existed: !!existing,
+      snapshot: existing ? {
+        kind: existing.kind || 'site',
+        status: existing.status || 'live',
+        ownerEmail: existing.ownerEmail || null,
+        paid: !!existing.paid,
+        amountPaid: existing.amountPaid ?? null,
+        paidUntil: existing.paidUntil || null,
+        redirectUrl: existing.redirectUrl || null,
+        createdAt: existing.createdAt || null,
+        updatedAt: existing.updatedAt || null
+      } : null
+    }));
+
     await env.SITES.delete(`site:${username}`);
     return json({ ok: true, freed: username });
+  }
+
+  // Lists hard-delete audit entries, most recent first. Read-only,
+  // admin-gated — lets the dashboard show "what got permanently
+  // erased, by whom, and when" even though the underlying site record
+  // is gone for good and can't be restored through the normal flow.
+  if (url.pathname === '/api/admin/audit-log' && request.method === 'POST') {
+    let body;
+    try { body = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON body.' }, 400); }
+    const adminEmail = await verifyAdminCredential(body.googleCredential);
+    if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
+
+    const list = await env.SITES.list({ prefix: 'audit:', limit: 200 });
+    const entries = await Promise.all(list.keys.map(k => env.SITES.get(k.name, 'json')));
+    const cleaned = entries.filter(Boolean).sort((a, b) => new Date(b.deletedAt) - new Date(a.deletedAt));
+    return json({ ok: true, entries: cleaned, truncated: list.list_complete === false });
   }
 
   // Lets an admin manually attach/replace an external reference link on

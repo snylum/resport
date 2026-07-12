@@ -28,6 +28,8 @@ const el = {
   adminRefreshBtn: document.getElementById('adminRefreshBtn'),
   adminOverviewView: document.getElementById('adminOverviewView'),
   adminSitesView: document.getElementById('adminSitesView'),
+  adminAuditView: document.getElementById('adminAuditView'),
+  adminAuditList: document.getElementById('adminAuditList'),
   adminStatsGrid: document.getElementById('adminStatsGrid'),
   adminRevenueChart: document.getElementById('adminRevenueChart'),
   adminStatusChart: document.getElementById('adminStatusChart'),
@@ -178,6 +180,8 @@ document.querySelectorAll('.admin-view-tab').forEach(tab => {
     activeView = tab.dataset.view;
     el.adminOverviewView.classList.toggle('hidden', activeView !== 'overview');
     el.adminSitesView.classList.toggle('hidden', activeView !== 'sites');
+    el.adminAuditView.classList.toggle('hidden', activeView !== 'audit');
+    if (activeView === 'audit') loadAuditLog();
   });
 });
 
@@ -380,6 +384,58 @@ function renderList() {
   `).join('');
 }
 
+// Hard-delete audit trail — fetched lazily the first time the tab is
+// opened, then re-fetched on every click (cheap: admin-only, capped
+// at 200 entries server-side). Entries are read-only: there's no
+// action button here because a hard delete really is permanent — the
+// point of this view is visibility ("who deleted @foo, and when"),
+// not recovery.
+async function loadAuditLog() {
+  const account = getSavedAdminAccount();
+  el.adminAuditList.innerHTML = `<p class="admin-empty admin-empty-sm">Loading…</p>`;
+  try {
+    const res = await fetch('/api/admin/audit-log', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ googleCredential: account.credential })
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      el.adminAuditList.innerHTML = `<p class="admin-empty">${esc(data.error || 'Not authorized.')}</p>`;
+      return;
+    }
+    renderAuditLog(data.entries || []);
+  } catch (err) {
+    el.adminAuditList.innerHTML = `<p class="admin-empty">Could not reach the admin API — check the Worker is deployed.</p>`;
+  }
+}
+
+function renderAuditLog(entries) {
+  if (!entries.length) {
+    el.adminAuditList.innerHTML = `<p class="admin-empty">No hard deletes yet.</p>`;
+    return;
+  }
+  el.adminAuditList.innerHTML = entries.map(e => {
+    const snap = e.snapshot;
+    const kindBadge = snap && snap.kind === 'domain' ? ` <span class="admin-kind-badge">Domain only</span>` : '';
+    const details = snap ? [
+      `was ${esc(snap.status)}`,
+      snap.ownerEmail ? esc(snap.ownerEmail) : 'anonymous',
+      snap.paid ? `paid${snap.amountPaid != null ? ` ${money(snap.amountPaid)}` : ''}` : null
+    ].filter(Boolean).join(' · ') : 'no record snapshot available';
+    return `
+    <div class="admin-site-row">
+      <div class="admin-site-main">
+        <div class="admin-site-username">${esc(e.username)}.proves.work${kindBadge}</div>
+        <div class="admin-site-meta">${details}</div>
+        <div class="admin-site-meta">deleted ${new Date(e.deletedAt).toLocaleString()} by ${esc(e.deletedBy)}</div>
+      </div>
+      <span class="admin-status-pill deleted">gone</span>
+    </div>
+  `;
+  }).join('');
+}
+
 async function setStatus(username, status) {
   const account = getSavedAdminAccount();
   const res = await fetch('/api/admin/set-status', {
@@ -524,21 +580,11 @@ function openMarkPaidModal(username, currentRef, kind = 'site', requestedMonths,
   });
 }
 
+// Same apex the Worker serves published sites on (<username>.proves.work).
+const PUBLISH_APEX = 'proves.work';
+
 async function viewSite(username) {
-  const account = getSavedAdminAccount();
-  try {
-    const res = await fetch('/api/admin/site-html', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ googleCredential: account.credential, username })
-    });
-    const data = await res.json();
-    if (!data.ok) { alertModal(data.error || 'Could not load that site.'); return; }
-    const blob = new Blob([data.html], { type: 'text/html' });
-    window.open(URL.createObjectURL(blob), '_blank', 'noopener');
-  } catch (err) {
-    alertModal('Could not reach the admin API.');
-  }
+  window.open(`https://${username}.${PUBLISH_APEX}`, '_blank', 'noopener');
 }
 
 function alertModal(message) {

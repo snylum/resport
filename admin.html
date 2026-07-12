@@ -40,6 +40,7 @@
       <div class="admin-view-tabs">
         <button class="admin-view-tab active" data-view="overview" type="button">📊 Overview</button>
         <button class="admin-view-tab" data-view="sites" type="button">🗂️ Sites</button>
+        <button class="admin-view-tab" data-view="audit" type="button">🧾 Audit log</button>
       </div>
 
       <p class="username-status" id="adminListStatus"></p>
@@ -74,6 +75,14 @@
           <button class="admin-tab" data-filter="all" type="button">All</button>
         </div>
         <div id="adminSitesList" class="admin-sites-list"></div>
+      </div>
+
+      <div id="adminAuditView" class="admin-view hidden">
+        <p class="modal-sub" style="margin-top:0;">
+          Permanent history of <strong>hard deletes</strong> — the username is freed the moment this happens and
+          nothing here can bring the site back, but you can see what it was, who deleted it, and when.
+        </p>
+        <div id="adminAuditList" class="admin-sites-list"></div>
       </div>
     </div>
   </main>

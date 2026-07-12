@@ -2109,21 +2109,15 @@ function openPublishModal() {
         confirmBtn.disabled = true;
         return;
       }
-      // If this is the name already saved for this browser (e.g. set once
-      // from the toolbar, or from a prior publish), it's theirs — don't
-      // run it past the "is it taken" check at all, since a naive
-      // availability check has no way to know a name is already yours.
-      if (value === getSavedUsername()) {
-        status.textContent = `✓ ${value}.${PUBLISH_APEX} is already yours`;
-        status.className = 'username-status ok';
-        confirmBtn.disabled = false;
-        return;
-      }
+      const wasCachedUsername = value === getSavedUsername();
+
       // Changing to a different address than the one already saved
       // consumes one of the 2 allowed username changes — block it here
       // once they're used up, rather than letting the publish request
-      // go out and fail (or worse, silently reuse the limit).
-      if (getSavedUsername() && usernameChangesRemaining() <= 0) {
+      // go out and fail (or worse, silently reuse the limit). This is
+      // just a UX speed bump based on the local cache; the real check
+      // below is what actually decides ownership.
+      if (!wasCachedUsername && getSavedUsername() && usernameChangesRemaining() <= 0) {
         status.textContent = `You've already changed your username ${MAX_USERNAME_CHANGES} times — ${getSavedUsername()}.${PUBLISH_APEX} is the only address you can publish to.`;
         status.className = 'username-status warn';
         confirmBtn.disabled = true;
@@ -2132,14 +2126,42 @@ function openPublishModal() {
       status.textContent = 'Checking availability…';
       status.className = 'username-status';
       try {
-        const res = await fetch(`/api/check-username?u=${encodeURIComponent(value)}`);
+        const account = getSavedGoogleAccount();
+        const res = await fetch('/api/check-username', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ username: value, googleCredential: account && account.credential })
+        });
         if (!res.ok) throw new Error('no-backend');
         const data = await res.json();
         if (data.available) {
+          // The server says this name is free. If it's the name we had
+          // cached locally, that cache is now stale — an admin must have
+          // unpublished, rejected, or hard-deleted it since. Clear it so
+          // the rest of the UI (toolbar status badge, change-count logic)
+          // stops treating a name we no longer actually hold as ours.
+          if (wasCachedUsername) clearLocalUsernameState();
           status.textContent = `✓ ${value}.${PUBLISH_APEX} is available`;
           status.className = 'username-status ok';
           confirmBtn.disabled = false;
+        } else if (data.ownedByYou) {
+          // Server-verified, not just a local-cache guess — this is
+          // what makes a site an admin soft-deleted and then restored
+          // still recognized as yours, even if the local cache was
+          // cleared or you're on a different browser/device: the
+          // record's ownerEmail still matches your signed-in account.
+          // Re-sync the local cache to match, without counting it as
+          // one of the 2 allowed username changes (nothing changed).
+          if (!wasCachedUsername) saveUsername(value);
+          status.textContent = `✓ ${value}.${PUBLISH_APEX} is already yours`;
+          status.className = 'username-status ok';
+          confirmBtn.disabled = false;
         } else {
+          // Genuinely someone else's (or a stale local cache claiming
+          // a name the server no longer attributes to you) — clear any
+          // stale cache pointing at it so the UI stops implying it's
+          // still ours.
+          if (wasCachedUsername) clearLocalUsernameState();
           status.textContent = data.reason === 'invalid'
             ? 'That name is reserved or has invalid characters.'
             : `${value}.${PUBLISH_APEX} is already taken.`;
