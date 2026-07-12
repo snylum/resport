@@ -155,13 +155,36 @@ function handleGoogleCredential(response) {
   showPanel();
 }
 
+// The Google Identity Services <script> tag is async/defer, so it can
+// still be mid-flight on a fresh page load — checking window.google
+// once and giving up immediately was reporting "hasn't loaded" for a
+// script that was simply still downloading. Poll briefly before
+// truly giving up (see the same fix/comment in editor.js).
+function waitForGoogleIdentity(callback, { timeoutMs = 4000, intervalMs = 100 } = {}) {
+  const isReady = () => !!(window.google && window.google.accounts && window.google.accounts.id);
+  if (isReady()) { callback(true); return; }
+  const start = Date.now();
+  const timer = setInterval(() => {
+    if (isReady()) {
+      clearInterval(timer);
+      callback(true);
+    } else if (Date.now() - start >= timeoutMs) {
+      clearInterval(timer);
+      callback(false);
+    }
+  }, intervalMs);
+}
+
 function renderGoogleSignInButton() {
-  if (!(window.google && window.google.accounts && window.google.accounts.id)) {
-    el.adminSignInSlot.innerHTML = `<p class="username-status warn">Google sign-in script hasn't loaded — check your connection and reload.</p>`;
-    return;
-  }
-  window.google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential });
-  window.google.accounts.id.renderButton(el.adminSignInSlot, { theme: 'outline', size: 'large', text: 'signin_with' });
+  el.adminSignInSlot.innerHTML = `<p class="username-status">Loading Google sign-in…</p>`;
+  waitForGoogleIdentity((ready) => {
+    if (!ready) {
+      el.adminSignInSlot.innerHTML = `<p class="username-status warn">Google sign-in script hasn't loaded — check your connection and reload.</p>`;
+      return;
+    }
+    window.google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential });
+    window.google.accounts.id.renderButton(el.adminSignInSlot, { theme: 'outline', size: 'large', text: 'signin_with' });
+  });
 }
 
 function showPanel() {

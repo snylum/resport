@@ -1141,13 +1141,44 @@ function handleGoogleCredential(response) {
   });
 }
 
+// The Google Identity Services <script> tag is async/defer, so it can
+// still be mid-flight when this code runs — especially right after a
+// fresh navigation (e.g. clicking "Open Editor" from index.html),
+// where it's competing with every other asset on the page for the
+// very first load, with no cache to lean on. Checking window.google
+// exactly once and giving up immediately if it's not there yet was
+// reporting "script hasn't loaded / blocked" for a script that was
+// simply still downloading. This polls for a short window before
+// truly giving up, so a real block/offline case still gets reported
+// (just a beat later), but an ordinary slow first load doesn't.
+function waitForGoogleIdentity(callback, { timeoutMs = 4000, intervalMs = 100 } = {}) {
+  const isReady = () => !!(window.google && window.google.accounts && window.google.accounts.id);
+  if (isReady()) { callback(true); return; }
+  const start = Date.now();
+  const timer = setInterval(() => {
+    if (isReady()) {
+      clearInterval(timer);
+      callback(true);
+    } else if (Date.now() - start >= timeoutMs) {
+      clearInterval(timer);
+      callback(false);
+    }
+  }, intervalMs);
+}
+
 function renderGoogleSignInButton(container) {
-  if (!(window.google && window.google.accounts && window.google.accounts.id)) {
-    container.innerHTML = `<p class="username-status warn">Google sign-in script hasn't loaded (offline, or blocked) — you can still publish anonymously below.</p>`;
-    return;
-  }
-  window.google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential });
-  window.google.accounts.id.renderButton(container, { theme: 'outline', size: 'medium', text: 'signin_with' });
+  container.innerHTML = `<p class="username-status">Loading Google sign-in…</p>`;
+  waitForGoogleIdentity((ready) => {
+    // Modal may have been closed/re-rendered while we were waiting —
+    // don't write into a detached node.
+    if (!container.isConnected) return;
+    if (!ready) {
+      container.innerHTML = `<p class="username-status warn">Google sign-in script hasn't loaded (offline, or blocked) — you can still publish anonymously below.</p>`;
+      return;
+    }
+    window.google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential });
+    window.google.accounts.id.renderButton(container, { theme: 'outline', size: 'medium', text: 'signin_with' });
+  });
 }
 
 // Renders the "Account" box at the top of the Publish modal: either a
@@ -2028,20 +2059,24 @@ function openSignInModal(opts) {
     </div>
   `, (root) => {
     const box = root.querySelector('#signInAccountBox');
-    if (!(window.google && window.google.accounts && window.google.accounts.id)) {
-      box.innerHTML = `<p class="username-status warn">Google sign-in script hasn't loaded (offline, or blocked) — you can still edit, but nothing will be saved until you sign in.</p>`;
-      return;
-    }
-    window.google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: async (response) => {
-        handleGoogleCredential(response);
-        closeModal();
-        await refreshSiteStatusBadge();
-        if (!onLoad) openPublishModal();
+    box.innerHTML = `<p class="username-status">Loading Google sign-in…</p>`;
+    waitForGoogleIdentity((ready) => {
+      if (!box.isConnected) return;
+      if (!ready) {
+        box.innerHTML = `<p class="username-status warn">Google sign-in script hasn't loaded (offline, or blocked) — you can still edit, but nothing will be saved until you sign in.</p>`;
+        return;
       }
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: async (response) => {
+          handleGoogleCredential(response);
+          closeModal();
+          await refreshSiteStatusBadge();
+          if (!onLoad) openPublishModal();
+        }
+      });
+      window.google.accounts.id.renderButton(box, { theme: 'outline', size: 'large', text: 'signin_with' });
     });
-    window.google.accounts.id.renderButton(box, { theme: 'outline', size: 'large', text: 'signin_with' });
   });
 }
 
