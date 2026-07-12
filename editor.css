@@ -262,6 +262,27 @@ body {
   box-shadow: 0 3px 0 0 var(--color-secondary);
 }
 
+/* Light, low-saturation tint per section type, purely so adjacent
+   items in the list are easy to tell apart at a glance — not meant
+   to carry any other meaning, so the palette stays pastel/muted
+   rather than using bold "status" colors that would compete with
+   the hide/verify/shadow icon buttons already living in this row.
+   Each type gets its own hue spaced around the color wheel so
+   neighbors never land on near-identical tints. */
+.sd-section-item[data-block-type="section"]        { background: #eef1f5; }
+.sd-section-item[data-block-type="summary"]         { background: #eef6f0; }
+.sd-section-item[data-block-type="experience"]      { background: #eaf2fb; }
+.sd-section-item[data-block-type="education"]       { background: #f2eefb; }
+.sd-section-item[data-block-type="projects"]        { background: #eafaf5; }
+.sd-section-item[data-block-type="skills"]          { background: #fbf6e6; }
+.sd-section-item[data-block-type="certifications"]  { background: #fdeeea; }
+.sd-section-item[data-block-type="languages"]       { background: #e9f7f7; }
+.sd-section-item[data-block-type="gallery"]         { background: #fdf0f6; }
+.sd-section-item[data-block-type="video"]           { background: #f0eefb; }
+.sd-section-item[data-block-type="links"]           { background: #eaf6fb; }
+.sd-section-item[data-block-type="custom"]          { background: #f6f0e9; }
+.sd-section-item[data-block-type="spacer"]          { background: repeating-linear-gradient(135deg, var(--color-surface-alt), var(--color-surface-alt) 6px, var(--color-surface) 6px, var(--color-surface) 12px); }
+
 .sd-item-header {
   display: flex;
   align-items: center;
@@ -791,6 +812,14 @@ body {
 .sd-icon-btn:hover {
   background: var(--color-surface-alt);
   color: var(--color-text);
+}
+
+.sd-content-align-btn {
+  width: auto;
+  min-width: 22px;
+  padding: 0 3px;
+  font-size: 0.6rem;
+  letter-spacing: -0.5px;
 }
 
 .sd-delete-btn:hover {
@@ -1370,6 +1399,14 @@ body {
   margin-bottom: 0.35rem;
 }
 
+/* ── Blank space block (resume/PDF) ────────────────────────────
+   Same sizing scale as the portfolio's .pf-spacer, just under the
+   resume-block naming convention. */
+.rb-spacer { width: 100%; }
+.rb-spacer-sm { height: 1rem; }
+.rb-spacer-md { height: 2rem; }
+.rb-spacer-lg { height: 3.5rem; }
+
 /* ── Skills (tag pills) ─────────────────────────────────────── */
 .rb-skills-wrap {
   display: flex;
@@ -1479,6 +1516,22 @@ body {
   background: var(--color-surface-alt);
 }
 
+.sd-spacer-size-btn {
+  display: inline-block;
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  background: none;
+  border: 1.5px dashed var(--color-border);
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+}
+.sd-spacer-size-btn:hover {
+  color: var(--color-text);
+  background: var(--color-surface-alt);
+}
+
 /* ── Gallery block: sidebar thumbnail grid ────────────────────── */
 .sd-gallery-grid {
   display: grid;
@@ -1537,6 +1590,98 @@ body {
 
 .sd-gallery-thumb-verify.is-verified {
   background: var(--color-secondary, #1a8f5c);
+}
+
+/* The "+ proof" / "✓" button is also reused for per-skill and
+   per-entry verification (skill tags, and certification/language/
+   link rows) — not just gallery photo thumbnails. The absolute
+   bottom-left positioning above only makes sense pinned to a small
+   square photo thumb (its own position:relative parent); skill tags
+   and entry rows aren't sized or positioned like that, so the button
+   was escaping to the nearest ANY positioned ancestor up the tree
+   (often the whole sidebar panel) and rendering far from the entry
+   it belongs to. Here it's taken out of absolute positioning
+   entirely and laid out inline, right next to the entry's own
+   remove button, so it always sits on the entry it actually
+   verifies. */
+.rb-skill-tag .sd-gallery-thumb-verify,
+.rb-entry-row .sd-gallery-thumb-verify {
+  position: static;
+  flex-shrink: 0;
+}
+
+/* Compact circular badge for skill tags — just an icon, no room for
+   a label in a tag this small. Unverified: a quiet dashed "+" that
+   invites adding proof without competing with the skill name.
+   Verified: a solid filled checkmark, the same "confirmed" language
+   used elsewhere in the app (e.g. the section-toolbar ✓ button). */
+.rb-skill-tag .sd-gallery-thumb-verify {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px dashed var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+}
+.rb-skill-tag .sd-gallery-thumb-verify:hover {
+  border-color: var(--pf-accent, var(--color-primary));
+  color: var(--pf-accent, var(--color-primary));
+}
+.rb-skill-tag .sd-gallery-thumb-verify.is-verified {
+  border-style: solid;
+  border-color: var(--color-secondary, #1a8f5c);
+  background: var(--color-secondary, #1a8f5c);
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+.rb-skill-tag .sd-gallery-thumb-verify.is-verified:hover {
+  transform: scale(1.1);
+}
+
+/* Full pill badge for entry-list rows (certifications, languages,
+   links) — there's room here for a label, so it reads at a glance
+   instead of relying on an icon alone. Unverified: an outlined
+   "+ Proof" invite matching the row's other ghost controls.
+   Verified: a solid checkmark pill, same green "confirmed" color as
+   the skill-tag badge above, so verification always looks the same
+   regardless of which section it's in. */
+.rb-entry-row .sd-gallery-thumb-verify {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 24px;
+  padding: 0 0.55rem;
+  margin-top: 0.15rem;
+  border-radius: 999px;
+  border: 1.5px dashed var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.rb-entry-row .sd-gallery-thumb-verify:hover {
+  border-color: var(--pf-accent, var(--color-primary));
+  color: var(--pf-accent, var(--color-primary));
+}
+.rb-entry-row .sd-gallery-thumb-verify.is-verified {
+  border-style: solid;
+  border-color: var(--color-secondary, #1a8f5c);
+  background: var(--color-secondary, #1a8f5c);
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+.rb-entry-row .sd-gallery-thumb-verify.is-verified:hover {
+  filter: brightness(1.08);
 }
 
 .sd-gallery-add {

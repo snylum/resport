@@ -564,7 +564,8 @@ export const BLOCK_LIBRARY = [
   { type: 'custom', label: 'Custom Text Block', makeData: () => ({ title: 'Custom Section', text: 'Add any additional information here.' }) },
   { type: 'gallery', label: 'Photo Gallery', makeData: () => ({ photos: [] }), mediaOnly: true },
   { type: 'video', label: 'Embedded Video', makeData: () => ({ url: '', caption: '' }), mediaOnly: true },
-  { type: 'links', label: 'Embedded Links', makeData: () => ({ items: [{ label: 'Website', url: '' }] }), mediaOnly: true }
+  { type: 'links', label: 'Embedded Links', makeData: () => ({ items: [{ label: 'Website', url: '' }] }), mediaOnly: true },
+  { type: 'spacer', label: 'Blank Space', makeData: () => ({ size: 'md' }) }
 ];
 
 const defaultBlocks = [
@@ -1014,6 +1015,18 @@ class EditorStore {
     const block = this.active().blocks.find(b => b.id === id);
     if (!block) return;
     block.align = align === 'center' || align === 'right' ? align : 'left';
+    this.emit('blocks_changed', this.active().blocks);
+  }
+
+  // How a section's own text/rows/tags read — independent from
+  // setBlockAlign above, which only controls where the card sits on
+  // the page. Undefined means "left", matching every block's
+  // appearance before this setting existed (see
+  // .pf-sections > [data-content-align] in portfolio.css).
+  setBlockContentAlign(id, align) {
+    const block = this.active().blocks.find(b => b.id === id);
+    if (!block) return;
+    block.contentAlign = align === 'center' || align === 'right' ? align : 'left';
     this.emit('blocks_changed', this.active().blocks);
   }
 

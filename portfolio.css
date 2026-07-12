@@ -705,55 +705,104 @@
   align-items: stretch;
 }
 
-/* ── Per-section alignment ─────────────────────────────────────
-   "Left" (the default, unset) keeps a section's card stretched full
-   width, matching every portfolio's appearance before this setting
-   existed. "Center"/"right" cap the card to a comfortable max-width
-   and position the whole card via align-self, plus align its text
-   content to match. Applies to top-level section children directly
-   (same element the canvas sets dataset.align on — see
-   createPortfolioBlock/renderStaticPortfolioBlock), so it also works
-   inside horizontal/vertical slide mode's .pf-slide-inner. */
-.pf-sections > [data-align="center"],
-.pf-slide-inner > [data-align="center"],
-.pf-sections > [data-align="right"],
-.pf-slide-inner > [data-align="right"] {
+/* ── Per-section POSITION (data-align) ───────────────────────────
+   Caps the card to a comfortable max-width and positions the whole
+   card on the row via align-self — left/center/right all get the
+   same width cap, just anchored differently, so all three read as
+   distinct choices even on an already-narrow/contained layout.
+   Deliberately does NOT touch text-align or internal content
+   layout — that's a separate, independent setting (see "Per-section
+   CONTENT alignment" below), so moving where the card sits on the
+   page never silently changes how its own text reads. Applies to
+   top-level section children directly (same element the canvas
+   sets dataset.align on — see createPortfolioBlock/
+   renderStaticPortfolioBlock), so it also works inside horizontal/
+   vertical slide mode's .pf-slide-inner. */
+.pf-sections > [data-align],
+.pf-slide-inner > [data-align] {
   max-width: min(640px, 100%);
   width: 100%;
+}
+.pf-sections > [data-align="left"],
+.pf-slide-inner > [data-align="left"] {
+  align-self: flex-start;
 }
 .pf-sections > [data-align="center"],
 .pf-slide-inner > [data-align="center"] {
   align-self: center;
-  text-align: center;
 }
 .pf-sections > [data-align="right"],
 .pf-slide-inner > [data-align="right"] {
   align-self: flex-end;
+}
+
+/* ── Per-section CONTENT alignment (data-content-align) ──────────
+   Independent from the position setting above — this is purely
+   about how the card's own text/rows/tags read, regardless of
+   where the card itself sits on the page. Defaults to "left"
+   (data-content-align is always emitted, same pattern as
+   data-align — see createPortfolioBlock/renderStaticPortfolioBlock),
+   matching every portfolio's appearance before this setting existed. */
+.pf-sections > [data-content-align="center"],
+.pf-slide-inner > [data-content-align="center"] {
+  text-align: center;
+}
+.pf-sections > [data-content-align="right"],
+.pf-slide-inner > [data-content-align="right"] {
   text-align: right;
 }
-.pf-sections > [data-align="center"] .pf-exp-top-row,
-.pf-sections > [data-align="center"] .pf-exp-sub-row,
-.pf-slide-inner > [data-align="center"] .pf-exp-top-row,
-.pf-slide-inner > [data-align="center"] .pf-exp-sub-row,
-.pf-sections > [data-align="right"] .pf-exp-top-row,
-.pf-sections > [data-align="right"] .pf-exp-sub-row,
-.pf-slide-inner > [data-align="right"] .pf-exp-top-row,
-.pf-slide-inner > [data-align="right"] .pf-exp-sub-row {
+.pf-sections > [data-content-align="center"] .pf-exp-top-row,
+.pf-sections > [data-content-align="center"] .pf-exp-sub-row,
+.pf-slide-inner > [data-content-align="center"] .pf-exp-top-row,
+.pf-slide-inner > [data-content-align="center"] .pf-exp-sub-row,
+.pf-sections > [data-content-align="right"] .pf-exp-top-row,
+.pf-sections > [data-content-align="right"] .pf-exp-sub-row,
+.pf-slide-inner > [data-content-align="right"] .pf-exp-top-row,
+.pf-slide-inner > [data-content-align="right"] .pf-exp-sub-row {
   justify-content: center;
 }
-.pf-sections > [data-align="right"] .pf-exp-top-row,
-.pf-sections > [data-align="right"] .pf-exp-sub-row,
-.pf-slide-inner > [data-align="right"] .pf-exp-top-row,
-.pf-slide-inner > [data-align="right"] .pf-exp-sub-row {
+.pf-sections > [data-content-align="right"] .pf-exp-top-row,
+.pf-sections > [data-content-align="right"] .pf-exp-sub-row,
+.pf-slide-inner > [data-content-align="right"] .pf-exp-top-row,
+.pf-slide-inner > [data-content-align="right"] .pf-exp-sub-row {
   justify-content: flex-end;
 }
-.pf-sections > [data-align="center"] .rb-skills-wrap,
-.pf-slide-inner > [data-align="center"] .rb-skills-wrap {
+.pf-sections > [data-content-align="center"] .rb-skills-wrap,
+.pf-slide-inner > [data-content-align="center"] .rb-skills-wrap {
   justify-content: center;
 }
-.pf-sections > [data-align="right"] .rb-skills-wrap,
-.pf-slide-inner > [data-align="right"] .rb-skills-wrap {
+.pf-sections > [data-content-align="right"] .rb-skills-wrap,
+.pf-slide-inner > [data-content-align="right"] .rb-skills-wrap {
   justify-content: flex-end;
+}
+
+/* ── Blank space block ─────────────────────────────────────────
+   A plain empty-height spacer for manually controlling gaps between
+   sections. On the published site it's just invisible vertical
+   space — no border, no content. In the editor canvas, the block
+   also carries a small "Blank space" label (see createPortfolioBlock)
+   so it doesn't look like a rendering glitch while editing; the
+   :has() selector picks that up automatically without needing a
+   separate "editor-only" class, since the exported markup never
+   includes that label span. */
+.pf-spacer {
+  width: 100%;
+}
+.pf-spacer-sm { height: 1.5rem; }
+.pf-spacer-md { height: 3.5rem; }
+.pf-spacer-lg { height: 6.5rem; }
+.pf-spacer:has(.pf-spacer-label) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px dashed var(--color-border);
+  border-radius: 6px;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.7;
 }
 
 /* ── Content width ────────────────────────────────────────────
@@ -934,10 +983,28 @@
   color: var(--color-text-muted);
   font-size: 0.9em;
 }
+/* Shared SVG checkmark used across every verified badge — sized to
+   sit on the text baseline instead of floating above/below it. */
+.pf-check-icon {
+  display: block;
+  flex-shrink: 0;
+}
+.pf-verify-badge-sm .pf-check-icon {
+  width: 10px;
+  height: 10px;
+}
+
 .pf-verify-badge-sm {
-  padding: 0.15rem 0.4rem;
-  font-size: 0.75em;
-  border-radius: 999px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  justify-content: center;
+}
+.pf-verify-badge-sm.pf-verify-badge:hover {
+  transform: scale(1.08);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
 }
 
 /* ── Photo gallery card ────────────────────────────────────── */
@@ -1009,10 +1076,20 @@
   pointer-events: none;
 }
 
+/* Bigger modal-box variant for the gallery photo lightbox — the
+   default 460px cap was sized for small proof-edit forms, not a
+   photo enlargement, so zoomed photos barely looked bigger than
+   the thumbnail they came from. */
+.modal-box--zoom {
+  max-width: min(92vw, 1100px);
+  max-height: 92vh;
+  padding: 1.5rem;
+}
+
 .pf-zoom-modal-body { text-align: center; }
 .pf-zoom-img {
   max-width: 100%;
-  max-height: 80vh;
+  max-height: 78vh;
   border-radius: 6px;
   box-shadow: none;
   object-fit: contain;

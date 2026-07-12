@@ -103,6 +103,7 @@ const el = {
   // Modal
   modalOverlay: document.getElementById('modalOverlay'),
   modalContent: document.getElementById('modalContent'),
+  modalBox: document.getElementById('modalBox'),
   modalCloseBtn: document.getElementById('modalCloseBtn')
 };
 
@@ -336,12 +337,18 @@ function videoEmbedSrc(url) {
   return null;
 }
 
+// Crisp SVG checkmark used in every verified badge, instead of the
+// unicode "✓" glyph — renders identically (weight, alignment) across
+// every OS/font instead of depending on whatever glyph the system
+// font ships, and scales cleanly at the small sizes these badges use.
+const CHECK_ICON = '<svg class="pf-check-icon" width="9" height="9" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
 function verifyControlHTML(block) {
   const v = block.data.verify || { type: 'none' };
   if (v.type !== 'none') {
     const labelHTML = v.label ? `<span class="pf-verify-label">${esc(v.label)}</span>` : '';
     return `
-      <button class="pf-verify-badge" data-action="view-verify" data-block="${block.id}" type="button">✓ Verified${labelHTML}</button>
+      <button class="pf-verify-badge" data-action="view-verify" data-block="${block.id}" type="button">${CHECK_ICON}Verified${labelHTML}</button>
       <button class="pf-verify-edit" data-action="edit-verify" data-block="${block.id}" title="Edit verification" type="button">✎</button>`;
   }
   return `<button class="pf-verify-add" data-action="edit-verify" data-block="${block.id}" type="button">+ Add proof</button>`;
@@ -378,6 +385,7 @@ function blockSummaryLine(block) {
     case 'gallery': return (d.photos || []).length ? `${d.photos.length} photo${d.photos.length === 1 ? '' : 's'}` : 'Photo gallery (empty)';
     case 'video': return d.url || 'Embedded video (empty)';
     case 'links': return (d.items || []).map(i => i.label).filter(Boolean).join(', ') || 'Embedded links';
+    case 'spacer': return d.size === 'sm' ? 'Small gap' : d.size === 'lg' ? 'Large gap' : 'Medium gap';
     default: return 'Section';
   }
 }
@@ -458,6 +466,11 @@ function blockEditFieldsHTML(block) {
       return field('Links', renderEntryList(d.items, block.id, 'items', [
         { key: 'label', cls: 'ce-strong', label: 'Label' }, { key: 'url', cls: 'ce-muted', label: 'URL' }
       ]));
+    case 'spacer': {
+      const size = ['sm', 'md', 'lg'].includes(d.size) ? d.size : 'md';
+      const sizeLabel = size === 'sm' ? 'Small' : size === 'lg' ? 'Large' : 'Medium';
+      return field('Size', `<button class="sd-spacer-size-btn" data-action="cycle-spacer-size" data-block="${block.id}" data-size="${size}" type="button">${sizeLabel} (click to change)</button>`);
+    }
     default:
       return '';
   }
@@ -470,7 +483,7 @@ function canvasVerifyBadge(block, index) {
   if (v.type === 'none') return '';
   const labelHTML = v.label ? `<span class="pf-verify-label">${esc(v.label)}</span>` : '';
   const idxAttr = index != null ? ` data-photo-index="${index}"` : '';
-  return `<div class="pf-verify"><button class="pf-verify-badge" data-action="view-verify" data-block="${block.id}"${idxAttr} type="button">✓ Verified${labelHTML}</button></div>`;
+  return `<div class="pf-verify"><button class="pf-verify-badge" data-action="view-verify" data-block="${block.id}"${idxAttr} type="button">${CHECK_ICON}Verified${labelHTML}</button></div>`;
 }
 
 // Compact inline version for entry-list rows (certifications, languages)
@@ -478,7 +491,7 @@ function canvasVerifyBadge(block, index) {
 function canvasEntryVerifyBadge(block, index) {
   const v = (block.data.items && block.data.items[index] && block.data.items[index].verify) || { type: 'none' };
   if (v.type === 'none') return '';
-  return `<button class="pf-verify-badge pf-verify-badge-sm" data-action="view-verify" data-block="${block.id}" data-photo-index="${index}" type="button" title="View proof">✓</button>`;
+  return `<button class="pf-verify-badge pf-verify-badge-sm" data-action="view-verify" data-block="${block.id}" data-photo-index="${index}" type="button" title="View proof">${CHECK_ICON}</button>`;
 }
 
 // Small "✓" pin shown in the corner of a gallery photo that has its
@@ -490,7 +503,7 @@ function canvasEntryVerifyBadge(block, index) {
 function canvasPhotoVerifyBadge(photo) {
   const v = photo.verify || { type: 'none' };
   if (v.type === 'none') return '';
-  return `<span class="pf-photo-verify-badge" title="Verified">✓</span>`;
+  return `<span class="pf-photo-verify-badge" title="Verified">${CHECK_ICON}</span>`;
 }
 
 function createResumeBlock(block) {
@@ -509,6 +522,7 @@ function createPortfolioBlock(block) {
   const wrapper = document.createElement('div');
   wrapper.dataset.id = block.id;
   wrapper.dataset.align = block.align || 'left';
+  wrapper.dataset.contentAlign = block.contentAlign || 'left';
   if (Store.state.selectedBlockId === block.id) wrapper.classList.add('selected');
   if (block.hidden) wrapper.classList.add('section-hidden-preview');
 
@@ -614,6 +628,10 @@ function createPortfolioBlock(block) {
       innerHTML = (block.data.items || []).filter(i => i.url).length
         ? `<div class="pf-links-list">${(block.data.items || []).filter(i => i.url).map(it => `<a class="pf-link-chip" href="${esc(/^https?:\/\//i.test(it.url) ? it.url : `https://${it.url}`)}" target="_blank" rel="noopener noreferrer">${esc(it.label || it.url)} ↗</a>`).join('')}</div>`
         : `<div class="pf-gallery-empty">No links yet — add some from the sidebar.</div>`;
+      break;
+    case 'spacer':
+      baseClass = 'pf-spacer pf-spacer-' + (['sm', 'md', 'lg'].includes(block.data.size) ? block.data.size : 'md');
+      innerHTML = `<span class="pf-spacer-label">Blank space</span>`;
       break;
     default:
       break;
@@ -911,9 +929,10 @@ function initCanvasDelegation() {
 // ── 4. Generic modal system (verification popups + toasts) ────
 // A real, custom-styled centered lightbox — never a native
 // alert()/confirm()/prompt() — used for viewing & editing proof.
-function openModal(html, onOpen) {
+function openModal(html, onOpen, boxClass) {
   el.modalContent.innerHTML = html;
   el.modalOverlay.classList.remove('hidden');
+  if (el.modalBox) el.modalBox.className = 'modal-box' + (boxClass ? ` ${boxClass}` : '');
   document.addEventListener('keydown', handleModalEscape);
   if (typeof onOpen === 'function') onOpen(el.modalContent);
 }
@@ -921,6 +940,7 @@ function openModal(html, onOpen) {
 function closeModal() {
   el.modalOverlay.classList.add('hidden');
   el.modalContent.innerHTML = '';
+  if (el.modalBox) el.modalBox.className = 'modal-box';
   document.removeEventListener('keydown', handleModalEscape);
 }
 
@@ -958,9 +978,9 @@ function openInfoModal(title, message) {
 function openPhotoZoomModal(src, verified, caption) {
   if (!src) return;
   const footer = verified
-    ? `<div class="pf-zoom-verified"><span class="pf-zoom-verified-check">✓ Verified</span>${caption ? `<p class="pf-zoom-caption">${esc(caption)}</p>` : ''}</div>`
+    ? `<div class="pf-zoom-verified"><span class="pf-zoom-verified-check">${CHECK_ICON}Verified</span>${caption ? `<p class="pf-zoom-caption">${esc(caption)}</p>` : ''}</div>`
     : '';
-  openModal(`<div class="verify-modal-body pf-zoom-modal-body"><img src="${esc(src)}" alt="" class="pf-zoom-img" />${footer}</div>`);
+  openModal(`<div class="verify-modal-body pf-zoom-modal-body"><img src="${esc(src)}" alt="" class="pf-zoom-img" />${footer}</div>`, null, 'modal-box--zoom');
 }
 
 // ── 4a. Verification: view proof ──────────────────────────────
@@ -1599,13 +1619,15 @@ document.addEventListener('click', function (e) {
   if (zoomEl) {
     var overlay = document.getElementById('modalOverlay');
     var content = document.getElementById('modalContent');
+    var box = document.getElementById('modalBox');
     var src = zoomEl.getAttribute('data-src');
     var verified = zoomEl.getAttribute('data-verified') === '1';
     var caption = zoomEl.getAttribute('data-caption') || '';
     var footer = verified
-      ? '<div class="pf-zoom-verified"><span class="pf-zoom-verified-check">\\u2713 Verified</span>' + (caption ? '<p class="pf-zoom-caption">' + caption + '</p>' : '') + '</div>'
+      ? '<div class="pf-zoom-verified"><span class="pf-zoom-verified-check"><svg class="pf-check-icon" width="9" height="9" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Verified</span>' + (caption ? '<p class="pf-zoom-caption">' + caption + '</p>' : '') + '</div>'
       : '';
     content.innerHTML = '<div class="verify-modal-body pf-zoom-modal-body"><img src="' + src + '" class="pf-zoom-img" alt=""/>' + footer + '</div>';
+    if (box) box.className = 'modal-box modal-box--zoom';
     overlay.classList.remove('hidden');
     return;
   }
@@ -1619,6 +1641,7 @@ document.addEventListener('click', function (e) {
     }
     var overlay = document.getElementById('modalOverlay');
     var content = document.getElementById('modalContent');
+    var box = document.getElementById('modalBox');
     var label = btn.getAttribute('data-verify-label') || '';
     var html = '';
     if (type === 'photo') {
@@ -1626,11 +1649,14 @@ document.addEventListener('click', function (e) {
       html = '<h3 class="modal-title">Verified experience</h3><div class="verify-modal-body"><img src="' + photo + '" class="verify-modal-img" alt="Verification proof"/>' + (label ? '<p class="verify-modal-caption">' + label + '</p>' : '') + '</div>';
     }
     content.innerHTML = html;
+    if (box) box.className = 'modal-box';
     overlay.classList.remove('hidden');
     return;
   }
   if (e.target.id === 'modalCloseBtn' || e.target.id === 'modalOverlay') {
     document.getElementById('modalOverlay').classList.add('hidden');
+    var box = document.getElementById('modalBox');
+    if (box) box.className = 'modal-box';
   }
 });
 document.addEventListener('keydown', function (e) {
@@ -1882,6 +1908,10 @@ function renderStaticResumeBlock(block) {
       return `<div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.issuer || '')}</span><span class="ce-muted">${esc(it.date || '')}</span></div>`).join('')}</div>`;
     case 'languages':
       return `<div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.level || '')}</span></div>`).join('')}</div>`;
+    case 'spacer': {
+      const size = ['sm', 'md', 'lg'].includes(block.data.size) ? block.data.size : 'md';
+      return `<div class="rb-spacer rb-spacer-${size}" aria-hidden="true"></div>`;
+    }
     default:
       return '';
   }
@@ -1986,10 +2016,12 @@ function renderStaticPortfolioBlock(block) {
     ? html.replace(/^(<[a-z0-9]+\s+class=")/i, '$1pf-no-shadow ')
     : html;
   const align = block.align === 'center' || block.align === 'right' ? block.align : 'left';
-  // Same idea: inject data-align onto that same top-level element (not
-  // a wrapping div) so the exported DOM shape matches the live canvas,
-  // where createPortfolioBlock sets dataset.align directly on the card.
-  return shadowed.replace(/^(<[a-z0-9]+\s)/i, `$1data-align="${align}" `);
+  const contentAlign = block.contentAlign === 'center' || block.contentAlign === 'right' ? block.contentAlign : 'left';
+  // Same idea: inject data-align/data-content-align onto that same
+  // top-level element (not a wrapping div) so the exported DOM shape
+  // matches the live canvas, where createPortfolioBlock sets
+  // dataset.align/dataset.contentAlign directly on the card.
+  return shadowed.replace(/^(<[a-z0-9]+\s)/i, `$1data-align="${align}" data-content-align="${contentAlign}" `);
 }
 
 function renderStaticPortfolioBlockInner(block) {
@@ -2003,7 +2035,7 @@ function renderStaticPortfolioBlockInner(block) {
     if (!v || v.type === 'none') return '';
     const labelHTML = v.label ? `<span class="pf-verify-label">${esc(v.label)}</span>` : '';
     const cls = small ? 'pf-verify-badge pf-verify-badge-sm' : 'pf-verify-badge';
-    const text = small ? '✓' : `✓ Verified${labelHTML}`;
+    const text = small ? CHECK_ICON : `${CHECK_ICON}Verified${labelHTML}`;
     if (v.type === 'photo' && v.photo) {
       return `<button class="${cls}" data-verify-type="photo" data-verify-photo="${esc(v.photo)}" data-verify-label="${esc(v.label || '')}" type="button" title="View proof">${text}</button>`;
     }
@@ -2073,7 +2105,7 @@ function renderStaticPortfolioBlockInner(block) {
         // link straight out to that URL in a new tab.
         if (pv.type === 'link' && pv.link) {
           const safeHref = /^https?:\/\//i.test(pv.link) ? pv.link : `https://${pv.link}`;
-          const badge = `<span class="pf-photo-verify-badge" title="Verified">✓</span>`;
+          const badge = `<span class="pf-photo-verify-badge" title="Verified">${CHECK_ICON}</span>`;
           return `<a class="pf-gallery-item" href="${esc(safeHref)}" target="_blank" rel="noopener noreferrer">${badge}<img src="${esc(p.src)}" alt="" /></a>`;
         }
         // Photo-type proof (or no proof): the photo just zooms into the
@@ -2081,7 +2113,7 @@ function renderStaticPortfolioBlockInner(block) {
         // itself — only the checkmark. If there's a proof, the caption
         // (if any) shows under a "✓ Verified" line inside that pop-up.
         const hasProof = pv.type === 'photo' && !!pv.photo;
-        const badge = hasProof ? `<span class="pf-photo-verify-badge" title="Verified">✓</span>` : '';
+        const badge = hasProof ? `<span class="pf-photo-verify-badge" title="Verified">${CHECK_ICON}</span>` : '';
         const captionAttr = hasProof && pv.label ? ` data-caption="${esc(pv.label)}"` : '';
         return `<div class="pf-gallery-item" data-action="zoom-photo" data-src="${esc(p.src)}" data-verified="${hasProof ? '1' : '0'}"${captionAttr}>${badge}<img src="${esc(p.src)}" alt="" /></div>`;
       }).join('');
@@ -2105,6 +2137,10 @@ function renderStaticPortfolioBlockInner(block) {
         return `<a class="pf-link-chip" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(it.label || it.url)} ↗</a>`;
       }).join('');
       return `<div class="pf-card pf-links-card"><div class="pf-links-list">${linksHTML}</div></div>`;
+    }
+    case 'spacer': {
+      const size = ['sm', 'md', 'lg'].includes(block.data.size) ? block.data.size : 'md';
+      return `<div class="pf-spacer pf-spacer-${size}" aria-hidden="true"></div>`;
     }
     default:
       return '';
@@ -2215,7 +2251,7 @@ ${siteUrl ? `<meta property="og:url" content="${esc(siteUrl)}" />` : ''}
   </div>
 
   <div class="modal-overlay hidden" id="modalOverlay">
-    <div class="modal-box" role="dialog" aria-modal="true">
+    <div class="modal-box" id="modalBox" role="dialog" aria-modal="true">
       <button class="modal-close" id="modalCloseBtn" type="button" aria-label="Close">✕</button>
       <div id="modalContent"></div>
     </div>
@@ -2672,6 +2708,7 @@ function renderSidebarList(blocks) {
     const item = document.createElement('div');
     item.className = 'sd-section-item';
     item.dataset.id = block.id;
+    item.dataset.blockType = block.type;
     if (Store.state.selectedBlockId === block.id) item.classList.add('selected');
     if (block.hidden) item.classList.add('section-hidden');
     item.draggable = true;
@@ -2686,6 +2723,7 @@ function renderSidebarList(blocks) {
     else if (block.type === 'certifications') titleText = 'Certifications';
     else if (block.type === 'languages') titleText = 'Languages';
     else if (block.type === 'custom') titleText = block.data.title || 'Custom Block';
+    else if (block.type === 'spacer') titleText = 'Blank Space';
 
     const hasGalleryVerify = block.type === 'gallery' && (block.data.photos || []).some(p => p.verify && p.verify.type !== 'none');
     const verifyBadge = ((block.type === 'experience' && block.data.verify && block.data.verify.type !== 'none') || hasGalleryVerify)
@@ -2704,7 +2742,11 @@ function renderSidebarList(blocks) {
     const align = block.align === 'center' || block.align === 'right' ? block.align : 'left';
     const alignIcon = align === 'center' ? '↔' : align === 'right' ? '➡' : '⬅';
     const alignLabel = align === 'center' ? 'Centered' : align === 'right' ? 'Right-aligned' : 'Left-aligned';
-    const alignBtn = `<button class="sd-icon-btn sd-align-btn" data-action="cycle-align" data-id="${block.id}" data-align="${align}" title="Section alignment: ${alignLabel} (click to change)" type="button">${alignIcon}</button>`;
+    const alignBtn = `<button class="sd-icon-btn sd-align-btn" data-action="cycle-align" data-id="${block.id}" data-align="${align}" title="Section position on page: ${alignLabel} (click to change)" type="button">${alignIcon}</button>`;
+    const contentAlign = block.contentAlign === 'center' || block.contentAlign === 'right' ? block.contentAlign : 'left';
+    const contentAlignIcon = contentAlign === 'center' ? 'T↔' : contentAlign === 'right' ? 'T➡' : 'T⬅';
+    const contentAlignLabel = contentAlign === 'center' ? 'Centered' : contentAlign === 'right' ? 'Right-aligned' : 'Left-aligned';
+    const contentAlignBtn = `<button class="sd-icon-btn sd-content-align-btn" data-action="cycle-content-align" data-id="${block.id}" data-content-align="${contentAlign}" title="Text alignment inside this section: ${contentAlignLabel} (click to change)" type="button">${contentAlignIcon}</button>`;
     const hiddenTag = block.hidden ? `<span class="sd-hidden-tag">Hidden</span>` : '';
 
     item.innerHTML = `
@@ -2714,6 +2756,7 @@ function renderSidebarList(blocks) {
         <span class="sd-item-actions">
           ${swapBtn}
           ${alignBtn}
+          ${contentAlignBtn}
           ${shadowBtn}
           ${hideBtn}
           <button class="sd-icon-btn sd-expand-btn" data-action="toggle-expand" data-block="${block.id}" title="${isExpanded ? 'Done editing' : 'Edit this section'}" type="button">${isExpanded ? '✓' : '✎'}</button>
@@ -2780,6 +2823,10 @@ function initSidebarActions() {
         const order = ['left', 'center', 'right'];
         const next = order[(order.indexOf(actionBtn.dataset.align) + 1) % order.length];
         Store.setBlockAlign(actionBtn.dataset.id, next);
+      } else if (action === 'cycle-content-align') {
+        const order = ['left', 'center', 'right'];
+        const next = order[(order.indexOf(actionBtn.dataset.contentAlign) + 1) % order.length];
+        Store.setBlockContentAlign(actionBtn.dataset.id, next);
       } else if (action === 'toggle-expand') {
         toggleBlockExpand(actionBtn.dataset.block);
       } else if (action === 'add-item') {
@@ -2792,6 +2839,10 @@ function initSidebarActions() {
         openVerifyEditModal(actionBtn.dataset.block, actionBtn.dataset.photoIndex !== undefined ? Number(actionBtn.dataset.photoIndex) : undefined);
       } else if (action === 'edit-photo-verify') {
         openVerifyEditModal(actionBtn.dataset.block, Number(actionBtn.dataset.photoIndex));
+      } else if (action === 'cycle-spacer-size') {
+        const order = ['sm', 'md', 'lg'];
+        const next = order[(order.indexOf(actionBtn.dataset.size) + 1) % order.length];
+        Store.updateBlockData(actionBtn.dataset.block, 'size', next);
       }
       return;
     }
