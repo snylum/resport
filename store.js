@@ -906,7 +906,10 @@ class EditorStore {
       const photo = block.data.photos[index];
       if (!photo.verify) photo.verify = emptyVerify();
       photo.verify[field] = value;
-    } else if (index != null && block.data.items && block.data.items[index]) {
+    } else if (index != null && block.data.items && block.data.items[index] !== undefined) {
+      if (typeof block.data.items[index] !== 'object' || block.data.items[index] === null) {
+        block.data.items[index] = { name: block.data.items[index] };
+      }
       const item = block.data.items[index];
       if (!item.verify) item.verify = emptyVerify();
       item.verify[field] = value;
@@ -922,7 +925,10 @@ class EditorStore {
     if (!block) return;
     if (index != null && block.data.photos && block.data.photos[index]) {
       block.data.photos[index].verify = emptyVerify();
-    } else if (index != null && block.data.items && block.data.items[index]) {
+    } else if (index != null && block.data.items && block.data.items[index] !== undefined) {
+      if (typeof block.data.items[index] !== 'object' || block.data.items[index] === null) {
+        block.data.items[index] = { name: block.data.items[index] };
+      }
       block.data.items[index].verify = emptyVerify();
     } else {
       block.data.verify = emptyVerify();

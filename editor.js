@@ -259,12 +259,28 @@ function renderBulletList(bullets, blockId, field) {
     <button class="add-item-btn" data-action="add-item" data-block="${blockId}" data-field="${field}" type="button">+ Add bullet</button>`;
 }
 
+// Skill items were originally plain strings; adding per-skill proof
+// needs somewhere to hang a `verify` object, so a skill can now also
+// be `{ name, verify }`. These two helpers paper over both shapes
+// everywhere a skill gets displayed or checked for proof, so existing
+// portfolios (still storing plain strings) keep working untouched.
+function skillName(it) {
+  return typeof it === 'string' ? it : ((it && it.name) || '');
+}
+function skillVerify(it) {
+  return (it && typeof it === 'object' && it.verify) || { type: 'none' };
+}
+
 function renderSkillTags(items, blockId, field) {
-  const tags = (items || []).map((s, i) => `
+  const tags = (items || []).map((s, i) => {
+    const verified = skillVerify(s).type !== 'none';
+    return `
     <span class="rb-skill-tag">
-      ${ceField(s, field, blockId, { index: i })}
+      ${ceField(skillName(s), field, blockId, { index: i, subfield: 'name' })}
+      <button class="sd-gallery-thumb-verify ${verified ? 'is-verified' : ''}" data-action="edit-photo-verify" data-block="${blockId}" data-photo-index="${i}" title="${verified ? 'Edit proof for this skill' : 'Add proof for this skill'}" type="button">${verified ? '✓' : '+ proof'}</button>
       <button class="tag-remove-btn" data-action="remove-item" data-block="${blockId}" data-field="${field}" data-index="${i}" title="Remove" type="button">✕</button>
-    </span>`).join('');
+    </span>`;
+  }).join('');
   return `<div class="rb-skills-wrap">${tags}</div>
     <button class="add-item-btn" data-action="add-item" data-block="${blockId}" data-field="${field}" type="button">+ Add skill</button>`;
 }
@@ -356,7 +372,7 @@ function blockSummaryLine(block) {
     case 'experience': return [d.company, d.role].filter(Boolean).join(' — ') || 'Experience entry';
     case 'education': return [d.school, d.degree].filter(Boolean).join(' — ') || 'Education entry';
     case 'projects': return d.name || 'Project';
-    case 'skills': return (d.items || []).join(', ') || 'Skills';
+    case 'skills': return (d.items || []).map(skillName).join(', ') || 'Skills';
     case 'certifications': return (d.items || []).map(i => i.name).filter(Boolean).join(', ') || 'Certifications';
     case 'languages': return (d.items || []).map(i => i.name).filter(Boolean).join(', ') || 'Languages';
     case 'gallery': return (d.photos || []).length ? `${d.photos.length} photo${d.photos.length === 1 ? '' : 's'}` : 'Photo gallery (empty)';
@@ -550,7 +566,7 @@ function createPortfolioBlock(block) {
       break;
     case 'skills':
       baseClass = 'pf-card';
-      innerHTML = `<div class="rb-skills-wrap">${(block.data.items || []).map(s => `<span class="rb-skill-tag">${esc(s)}</span>`).join('')}</div>
+      innerHTML = `<div class="rb-skills-wrap">${(block.data.items || []).map((s, i) => `<span class="rb-skill-tag">${esc(skillName(s))}${canvasEntryVerifyBadge(block, i)}</span>`).join('')}</div>
         ${canvasVerifyBadge(block)}`;
       break;
     case 'certifications':
@@ -1787,7 +1803,7 @@ function buildResumePlainText() {
           ...(block.data.bullets || []).map(b => `• ${b}`)
         ];
       case 'skills':
-        return [(block.data.items || []).join(', ')];
+        return [(block.data.items || []).map(skillName).join(', ')];
       case 'certifications':
         return (block.data.items || []).map(it => [it.name, it.issuer, it.date].filter(Boolean).join(' — '));
       case 'languages':
@@ -1838,7 +1854,7 @@ function renderStaticResumeBlock(block) {
         ${bulletsHTML(block.data.bullets)}
       </div>`;
     case 'skills':
-      return `<div class="rb-skills-wrap">${(block.data.items || []).map(s => `<span class="rb-skill-tag">${esc(s)}</span>`).join('')}</div>`;
+      return `<div class="rb-skills-wrap">${(block.data.items || []).map(s => `<span class="rb-skill-tag">${esc(skillName(s))}</span>`).join('')}</div>`;
     case 'certifications':
       return `<div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.issuer || '')}</span><span class="ce-muted">${esc(it.date || '')}</span></div>`).join('')}</div>`;
     case 'languages':
@@ -2015,7 +2031,7 @@ function renderStaticPortfolioBlockInner(block) {
     }
     case 'skills': {
       const badge = staticVerifyBadge(block.data.verify);
-      return `<div class="pf-card"><div class="rb-skills-wrap">${(block.data.items || []).map(s => `<span class="rb-skill-tag">${esc(s)}</span>`).join('')}</div>${badge ? `<div class="pf-verify">${badge}</div>` : ''}</div>`;
+      return `<div class="pf-card"><div class="rb-skills-wrap">${(block.data.items || []).map(s => `<span class="rb-skill-tag">${esc(skillName(s))}${staticVerifyBadge(skillVerify(s), true)}</span>`).join('')}</div>${badge ? `<div class="pf-verify">${badge}</div>` : ''}</div>`;
     }
     case 'certifications':
       return `<div class="pf-card"><div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><div class="rb-entry-main"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.issuer || '')}</span></div><div class="rb-entry-right"><span class="ce-muted rb-entry-date">${esc(it.date || '')}</span>${staticVerifyBadge(it.verify, true)}</div></div>`).join('')}</div></div>`;
