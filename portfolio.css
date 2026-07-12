@@ -102,6 +102,17 @@
 .portfolio-site[data-hero-photo-shape="rounded"] .pf-hero-photo-wrap { border-radius: 16px; }
 .portfolio-site[data-hero-photo-shape="square"] .pf-hero-photo-wrap { border-radius: 4px; }
 
+/* ── Photo border ────────────────────────────────────────────
+   Off by default is opt-in (data attr defaults to "1" — see
+   editor.js's data-hero-photo-border on .portfolio-site and the
+   published-HTML builder) so existing sites keep their current
+   look until someone explicitly turns this off. */
+.portfolio-site[data-hero-photo-border="0"] .pf-hero-photo-wrap {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
 /* ── Photo size ──────────────────────────────────────────── */
 .portfolio-site[data-hero-photo-size="sm"] .pf-hero-photo-wrap { width: calc(76px * var(--pf-hero-scale)); height: calc(76px * var(--pf-hero-scale)); }
 .portfolio-site[data-hero-photo-size="lg"] .pf-hero-photo-wrap { width: calc(152px * var(--pf-hero-scale)); height: calc(152px * var(--pf-hero-scale)); }

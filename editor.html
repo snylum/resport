@@ -173,19 +173,26 @@
       font-style: italic;
       font-weight: 700;
       color: var(--color-text);
+      text-decoration: none;
       outline: none;
       border-bottom: 1px dashed transparent;
       padding: 0 0.05rem;
-      cursor: text;
+      cursor: default;
       max-width: 16ch;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      display: inline-block;
+      vertical-align: bottom;
     }
-    .nav-username:hover {
-      border-bottom-color: var(--color-text-muted);
+    /* Only a real, live, paid-and-approved address is an actual link —
+       see refreshNavUsername() in editor.js, which is the only place
+       an href ever gets set on this element. */
+    .nav-username.is-claimed {
+      cursor: pointer;
     }
-    .nav-username:focus {
+    .nav-username.is-claimed:hover,
+    .nav-username.is-claimed:focus {
       border-bottom-color: var(--color-secondary);
     }
     @media (max-width: 900px) {
@@ -207,7 +214,7 @@
 
   <nav class="site-nav">
     <div class="nav-logo">
-      <img src="favicon.png" alt="" class="logo-dot" /><span class="nav-username" id="navUsername" spellcheck="false" title="Sign in with Google and publish to claim a real username">a-sign-up</span><a href="index.html" class="nav-logo-suffix">.proves.work</a>
+      <img src="favicon.png" alt="" class="logo-dot" /><a class="nav-username" id="navUsername" spellcheck="false" title="Sign in with Google and publish to claim a real username">a-sign-up</a><a href="index.html" class="nav-logo-suffix">.proves.work</a>
     </div>
     <ul class="nav-links">
       <li>
@@ -734,6 +741,16 @@
                   <button class="option-pill" data-value="rounded">Rounded</button>
                   <button class="option-pill" data-value="square">Square</button>
                 </div>
+              </div>
+              <div class="customize-group">
+                <div class="customize-toggle-row">
+                  <p class="customize-label" style="margin:0;">Photo Border</p>
+                  <label class="customize-toggle">
+                    <input type="checkbox" id="inHeroPhotoBorder" checked />
+                    <span class="customize-toggle-slider"></span>
+                  </label>
+                </div>
+                <p class="customize-hint">Turn off for a clean, borderless photo with no frame or shadow.</p>
               </div>
               <div class="customize-group">
                 <p class="customize-label">Photo Size</p>

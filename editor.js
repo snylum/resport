@@ -88,6 +88,7 @@ const el = {
   inColGap: document.getElementById('inColGap'),
   colGapLabel: document.getElementById('colGapLabel'),
   inColBorder: document.getElementById('inColBorder'),
+  inHeroPhotoBorder: document.getElementById('inHeroPhotoBorder'),
   colSplitGroup: document.getElementById('colSplitGroup'),
   colGapGroup: document.getElementById('colGapGroup'),
   colBorderGroup: document.getElementById('colBorderGroup'),
@@ -1424,22 +1425,37 @@ function initUsernameEditor() {
 // Call this whenever sign-in state, saved username, or site status
 // changes, so the toolbar logo never implies an address is claimed
 // when it isn't.
+//
+// When the address is genuinely live — signed in, published, admin-
+// approved, and paid (not just "status: live", which an unpaid/lapsed
+// record can still carry) — this becomes a real link that opens
+// username.proves.work in a new tab. Otherwise it's inert text: no
+// href, so there's nothing to click.
 function refreshNavUsername() {
   if (!el.navUsername) return;
   const saved = getSavedUsername();
   const signedIn = !!getSavedGoogleAccount();
-  const approvedLive = el.siteStatusBadge && el.siteStatusBadge.classList.contains('status-live');
+  const eligible = !!(signedIn && saved && lastSiteStatusData &&
+    lastSiteStatusData.status === 'live' &&
+    lastSiteStatusData.paid &&
+    (!lastSiteStatusData.paidUntil || new Date(lastSiteStatusData.paidUntil).getTime() > Date.now()));
 
-  if (signedIn && saved && approvedLive) {
+  if (eligible) {
     el.navUsername.textContent = saved;
     el.navUsername.classList.remove('is-unclaimed');
     el.navUsername.classList.add('is-claimed');
     el.navUsername.title = `${saved}.${PUBLISH_APEX} — live`;
+    el.navUsername.href = `https://${saved}.${PUBLISH_APEX}`;
+    el.navUsername.target = '_blank';
+    el.navUsername.rel = 'noopener noreferrer';
   } else {
     el.navUsername.textContent = 'a-sign-up';
     el.navUsername.classList.remove('is-claimed');
     el.navUsername.classList.add('is-unclaimed');
     el.navUsername.title = 'Sign in with Google and publish to claim a real username — subject to admin approval';
+    el.navUsername.removeAttribute('href');
+    el.navUsername.removeAttribute('target');
+    el.navUsername.removeAttribute('rel');
   }
 }
 
@@ -1999,7 +2015,7 @@ ${siteUrl ? `<meta property="og:url" content="${esc(siteUrl)}" />` : ''}
 </style>
 </head>
 <body data-viewmode="portfolio">
-  <div class="portfolio-site" id="portfolioSite" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-dots-pos="${esc(design.dotsPosition || 'right')}" data-dots-center="${esc(design.dotsCentering || 'slide')}" data-dots-style="${esc(design.dotsStyle || 'dot')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" data-hero-photo-shape="${esc(design.heroPhotoShape || 'circle')}" data-hero-photo-size="${esc(design.heroPhotoSize || 'md')}" data-hero-size="${esc(design.heroSize || 'normal')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};--pf-header-pct:${esc(design.headerHeightPct || 30)};--pf-text-pad:${esc((Number(design.textPaddingRem) || 0) + 'rem')};--pf-line-height:${esc(LINE_SPACING_PRESETS[design.lineSpacing] || LINE_SPACING_PRESETS.normal)};--pf-section-gap:${esc(SECTION_SPACING_PRESETS[design.sectionSpacing] || SECTION_SPACING_PRESETS.normal)};--pf-card-pad:${esc(CARD_PADDING_PRESETS[design.cardPadding] || CARD_PADDING_PRESETS.normal)};">
+  <div class="portfolio-site" id="portfolioSite" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-dots-pos="${esc(design.dotsPosition || 'right')}" data-dots-center="${esc(design.dotsCentering || 'slide')}" data-dots-style="${esc(design.dotsStyle || 'dot')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" data-hero-photo-shape="${esc(design.heroPhotoShape || 'circle')}" data-hero-photo-border="${design.heroPhotoBorder === false ? '0' : '1'}" data-hero-photo-size="${esc(design.heroPhotoSize || 'md')}" data-hero-size="${esc(design.heroSize || 'normal')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};--pf-header-pct:${esc(design.headerHeightPct || 30)};--pf-text-pad:${esc((Number(design.textPaddingRem) || 0) + 'rem')};--pf-line-height:${esc(LINE_SPACING_PRESETS[design.lineSpacing] || LINE_SPACING_PRESETS.normal)};--pf-section-gap:${esc(SECTION_SPACING_PRESETS[design.sectionSpacing] || SECTION_SPACING_PRESETS.normal)};--pf-card-pad:${esc(CARD_PADDING_PRESETS[design.cardPadding] || CARD_PADDING_PRESETS.normal)};">
     <header class="pf-hero">
       ${p.photo ? `<div class="pf-hero-photo-wrap"><img src="${esc(p.photo)}" alt="${esc(fullName)}" /></div>` : ''}
       <div class="pf-hero-text">
@@ -3311,6 +3327,7 @@ function applyPortfolioDesign(design) {
   el.portfolioSite.setAttribute('data-content-width', design.contentWidth || 'contained');
   el.portfolioSite.setAttribute('data-hero-align', design.heroAlign || 'left');
   el.portfolioSite.setAttribute('data-hero-photo-shape', design.heroPhotoShape || 'circle');
+  el.portfolioSite.setAttribute('data-hero-photo-border', design.heroPhotoBorder === false ? '0' : '1');
   el.portfolioSite.setAttribute('data-hero-photo-size', design.heroPhotoSize || 'md');
   el.portfolioSite.setAttribute('data-hero-size', design.heroSize || 'normal');
   el.portfolioSite.style.setProperty('--pf-header-pct', design.headerHeightPct || 30);
@@ -3397,6 +3414,7 @@ function syncCustomizeControls(design) {
     el.colGapLabel.textContent = v + 'rem';
   }
   if (el.inColBorder) el.inColBorder.checked = design.colBorder !== false;
+  if (el.inHeroPhotoBorder) el.inHeroPhotoBorder.checked = design.heroPhotoBorder !== false;
 
   const isTwoCol = Store.state.viewMode === 'resume' && String(design.layout) === '2';
   [el.colSplitGroup, el.colGapGroup, el.colBorderGroup].forEach(g => { if (g) g.classList.toggle('hidden', !isTwoCol); });
@@ -3492,6 +3510,9 @@ function initCustomizePanel() {
 
   if (el.inColBorder) {
     el.inColBorder.addEventListener('change', (e) => Store.setDesign('colBorder', e.target.checked));
+  }
+  if (el.inHeroPhotoBorder) {
+    el.inHeroPhotoBorder.addEventListener('change', (e) => Store.setDesign('heroPhotoBorder', e.target.checked));
   }
 
   if (el.inIncludePortfolioLink) {
