@@ -914,18 +914,17 @@ function openVerifyViewModal(blockId, photoIndex) {
     ? (block.data.photos[photoIndex].verify || { type: 'none' })
     : (block.data.verify || { type: 'none' });
 
+  if (v.type === 'link' && v.link) {
+    const safeHref = /^https?:\/\//i.test(v.link) ? v.link : `https://${v.link}`;
+    window.open(safeHref, '_blank', 'noopener,noreferrer');
+    return;
+  }
+
   let body;
   if (v.type === 'photo' && v.photo) {
     body = `<div class="verify-modal-body">
       <img src="${v.photo}" alt="Verification proof" class="verify-modal-img" />
       ${v.label ? `<p class="verify-modal-caption">${esc(v.label)}</p>` : ''}
-    </div>`;
-  } else if (v.type === 'link' && v.link) {
-    const safeHref = /^https?:\/\//i.test(v.link) ? v.link : `https://${v.link}`;
-    body = `<div class="verify-modal-body verify-modal-link">
-      <div class="verify-link-icon">🔗</div>
-      <p class="verify-modal-caption">${esc(v.label || 'Verification link')}</p>
-      <a class="btn btn-secondary btn-sm" href="${esc(safeHref)}" target="_blank" rel="noopener noreferrer">Visit link ↗</a>
     </div>`;
   } else {
     body = `<p class="verify-empty">No proof attached yet.</p>`;
@@ -1549,17 +1548,19 @@ document.addEventListener('click', function (e) {
   }
   var btn = e.target.closest('[data-verify-type]');
   if (btn) {
+    var type = btn.getAttribute('data-verify-type');
+    if (type === 'link') {
+      var link = btn.getAttribute('data-verify-link');
+      if (link) window.open(link, '_blank', 'noopener,noreferrer');
+      return;
+    }
     var overlay = document.getElementById('modalOverlay');
     var content = document.getElementById('modalContent');
-    var type = btn.getAttribute('data-verify-type');
     var label = btn.getAttribute('data-verify-label') || '';
     var html = '';
     if (type === 'photo') {
       var photo = btn.getAttribute('data-verify-photo');
       html = '<h3 class="modal-title">Verified experience</h3><div class="verify-modal-body"><img src="' + photo + '" class="verify-modal-img" alt="Verification proof"/>' + (label ? '<p class="verify-modal-caption">' + label + '</p>' : '') + '</div>';
-    } else if (type === 'link') {
-      var link = btn.getAttribute('data-verify-link');
-      html = '<h3 class="modal-title">Verified experience</h3><div class="verify-modal-body verify-modal-link"><div class="verify-link-icon">\\uD83D\\uDD17</div>' + (label ? '<p class="verify-modal-caption">' + label + '</p>' : '') + '<a class="btn btn-secondary btn-sm" href="' + link + '" target="_blank" rel="noopener noreferrer">Visit link \\u2197</a></div>';
     }
     content.innerHTML = html;
     overlay.classList.remove('hidden');

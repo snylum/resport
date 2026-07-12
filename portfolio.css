@@ -803,6 +803,33 @@
   gap: 0.5rem;
 }
 
+/* ── Certification / language entry rows (published site) ────
+   Mirrors editor.css's .rb-entry-list/.rb-entry-row so these blocks
+   render as styled rows on the live portfolio, not bare run-on text.
+   Tinted with the portfolio's own accent color rather than a fixed
+   editor UI color, so it matches whatever theme is selected. */
+.rb-entry-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.rb-entry-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--pf-accent, var(--color-secondary)) 8%, white);
+}
+.rb-entry-row .ce-strong {
+  font-weight: 700;
+}
+.rb-entry-row .ce-muted {
+  color: var(--color-text-muted);
+  font-size: 0.9em;
+}
+
 /* ── Photo gallery card ────────────────────────────────────── */
 .pf-gallery-card { padding: 0; overflow: hidden; background: transparent; box-shadow: none !important; border: none !important; }
 .pf-gallery-grid {

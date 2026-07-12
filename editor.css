@@ -1425,6 +1425,11 @@ body {
   background: var(--color-surface-alt);
 }
 
+.portfolio-site .rb-entry-row {
+  border: none;
+  background: color-mix(in srgb, var(--pf-accent, var(--color-secondary)) 8%, white);
+}
+
 .rb-entry-fields {
   flex: 1;
   display: flex;
