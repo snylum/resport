@@ -392,16 +392,24 @@
 .portfolio-site[data-section-anim="vertical"][data-dots-pos="left"] .pf-slide-dots,
 .portfolio-site[data-section-anim="horizontal"][data-dots-pos="right"] .pf-slide-dots,
 .portfolio-site[data-section-anim="vertical"][data-dots-pos="right"] .pf-slide-dots {
-  top: calc(50vh + (var(--pf-header-pct) * 0.5vh));
+  /* --pf-header-real-h is set by JS (see PUBLISHED_PAGE_SCRIPT) once the
+     hero's actual rendered height is known — the hero's min-height is
+     only a target and can grow past it (long name/tagline wrapping),
+     and this rail needs to center on the real gap below it, not the
+     target. The vh-based calc is a fallback only, for the brief moment
+     before that JS runs (or if it can't). */
+  top: calc((100vh + var(--pf-header-real-h, calc(var(--pf-header-pct) * 1vh))) / 2);
   transform: translateY(-50%);
 }
 #canvasZoomTarget .portfolio-site[data-section-anim="horizontal"][data-dots-pos="left"] .pf-slide-dots,
 #canvasZoomTarget .portfolio-site[data-section-anim="vertical"][data-dots-pos="left"] .pf-slide-dots,
 #canvasZoomTarget .portfolio-site[data-section-anim="horizontal"][data-dots-pos="right"] .pf-slide-dots,
 #canvasZoomTarget .portfolio-site[data-section-anim="vertical"][data-dots-pos="right"] .pf-slide-dots {
-  /* Same 640px-canvas / 6.4px-per-percent reference the header and the
-     "top" dots position already use inside the editor canvas. */
-  top: calc(320px + (var(--pf-header-pct) * 3.2px));
+  /* Same 640px-canvas reference the header itself uses inside the
+     editor; --pf-header-real-h (if set) still wins either way since
+     it's already a real pixel value regardless of which shell it's
+     measured in. */
+  top: calc((640px + var(--pf-header-real-h, calc(var(--pf-header-pct) * 6.4px))) / 2);
 }
 /* "Centered on screen/display" alternative (data-dots-center="viewport")
    — instead of centering on the section area below the header, this
@@ -799,7 +807,7 @@
 .pf-gallery-card { padding: 0; overflow: hidden; background: transparent; box-shadow: none !important; border: none !important; }
 .pf-gallery-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 0.6rem;
 }
 .pf-gallery-item {

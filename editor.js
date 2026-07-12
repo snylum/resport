@@ -1594,6 +1594,29 @@ document.addEventListener('keydown', function (e) {
   var root = document.getElementById('portfolioSite');
   var anim = root && root.getAttribute('data-section-anim');
   if (!root || (anim !== 'horizontal' && anim !== 'vertical')) return;
+
+  // The hero band's CSS min-height is a TARGET (--pf-header-pct), not a
+  // cap — long names/taglines/contact lines can wrap and push the
+  // header taller than that target so nothing gets clipped (see
+  // .pf-hero in portfolio.css). The dot rail's centering math used to
+  // assume the header was always exactly the target height, so on a
+  // header that grew past its target the rail ended up positioned too
+  // high — overlapping the now-taller header instead of sitting
+  // cleanly in the section area below it. Measuring the hero's real
+  // rendered height and feeding it back in as --pf-header-real-h fixes
+  // that regardless of how much the header grows.
+  var hero = root.querySelector('.pf-hero');
+  function syncHeaderHeight() {
+    if (!hero) return;
+    root.style.setProperty('--pf-header-real-h', hero.getBoundingClientRect().height + 'px');
+  }
+  syncHeaderHeight();
+  if (hero && 'ResizeObserver' in window) {
+    new ResizeObserver(syncHeaderHeight).observe(hero);
+  } else {
+    window.addEventListener('resize', syncHeaderHeight);
+  }
+
   var axis = anim === 'vertical' ? 'y' : 'x';
   var track = root.querySelector('.pf-sections');
   var slides = root.querySelectorAll('.pf-slide');
@@ -3396,6 +3419,29 @@ function applyPortfolioDesign(design) {
   el.portfolioSite.style.setProperty('--pf-section-gap', SECTION_SPACING_PRESETS[design.sectionSpacing] || SECTION_SPACING_PRESETS.normal);
   el.portfolioSite.style.setProperty('--pf-card-pad', CARD_PADDING_PRESETS[design.cardPadding] || CARD_PADDING_PRESETS.normal);
   initPortfolioAnimation(design.sectionAnimation || 'none');
+  syncPortfolioHeaderHeight();
+}
+
+// Keeps the horizontal/vertical mode's side dot rail (see .pf-slide-dots
+// in portfolio.css) centered on the real space below the header, not an
+// assumed one. The hero's min-height (--pf-header-pct) is only a
+// target — a long name/tagline/contact line can wrap and push it
+// taller — so the rail's CSS centering math reads the hero's actual
+// measured height (--pf-header-real-h) instead of guessing from the
+// target percentage. Re-runs via ResizeObserver whenever the hero's
+// rendered size changes (content edits, re-render, window resize),
+// same approach used in the published page's own script.
+let portfolioHeaderHeightObserver = null;
+function syncPortfolioHeaderHeight() {
+  const hero = el.portfolioSite.querySelector('.pf-hero');
+  if (!hero) return;
+  const setH = () => el.portfolioSite.style.setProperty('--pf-header-real-h', hero.getBoundingClientRect().height + 'px');
+  setH();
+  if ('ResizeObserver' in window) {
+    if (portfolioHeaderHeightObserver) portfolioHeaderHeightObserver.disconnect();
+    portfolioHeaderHeightObserver = new ResizeObserver(setH);
+    portfolioHeaderHeightObserver.observe(hero);
+  }
 }
 
 function applyActiveDesign() {
