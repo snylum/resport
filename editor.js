@@ -421,8 +421,13 @@ function blockEditFieldsHTML(block) {
         + field('Bullets', renderBulletList(d.bullets, block.id, 'bullets'))
         + field('Verification', `<div class="pf-verify">${verifyControlHTML(block)}</div>`);
     case 'skills':
-      return field('Skills', renderSkillTags(d.items, block.id, 'items'))
-        + field('Verification', `<div class="pf-verify">${verifyControlHTML(block)}</div>`);
+      // Skills verification is per-entry (the "+ proof" button baked
+      // into each tag by renderSkillTags) — same model as
+      // certifications/languages below. No block-level "Verification"
+      // field here; one used to be added by mistake, which produced a
+      // confusing second, whole-section "+ Add proof" control that
+      // didn't do anything useful once every tag already had its own.
+      return field('Skills', renderSkillTags(d.items, block.id, 'items'));
     case 'certifications':
       return field('Certifications', renderEntryList(d.items, block.id, 'items', [
         { key: 'name', cls: 'ce-strong', label: 'Name' }, { key: 'issuer', cls: 'ce-muted', label: 'Issuer' }, { key: 'date', cls: 'ce-muted', label: 'Date' }
@@ -639,6 +644,7 @@ function renderPortfolioCanvasBlocks(blocks, mode) {
     el.pfSlideArrowBottom.classList.add('hidden');
     pfSlideEls = [];
     pfDotEls = [];
+    el.portfolioSite.classList.remove('pf-header-collapsed');
     el.pfSections.innerHTML = '';
     blocks.forEach(block => el.pfSections.appendChild(createPortfolioBlock(block)));
     return;
@@ -689,6 +695,7 @@ function renderPortfolioCanvasBlocks(blocks, mode) {
   });
 
   pfCurrentSlide = keepIndex;
+  pfUpdateHeaderCollapse(keepIndex);
   // Jump (no smooth animation — this is a re-render, not a user nav
   // action) back to whichever slide was active before the re-render,
   // once the new layout has settled.
@@ -707,6 +714,17 @@ function pfSetActiveDot(i) {
   });
   el.pfSlideArrowTop.toggleAttribute('disabled', i <= 0);
   el.pfSlideArrowBottom.toggleAttribute('disabled', i >= pfSlideEls.length - 1);
+  pfUpdateHeaderCollapse(i);
+}
+
+// Pinned header in horizontal/vertical mode: visible on slide 0,
+// collapsed away (see .pf-header-collapsed in portfolio.css) on every
+// slide after that, so those slides expand up to where the header
+// used to be. No-op (class stays off) for "scroll"-style headers,
+// which have nothing to collapse.
+function pfUpdateHeaderCollapse(i) {
+  const headerStyle = el.portfolioSite.getAttribute('data-header-style');
+  el.portfolioSite.classList.toggle('pf-header-collapsed', headerStyle === 'pinned' && i > 0);
 }
 
 function pfCurrentAxis() {
@@ -1680,11 +1698,16 @@ document.addEventListener('keydown', function (e) {
     setTimeout(function () { isProgrammatic = false; }, 500);
   }
   var dotsStyle = root.getAttribute('data-dots-style') || 'dot';
+  var headerStyle = root.getAttribute('data-header-style');
   function setDots(i) {
     dots.forEach(function (d, di) {
       d.classList.toggle('active', di === i);
       d.classList.toggle('passed', dotsStyle === 'progress' && di <= i);
     });
+    // Pinned header: visible on slide 0, collapsed away (see
+    // .pf-header-collapsed in portfolio.css) on every slide after
+    // that, so those slides expand up to where the header used to be.
+    root.classList.toggle('pf-header-collapsed', headerStyle === 'pinned' && i > 0);
   }
   dots.forEach(function (d) {
     d.addEventListener('click', function () { goTo(parseInt(d.getAttribute('data-pf-slide'), 10)); });
@@ -2030,8 +2053,13 @@ function renderStaticPortfolioBlockInner(block) {
       </div>`;
     }
     case 'skills': {
-      const badge = staticVerifyBadge(block.data.verify);
-      return `<div class="pf-card"><div class="rb-skills-wrap">${(block.data.items || []).map(s => `<span class="rb-skill-tag">${esc(skillName(s))}${staticVerifyBadge(skillVerify(s), true)}</span>`).join('')}</div>${badge ? `<div class="pf-verify">${badge}</div>` : ''}</div>`;
+      // Per-entry proof only (each tag carries its own badge via
+      // skillVerify/staticVerifyBadge) — no block-level verify here,
+      // matching certifications/languages below. A whole-section
+      // badge sourced from block.data.verify used to render here too,
+      // which never had anywhere to be set from the editor and just
+      // showed a stray, meaningless "Verified" pill under the tags.
+      return `<div class="pf-card"><div class="rb-skills-wrap">${(block.data.items || []).map(s => `<span class="rb-skill-tag">${esc(skillName(s))}${staticVerifyBadge(skillVerify(s), true)}</span>`).join('')}</div></div>`;
     }
     case 'certifications':
       return `<div class="pf-card"><div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><div class="rb-entry-main"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.issuer || '')}</span></div><div class="rb-entry-right"><span class="ce-muted rb-entry-date">${esc(it.date || '')}</span>${staticVerifyBadge(it.verify, true)}</div></div>`).join('')}</div></div>`;

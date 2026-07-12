@@ -184,13 +184,43 @@
   z-index: 20;
 }
 
-/* Horizontal mode never uses sticky for the header — see the "fixed
-   shell" block below, which makes the header a static flex item that's
-   always fully visible instead, so there's nothing to fall out of sync. */
+/* Horizontal/vertical slide mode has no page scroll for a sticky
+   header to stick to (see the "fixed shell" block below) — so
+   "pinned" means something different there: the header stays fully
+   visible on the first slide, then collapses away (height animates
+   to 0) as soon as the visitor moves past it, so slide 2 onward
+   expands to fill the space all the way up to where the header used
+   to be. That's driven by the .pf-header-collapsed class, toggled on
+   .portfolio-site by the slide-nav script as the active slide
+   changes (see initPortfolioHorizontalNav in the editor, and the
+   equivalent inline script on the published page). --pf-header-real-h
+   is measured/kept in sync by that same script. */
 .portfolio-site[data-section-anim="horizontal"][data-header-style="pinned"] .pf-hero,
 .portfolio-site[data-section-anim="vertical"][data-header-style="pinned"] .pf-hero {
   position: static;
+  flex-shrink: 0;
+  overflow: hidden;
+  max-height: var(--pf-header-real-h, 480px);
+  opacity: 1;
+  transition: max-height 0.45s ease, opacity 0.3s ease, padding-top 0.45s ease, padding-bottom 0.45s ease, border-width 0.45s ease;
 }
+
+.portfolio-site[data-section-anim="horizontal"][data-header-style="pinned"].pf-header-collapsed .pf-hero,
+.portfolio-site[data-section-anim="vertical"][data-header-style="pinned"].pf-header-collapsed .pf-hero {
+  max-height: 0;
+  min-height: 0; /* .pf-hero's own min-height (--pf-header-pct, floored
+                    at --pf-hero-min) would otherwise win over max-height
+                    and hold the band open */
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-width: 0;
+  pointer-events: none;
+}
+
+/* Scroll-mode headers (non-pinned) in slide mode are already plain
+   static flex items with nothing to collapse, so this class has no
+   effect there — it's scoped to [data-header-style="pinned"] above. */
 
 /* ── Hero alignment ───────────────────────────────────────────
    Lets the personal-details card sit left (default), centered, or
@@ -280,6 +310,24 @@
 .portfolio-site[data-section-anim="horizontal"] .pf-hero,
 .portfolio-site[data-section-anim="vertical"] .pf-hero {
   flex-shrink: 0;
+}
+
+/* ── Slide viewport ───────────────────────────────────────────
+   Wraps the section track, dot rail and prev/next arrows only —
+   deliberately NOT the hero header. It's the flex child that
+   fills whatever space is left below the header, and it's the
+   positioning context the arrows are absolutely placed against
+   (see .pf-slide-arrow below). Previously the arrows were
+   positioned against the whole .portfolio-site card, so a tall
+   pinned header pushed the "top" arrow's 0.75rem offset straight
+   into the header instead of the top edge of the slide itself. */
+.portfolio-site[data-section-anim="horizontal"] .pf-slide-viewport,
+.portfolio-site[data-section-anim="vertical"] .pf-slide-viewport {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .portfolio-site[data-section-anim="horizontal"] .pf-slide-dots,
@@ -381,55 +429,48 @@
   box-shadow: 0 2px 10px rgba(0,0,0,0.08);
   z-index: 5;
 }
-/* "left"/"right" center the rail on the SECTION area only — the space
-   below the header/hero band, not the whole page (which would drag
-   the rail visually up into/above the header on any header-pct other
-   than the one this was eyeballed against). The section area runs
-   from the header's real bottom edge (--pf-header-pct, same math the
-   header itself uses) down to the bottom of the viewport, so its
-   vertical center sits at (100vh + header-height) / 2. */
+/* "left"/"right" center the rail on the section area — i.e. within
+   .pf-slide-viewport, which wraps the section track/dots/arrows but
+   deliberately excludes the hero header. Because the rail's
+   positioning ancestor is that header-free wrapper, a flat 50% here
+   is already the vertical center of the section area — no header-
+   height math needed. */
 .portfolio-site[data-section-anim="horizontal"][data-dots-pos="left"] .pf-slide-dots,
 .portfolio-site[data-section-anim="vertical"][data-dots-pos="left"] .pf-slide-dots,
 .portfolio-site[data-section-anim="horizontal"][data-dots-pos="right"] .pf-slide-dots,
 .portfolio-site[data-section-anim="vertical"][data-dots-pos="right"] .pf-slide-dots {
-  /* --pf-header-real-h is set by JS (see PUBLISHED_PAGE_SCRIPT) once the
-     hero's actual rendered height is known — the hero's min-height is
-     only a target and can grow past it (long name/tagline wrapping),
-     and this rail needs to center on the real gap below it, not the
-     target. The vh-based calc is a fallback only, for the brief moment
-     before that JS runs (or if it can't). */
-  top: calc((100vh + var(--pf-header-real-h, calc(var(--pf-header-pct) * 1vh))) / 2);
+  top: 50%;
   transform: translateY(-50%);
-}
-#canvasZoomTarget .portfolio-site[data-section-anim="horizontal"][data-dots-pos="left"] .pf-slide-dots,
-#canvasZoomTarget .portfolio-site[data-section-anim="vertical"][data-dots-pos="left"] .pf-slide-dots,
-#canvasZoomTarget .portfolio-site[data-section-anim="horizontal"][data-dots-pos="right"] .pf-slide-dots,
-#canvasZoomTarget .portfolio-site[data-section-anim="vertical"][data-dots-pos="right"] .pf-slide-dots {
-  /* Same 640px-canvas reference the header itself uses inside the
-     editor; --pf-header-real-h (if set) still wins either way since
-     it's already a real pixel value regardless of which shell it's
-     measured in. */
-  top: calc((640px + var(--pf-header-real-h, calc(var(--pf-header-pct) * 6.4px))) / 2);
 }
 /* "Centered on screen/display" alternative (data-dots-center="viewport")
    — instead of centering on the section area below the header, this
    centers the rail on the full display/canvas height, header included.
-   .portfolio-site is itself the 100vh (or, in the editor canvas, fixed
-   640px) box these percentages measure against, so a flat 50% here
-   really is dead-center on the whole thing — no header-offset math
-   needed, unlike the "slide" default above. Extra attribute selectors
-   are deliberate: this needs to out-specificity the default rule
-   above it, not just come later in the file. */
+   Since the rail's positioning ancestor (.pf-slide-viewport) starts
+   BELOW the header, hitting that full-height center means shifting up
+   by half the header's real height relative to the viewport's own
+   50% mark. --pf-header-real-h is set by JS (see PUBLISHED_PAGE_SCRIPT)
+   once the hero's actual rendered height is known — the hero's
+   min-height is only a target and can grow past it (long name/tagline
+   wrapping) — with the vh-based --pf-header-pct calc as a fallback for
+   the brief moment before that JS runs, or if it can't. Extra
+   attribute selectors are deliberate: this needs to out-specificity
+   the default rule above it, not just come later in the file. */
 .portfolio-site[data-section-anim="horizontal"][data-dots-center="viewport"][data-dots-pos="left"] .pf-slide-dots,
 .portfolio-site[data-section-anim="vertical"][data-dots-center="viewport"][data-dots-pos="left"] .pf-slide-dots,
 .portfolio-site[data-section-anim="horizontal"][data-dots-center="viewport"][data-dots-pos="right"] .pf-slide-dots,
-.portfolio-site[data-section-anim="vertical"][data-dots-center="viewport"][data-dots-pos="right"] .pf-slide-dots,
+.portfolio-site[data-section-anim="vertical"][data-dots-center="viewport"][data-dots-pos="right"] .pf-slide-dots {
+  top: calc(50% - (var(--pf-header-real-h, calc(var(--pf-header-pct) * 1vh)) / 2));
+  transform: translateY(-50%);
+}
 #canvasZoomTarget .portfolio-site[data-section-anim="horizontal"][data-dots-center="viewport"][data-dots-pos="left"] .pf-slide-dots,
 #canvasZoomTarget .portfolio-site[data-section-anim="vertical"][data-dots-center="viewport"][data-dots-pos="left"] .pf-slide-dots,
 #canvasZoomTarget .portfolio-site[data-section-anim="horizontal"][data-dots-center="viewport"][data-dots-pos="right"] .pf-slide-dots,
 #canvasZoomTarget .portfolio-site[data-section-anim="vertical"][data-dots-center="viewport"][data-dots-pos="right"] .pf-slide-dots {
-  top: 50%;
-  transform: translateY(-50%);
+  /* Same 640px-canvas reference the header itself uses inside the
+     editor; --pf-header-real-h (if set) still wins either way since
+     it's already a real pixel value regardless of which shell it's
+     measured in. */
+  top: calc(50% - (var(--pf-header-real-h, calc(var(--pf-header-pct) * 6.4px)) / 2));
 }
 .portfolio-site[data-section-anim="horizontal"][data-dots-pos="left"] .pf-slide-dots,
 .portfolio-site[data-section-anim="vertical"][data-dots-pos="left"] .pf-slide-dots {
