@@ -893,17 +893,23 @@ class EditorStore {
 
   // Verification attachment on an experience block (portfolio-only concept,
   // but works on whichever document is active so the same UI code runs).
-  // Verification attachment. Normally on the block itself (experience
-  // entries), but for gallery blocks each *photo* carries its own proof
-  // — pass photoIndex to target `block.data.photos[photoIndex].verify`
-  // instead of `block.data.verify`.
-  updateVerify(id, field, value, photoIndex) {
+  // Verification attachment. Normally on the block itself (experience,
+  // education, projects, skills, summary, custom entries), but for
+  // gallery blocks each *photo*, and for list-based blocks (certifications,
+  // languages, links) each *item*, carries its own proof instead — pass
+  // index to target `block.data.photos[index].verify` or
+  // `block.data.items[index].verify` instead of `block.data.verify`.
+  updateVerify(id, field, value, index) {
     const block = this.active().blocks.find(b => b.id === id);
     if (!block) return;
-    if (photoIndex != null && block.data.photos && block.data.photos[photoIndex]) {
-      const photo = block.data.photos[photoIndex];
+    if (index != null && block.data.photos && block.data.photos[index]) {
+      const photo = block.data.photos[index];
       if (!photo.verify) photo.verify = emptyVerify();
       photo.verify[field] = value;
+    } else if (index != null && block.data.items && block.data.items[index]) {
+      const item = block.data.items[index];
+      if (!item.verify) item.verify = emptyVerify();
+      item.verify[field] = value;
     } else {
       if (!block.data.verify) block.data.verify = emptyVerify();
       block.data.verify[field] = value;
@@ -911,11 +917,13 @@ class EditorStore {
     this.emit('blocks_changed', this.active().blocks);
   }
 
-  clearVerify(id, photoIndex) {
+  clearVerify(id, index) {
     const block = this.active().blocks.find(b => b.id === id);
     if (!block) return;
-    if (photoIndex != null && block.data.photos && block.data.photos[photoIndex]) {
-      block.data.photos[photoIndex].verify = emptyVerify();
+    if (index != null && block.data.photos && block.data.photos[index]) {
+      block.data.photos[index].verify = emptyVerify();
+    } else if (index != null && block.data.items && block.data.items[index]) {
+      block.data.items[index].verify = emptyVerify();
     } else {
       block.data.verify = emptyVerify();
     }
@@ -987,6 +995,19 @@ class EditorStore {
     if (!block) return;
     const currentlyOn = block.hardShadow !== false;
     block.hardShadow = !currentlyOn;
+    this.emit('blocks_changed', this.active().blocks);
+  }
+
+  // How a section sits horizontally on the portfolio page: "left"
+  // (the historical default — the card stretches full width), or
+  // "center" / "right", which cap the card to a comfortable max-width
+  // and position it accordingly (see .pf-sections > [data-align] in
+  // portfolio.css). Undefined means "left", matching every block's
+  // appearance before this setting existed.
+  setBlockAlign(id, align) {
+    const block = this.active().blocks.find(b => b.id === id);
+    if (!block) return;
+    block.align = align === 'center' || align === 'right' ? align : 'left';
     this.emit('blocks_changed', this.active().blocks);
   }
 

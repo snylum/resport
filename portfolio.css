@@ -661,7 +661,58 @@
   gap: var(--pf-section-gap);
   font-family: var(--pf-body-font, var(--font-sans));
   color: var(--color-text);
-  line-height: var(--pf-line-height);
+  align-items: stretch;
+}
+
+/* ── Per-section alignment ─────────────────────────────────────
+   "Left" (the default, unset) keeps a section's card stretched full
+   width, matching every portfolio's appearance before this setting
+   existed. "Center"/"right" cap the card to a comfortable max-width
+   and position the whole card via align-self, plus align its text
+   content to match. Applies to top-level section children directly
+   (same element the canvas sets dataset.align on — see
+   createPortfolioBlock/renderStaticPortfolioBlock), so it also works
+   inside horizontal/vertical slide mode's .pf-slide-inner. */
+.pf-sections > [data-align="center"],
+.pf-slide-inner > [data-align="center"],
+.pf-sections > [data-align="right"],
+.pf-slide-inner > [data-align="right"] {
+  max-width: min(640px, 100%);
+  width: 100%;
+}
+.pf-sections > [data-align="center"],
+.pf-slide-inner > [data-align="center"] {
+  align-self: center;
+  text-align: center;
+}
+.pf-sections > [data-align="right"],
+.pf-slide-inner > [data-align="right"] {
+  align-self: flex-end;
+  text-align: right;
+}
+.pf-sections > [data-align="center"] .pf-exp-top-row,
+.pf-sections > [data-align="center"] .pf-exp-sub-row,
+.pf-slide-inner > [data-align="center"] .pf-exp-top-row,
+.pf-slide-inner > [data-align="center"] .pf-exp-sub-row,
+.pf-sections > [data-align="right"] .pf-exp-top-row,
+.pf-sections > [data-align="right"] .pf-exp-sub-row,
+.pf-slide-inner > [data-align="right"] .pf-exp-top-row,
+.pf-slide-inner > [data-align="right"] .pf-exp-sub-row {
+  justify-content: center;
+}
+.pf-sections > [data-align="right"] .pf-exp-top-row,
+.pf-sections > [data-align="right"] .pf-exp-sub-row,
+.pf-slide-inner > [data-align="right"] .pf-exp-top-row,
+.pf-slide-inner > [data-align="right"] .pf-exp-sub-row {
+  justify-content: flex-end;
+}
+.pf-sections > [data-align="center"] .rb-skills-wrap,
+.pf-slide-inner > [data-align="center"] .rb-skills-wrap {
+  justify-content: center;
+}
+.pf-sections > [data-align="right"] .rb-skills-wrap,
+.pf-slide-inner > [data-align="right"] .rb-skills-wrap {
+  justify-content: flex-end;
 }
 
 /* ── Content width ────────────────────────────────────────────
@@ -815,12 +866,25 @@
 }
 .rb-entry-row {
   display: flex;
-  flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.5rem;
+  justify-content: space-between;
+  gap: 0.75rem;
   padding: 0.55rem 0.75rem;
   border-radius: 6px;
   background: color-mix(in srgb, var(--pf-accent, var(--color-secondary)) 8%, white);
+}
+.rb-entry-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.rb-entry-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 .rb-entry-row .ce-strong {
   font-weight: 700;
@@ -828,6 +892,11 @@
 .rb-entry-row .ce-muted {
   color: var(--color-text-muted);
   font-size: 0.9em;
+}
+.pf-verify-badge-sm {
+  padding: 0.15rem 0.4rem;
+  font-size: 0.75em;
+  border-radius: 999px;
 }
 
 /* ── Photo gallery card ────────────────────────────────────── */

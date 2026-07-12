@@ -270,7 +270,9 @@ function renderSkillTags(items, blockId, field) {
 }
 
 function renderEntryList(items, blockId, field, cols) {
-  const rows = (items || []).map((it, i) => `
+  const rows = (items || []).map((it, i) => {
+    const verified = it.verify && it.verify.type !== 'none';
+    return `
     <div class="rb-entry-row">
       <div class="rb-entry-fields">
         ${cols.map(c => `
@@ -279,8 +281,10 @@ function renderEntryList(items, blockId, field, cols) {
             ${ceField(it[c.key] || '', field, blockId, { index: i, subfield: c.key, cls: c.cls })}
           </div>`).join('')}
       </div>
+      <button class="sd-gallery-thumb-verify ${verified ? 'is-verified' : ''}" data-action="edit-photo-verify" data-block="${blockId}" data-photo-index="${i}" type="button" title="${verified ? 'Edit proof for this entry' : 'Add proof for this entry'}">${verified ? '✓' : '+ proof'}</button>
       <button class="li-remove-btn" data-action="remove-item" data-block="${blockId}" data-field="${field}" data-index="${i}" title="Remove" type="button">✕</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   return `<div class="rb-entry-list">${rows}</div>
     <button class="add-item-btn" data-action="add-item" data-block="${blockId}" data-field="${field}" data-item-type="object" type="button">+ Add</button>`;
 }
@@ -374,10 +378,12 @@ function blockEditFieldsHTML(block) {
     case 'section':
       return field('Section title', ceField(d.title, 'title', block.id));
     case 'summary':
-      return field('Text', ceField(d.text, 'text', block.id, { cls: 'ce-block' }));
+      return field('Text', ceField(d.text, 'text', block.id, { cls: 'ce-block' }))
+        + field('Verification', `<div class="pf-verify">${verifyControlHTML(block)}</div>`);
     case 'custom':
       return field('Title', ceField(d.title, 'title', block.id))
-        + field('Text', ceField(d.text, 'text', block.id, { cls: 'ce-block' }));
+        + field('Text', ceField(d.text, 'text', block.id, { cls: 'ce-block' }))
+        + field('Verification', `<div class="pf-verify">${verifyControlHTML(block)}</div>`);
     case 'experience':
       return field('Company', ceField(d.company, 'company', block.id))
         + field('Dates', ceField(d.dates, 'dates', block.id))
@@ -390,14 +396,17 @@ function blockEditFieldsHTML(block) {
         + field('Year', ceField(d.year, 'year', block.id))
         + field('Degree', ceField(d.degree, 'degree', block.id))
         + field('Location', ceField(d.location, 'location', block.id))
-        + field('GPA', ceField(d.gpa, 'gpa', block.id));
+        + field('GPA', ceField(d.gpa, 'gpa', block.id))
+        + field('Verification', `<div class="pf-verify">${verifyControlHTML(block)}</div>`);
     case 'projects':
       return field('Name', ceField(d.name, 'name', block.id))
         + field('Dates', ceField(d.dates, 'dates', block.id))
         + field('Description', ceField(d.description, 'description', block.id))
-        + field('Bullets', renderBulletList(d.bullets, block.id, 'bullets'));
+        + field('Bullets', renderBulletList(d.bullets, block.id, 'bullets'))
+        + field('Verification', `<div class="pf-verify">${verifyControlHTML(block)}</div>`);
     case 'skills':
-      return field('Skills', renderSkillTags(d.items, block.id, 'items'));
+      return field('Skills', renderSkillTags(d.items, block.id, 'items'))
+        + field('Verification', `<div class="pf-verify">${verifyControlHTML(block)}</div>`);
     case 'certifications':
       return field('Certifications', renderEntryList(d.items, block.id, 'items', [
         { key: 'name', cls: 'ce-strong', label: 'Name' }, { key: 'issuer', cls: 'ce-muted', label: 'Issuer' }, { key: 'date', cls: 'ce-muted', label: 'Date' }
@@ -435,11 +444,20 @@ function blockEditFieldsHTML(block) {
 
 // View-only verify badge for the canvas preview (no edit/add-proof
 // affordance there anymore — that lives in the sidebar accordion).
-function canvasVerifyBadge(block) {
-  const v = block.data.verify || { type: 'none' };
+function canvasVerifyBadge(block, index) {
+  const v = index != null ? ((block.data.items && block.data.items[index] && block.data.items[index].verify) || { type: 'none' }) : (block.data.verify || { type: 'none' });
   if (v.type === 'none') return '';
   const labelHTML = v.label ? `<span class="pf-verify-label">${esc(v.label)}</span>` : '';
-  return `<div class="pf-verify"><button class="pf-verify-badge" data-action="view-verify" data-block="${block.id}" type="button">✓ Verified${labelHTML}</button></div>`;
+  const idxAttr = index != null ? ` data-photo-index="${index}"` : '';
+  return `<div class="pf-verify"><button class="pf-verify-badge" data-action="view-verify" data-block="${block.id}"${idxAttr} type="button">✓ Verified${labelHTML}</button></div>`;
+}
+
+// Compact inline version for entry-list rows (certifications, languages)
+// where a full-size badge would overwhelm a single line.
+function canvasEntryVerifyBadge(block, index) {
+  const v = (block.data.items && block.data.items[index] && block.data.items[index].verify) || { type: 'none' };
+  if (v.type === 'none') return '';
+  return `<button class="pf-verify-badge pf-verify-badge-sm" data-action="view-verify" data-block="${block.id}" data-photo-index="${index}" type="button" title="View proof">✓</button>`;
 }
 
 // Small "✓" pin shown in the corner of a gallery photo that has its
@@ -469,6 +487,7 @@ function createResumeBlock(block) {
 function createPortfolioBlock(block) {
   const wrapper = document.createElement('div');
   wrapper.dataset.id = block.id;
+  wrapper.dataset.align = block.align || 'left';
   if (Store.state.selectedBlockId === block.id) wrapper.classList.add('selected');
   if (block.hidden) wrapper.classList.add('section-hidden-preview');
 
@@ -481,13 +500,14 @@ function createPortfolioBlock(block) {
       break;
     case 'summary':
       baseClass = 'pf-card pf-summary-card';
-      innerHTML = esc(block.data.text);
+      innerHTML = esc(block.data.text) + canvasVerifyBadge(block);
       break;
     case 'custom':
       baseClass = 'pf-card';
       innerHTML = `
         <h3 class="pf-exp-company">${esc(block.data.title)}</h3>
-        <p>${esc(block.data.text)}</p>`;
+        <p>${esc(block.data.text)}</p>
+        ${canvasVerifyBadge(block)}`;
       break;
     case 'experience':
       baseClass = 'pf-card';
@@ -514,7 +534,8 @@ function createPortfolioBlock(block) {
           <span>${esc(block.data.degree)}</span>
           <span>${esc(block.data.location)}</span>
         </div>
-        <div class="pf-edu-gpa">${esc(block.data.gpa)}</div>`;
+        <div class="pf-edu-gpa">${esc(block.data.gpa)}</div>
+        ${canvasVerifyBadge(block)}`;
       break;
     case 'projects':
       baseClass = 'pf-card';
@@ -524,19 +545,21 @@ function createPortfolioBlock(block) {
           <span class="pf-exp-dates">${esc(block.data.dates)}</span>
         </div>
         <div class="pf-exp-sub-row"><span>${esc(block.data.description)}</span></div>
-        <ul class="rb-bullets">${(block.data.bullets || []).map(b => `<li>${esc(b)}</li>`).join('')}</ul>`;
+        <ul class="rb-bullets">${(block.data.bullets || []).map(b => `<li>${esc(b)}</li>`).join('')}</ul>
+        ${canvasVerifyBadge(block)}`;
       break;
     case 'skills':
       baseClass = 'pf-card';
-      innerHTML = `<div class="rb-skills-wrap">${(block.data.items || []).map(s => `<span class="rb-skill-tag">${esc(s)}</span>`).join('')}</div>`;
+      innerHTML = `<div class="rb-skills-wrap">${(block.data.items || []).map(s => `<span class="rb-skill-tag">${esc(s)}</span>`).join('')}</div>
+        ${canvasVerifyBadge(block)}`;
       break;
     case 'certifications':
       baseClass = 'pf-card';
-      innerHTML = `<div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.issuer || '')}</span><span class="ce-muted">${esc(it.date || '')}</span></div>`).join('')}</div>`;
+      innerHTML = `<div class="rb-entry-list">${(block.data.items || []).map((it, i) => `<div class="rb-entry-row"><div class="rb-entry-main"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.issuer || '')}</span></div><div class="rb-entry-right"><span class="ce-muted rb-entry-date">${esc(it.date || '')}</span>${canvasEntryVerifyBadge(block, i)}</div></div>`).join('')}</div>`;
       break;
     case 'languages':
       baseClass = 'pf-card';
-      innerHTML = `<div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.level || '')}</span></div>`).join('')}</div>`;
+      innerHTML = `<div class="rb-entry-list">${(block.data.items || []).map((it, i) => `<div class="rb-entry-row"><div class="rb-entry-main"><span class="ce-strong">${esc(it.name || '')}</span></div><div class="rb-entry-right"><span class="ce-muted rb-entry-date">${esc(it.level || '')}</span>${canvasEntryVerifyBadge(block, i)}</div></div>`).join('')}</div>`;
       break;
     case 'gallery': {
       baseClass = 'pf-card pf-gallery-card';
@@ -907,12 +930,14 @@ function openPhotoZoomModal(src, verified, caption) {
 }
 
 // ── 4a. Verification: view proof ──────────────────────────────
-function openVerifyViewModal(blockId, photoIndex) {
+function openVerifyViewModal(blockId, index) {
   const block = Store.active().blocks.find(b => b.id === blockId);
   if (!block) return;
-  const v = (photoIndex != null && block.data.photos && block.data.photos[photoIndex])
-    ? (block.data.photos[photoIndex].verify || { type: 'none' })
-    : (block.data.verify || { type: 'none' });
+  const v = (index != null && block.data.photos && block.data.photos[index])
+    ? (block.data.photos[index].verify || { type: 'none' })
+    : (index != null && block.data.items && block.data.items[index])
+      ? (block.data.items[index].verify || { type: 'none' })
+      : (block.data.verify || { type: 'none' });
 
   if (v.type === 'link' && v.link) {
     const safeHref = /^https?:\/\//i.test(v.link) ? v.link : `https://${v.link}`;
@@ -934,18 +959,22 @@ function openVerifyViewModal(blockId, photoIndex) {
 }
 
 // ── 4b. Verification: add / edit / remove proof ────────────────
-function openVerifyEditModal(blockId, photoIndex) {
+function openVerifyEditModal(blockId, index) {
   const block = Store.active().blocks.find(b => b.id === blockId);
   if (!block) return;
-  const isPhotoScoped = photoIndex != null && block.data.photos && block.data.photos[photoIndex];
-  const v = isPhotoScoped ? (block.data.photos[photoIndex].verify || { type: 'none', photo: null, link: '', label: '' }) : (block.data.verify || { type: 'none', photo: null, link: '', label: '' });
+  const isPhotoScoped = index != null && block.data.photos && block.data.photos[index];
+  const isItemScoped = !isPhotoScoped && index != null && block.data.items && block.data.items[index];
+  const isScoped = isPhotoScoped || isItemScoped;
+  const v = isPhotoScoped ? (block.data.photos[index].verify || { type: 'none', photo: null, link: '', label: '' })
+    : isItemScoped ? (block.data.items[index].verify || { type: 'none', photo: null, link: '', label: '' })
+    : (block.data.verify || { type: 'none', photo: null, link: '', label: '' });
 
   let currentType = v.type === 'none' ? 'photo' : v.type;
   let pendingPhoto = v.photo || null;
 
   const html = `
-    <h3 class="modal-title" id="modalTitle">${isPhotoScoped ? 'Verify this photo' : 'Verify this experience'}</h3>
-    <p class="modal-sub">${isPhotoScoped ? 'Attach a photo (certificate, badge, ID) or a link (LinkedIn post, reference, article) so visitors can confirm this specific photo is real.' : 'Attach a photo (certificate, badge, ID) or a link (LinkedIn post, reference, article) so visitors can confirm this role really happened.'}</p>
+    <h3 class="modal-title" id="modalTitle">${isPhotoScoped ? 'Verify this photo' : isItemScoped ? 'Verify this entry' : 'Verify this section'}</h3>
+    <p class="modal-sub">${isPhotoScoped ? 'Attach a photo (certificate, badge, ID) or a link (LinkedIn post, reference, article) so visitors can confirm this specific photo is real.' : isItemScoped ? 'Attach a photo or a link so visitors can confirm this entry is real.' : 'Attach a photo (certificate, badge, ID) or a link (LinkedIn post, reference, article) so visitors can confirm this really happened.'}</p>
     <div class="verify-type-row">
       <button class="option-pill ${currentType === 'photo' ? 'active' : ''}" data-verify-type="photo" type="button">📷 Photo</button>
       <button class="option-pill ${currentType === 'link' ? 'active' : ''}" data-verify-type="link" type="button">🔗 Link</button>
@@ -1003,7 +1032,7 @@ function openVerifyEditModal(blockId, photoIndex) {
     const removeBtn = root.querySelector('#verifyRemoveBtn');
     if (removeBtn) {
       removeBtn.addEventListener('click', () => {
-        Store.clearVerify(blockId, photoIndex);
+        Store.clearVerify(blockId, index);
         closeModal();
       });
     }
@@ -1023,10 +1052,10 @@ function openVerifyEditModal(blockId, photoIndex) {
         return;
       }
 
-      Store.updateVerify(blockId, 'type', currentType, photoIndex);
-      if (currentType === 'photo') Store.updateVerify(blockId, 'photo', pendingPhoto, photoIndex);
-      else Store.updateVerify(blockId, 'link', link, photoIndex);
-      Store.updateVerify(blockId, 'label', label, photoIndex);
+      Store.updateVerify(blockId, 'type', currentType, index);
+      if (currentType === 'photo') Store.updateVerify(blockId, 'photo', pendingPhoto, index);
+      else Store.updateVerify(blockId, 'link', link, index);
+      Store.updateVerify(blockId, 'label', label, index);
       closeModal();
     });
   });
@@ -1907,37 +1936,58 @@ function renderTemplateThumbnails() {
 
 function renderStaticPortfolioBlock(block) {
   const html = renderStaticPortfolioBlockInner(block);
+  if (!html) return html;
   // Every case below opens with a single top-level element whose first
   // attribute is class="..." — injecting pf-no-shadow into that first
   // match is enough to flatten the shadow on export, matching what
   // pf-no-shadow already does on the live canvas (see
   // createPortfolioBlock). A block with no shadow to begin with (e.g.
   // the section-title heading) just gets a harmless, inert class.
-  if (!html || block.hardShadow !== false) return html;
-  return html.replace(/^(<[a-z0-9]+\s+class=")/i, '$1pf-no-shadow ');
+  const shadowed = block.hardShadow === false
+    ? html.replace(/^(<[a-z0-9]+\s+class=")/i, '$1pf-no-shadow ')
+    : html;
+  const align = block.align === 'center' || block.align === 'right' ? block.align : 'left';
+  // Same idea: inject data-align onto that same top-level element (not
+  // a wrapping div) so the exported DOM shape matches the live canvas,
+  // where createPortfolioBlock sets dataset.align directly on the card.
+  return shadowed.replace(/^(<[a-z0-9]+\s)/i, `$1data-align="${align}" `);
 }
 
 function renderStaticPortfolioBlockInner(block) {
   const bulletsHTML = (bullets) => `<ul class="rb-bullets">${(bullets || []).map(b => `<li>${esc(b)}</li>`).join('')}</ul>`;
+  // Self-contained proof badge — carries its own type/link/photo/label
+  // attributes so PUBLISHED_PAGE_SCRIPT's delegated click handler can
+  // act on it directly, with no index lookups needed. `small` gives a
+  // compact variant for inline use in entry-list rows (certifications,
+  // languages) where a full-size badge would overwhelm one line.
+  const staticVerifyBadge = (v, small) => {
+    if (!v || v.type === 'none') return '';
+    const labelHTML = v.label ? `<span class="pf-verify-label">${esc(v.label)}</span>` : '';
+    const cls = small ? 'pf-verify-badge pf-verify-badge-sm' : 'pf-verify-badge';
+    const text = small ? '✓' : `✓ Verified${labelHTML}`;
+    if (v.type === 'photo' && v.photo) {
+      return `<button class="${cls}" data-verify-type="photo" data-verify-photo="${esc(v.photo)}" data-verify-label="${esc(v.label || '')}" type="button" title="View proof">${text}</button>`;
+    }
+    if (v.type === 'link' && v.link) {
+      const safeHref = /^https?:\/\//i.test(v.link) ? v.link : `https://${v.link}`;
+      return `<button class="${cls}" data-verify-type="link" data-verify-link="${esc(safeHref)}" data-verify-label="${esc(v.label || '')}" type="button" title="View proof">${text}</button>`;
+    }
+    return '';
+  };
 
   switch (block.type) {
     case 'section':
       return `<h2 class="pf-block-section-title">${esc(block.data.title)}</h2>`;
-    case 'summary':
-      return `<div class="pf-card pf-summary-card">${esc(block.data.text)}</div>`;
-    case 'custom':
-      return `<div class="pf-card"><h3 class="pf-exp-company">${esc(block.data.title)}</h3><p>${esc(block.data.text)}</p></div>`;
+    case 'summary': {
+      const badge = staticVerifyBadge(block.data.verify);
+      return `<div class="pf-card pf-summary-card">${esc(block.data.text)}${badge ? `<div class="pf-verify">${badge}</div>` : ''}</div>`;
+    }
+    case 'custom': {
+      const badge = staticVerifyBadge(block.data.verify);
+      return `<div class="pf-card"><h3 class="pf-exp-company">${esc(block.data.title)}</h3><p>${esc(block.data.text)}</p>${badge ? `<div class="pf-verify">${badge}</div>` : ''}</div>`;
+    }
     case 'experience': {
-      const v = block.data.verify || { type: 'none' };
-      let verifyHTML = '';
-      if (v.type === 'photo' && v.photo) {
-        const labelHTML = v.label ? `<span class="pf-verify-label">${esc(v.label)}</span>` : '';
-        verifyHTML = `<button class="pf-verify-badge" data-verify-type="photo" data-verify-photo="${esc(v.photo)}" data-verify-label="${esc(v.label || '')}" type="button">✓ Verified${labelHTML}</button>`;
-      } else if (v.type === 'link' && v.link) {
-        const safeHref = /^https?:\/\//i.test(v.link) ? v.link : `https://${v.link}`;
-        const labelHTML = v.label ? `<span class="pf-verify-label">${esc(v.label)}</span>` : '';
-        verifyHTML = `<button class="pf-verify-badge" data-verify-type="link" data-verify-link="${esc(safeHref)}" data-verify-label="${esc(v.label || '')}" type="button">✓ Verified${labelHTML}</button>`;
-      }
+      const verifyHTML = staticVerifyBadge(block.data.verify);
       return `<div class="pf-card">
         <div class="pf-exp-top-row"><span class="pf-exp-company">${esc(block.data.company)}</span><span class="pf-exp-dates">${esc(block.data.dates)}</span></div>
         <div class="pf-exp-sub-row"><span>${esc(block.data.role)}</span><span>${esc(block.data.location)}</span></div>
@@ -1945,24 +1995,32 @@ function renderStaticPortfolioBlockInner(block) {
         ${verifyHTML ? `<div class="pf-verify">${verifyHTML}</div>` : ''}
       </div>`;
     }
-    case 'education':
+    case 'education': {
+      const badge = staticVerifyBadge(block.data.verify);
       return `<div class="pf-card pf-edu-card">
         <div class="pf-exp-top-row"><span class="pf-exp-company">${esc(block.data.school)}</span><span class="pf-exp-dates">${esc(block.data.year)}</span></div>
         <div class="pf-exp-sub-row"><span>${esc(block.data.degree)}</span><span>${esc(block.data.location)}</span></div>
         ${block.data.gpa ? `<div class="pf-edu-gpa">${esc(block.data.gpa)}</div>` : ''}
+        ${badge ? `<div class="pf-verify">${badge}</div>` : ''}
       </div>`;
-    case 'projects':
+    }
+    case 'projects': {
+      const badge = staticVerifyBadge(block.data.verify);
       return `<div class="pf-card">
         <div class="pf-exp-top-row"><span class="pf-exp-company">${esc(block.data.name)}</span><span class="pf-exp-dates">${esc(block.data.dates)}</span></div>
         <div class="pf-exp-sub-row"><span>${esc(block.data.description)}</span></div>
         ${bulletsHTML(block.data.bullets)}
+        ${badge ? `<div class="pf-verify">${badge}</div>` : ''}
       </div>`;
-    case 'skills':
-      return `<div class="pf-card"><div class="rb-skills-wrap">${(block.data.items || []).map(s => `<span class="rb-skill-tag">${esc(s)}</span>`).join('')}</div></div>`;
+    }
+    case 'skills': {
+      const badge = staticVerifyBadge(block.data.verify);
+      return `<div class="pf-card"><div class="rb-skills-wrap">${(block.data.items || []).map(s => `<span class="rb-skill-tag">${esc(s)}</span>`).join('')}</div>${badge ? `<div class="pf-verify">${badge}</div>` : ''}</div>`;
+    }
     case 'certifications':
-      return `<div class="pf-card"><div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.issuer || '')}</span><span class="ce-muted">${esc(it.date || '')}</span></div>`).join('')}</div></div>`;
+      return `<div class="pf-card"><div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><div class="rb-entry-main"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.issuer || '')}</span></div><div class="rb-entry-right"><span class="ce-muted rb-entry-date">${esc(it.date || '')}</span>${staticVerifyBadge(it.verify, true)}</div></div>`).join('')}</div></div>`;
     case 'languages':
-      return `<div class="pf-card"><div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.level || '')}</span></div>`).join('')}</div></div>`;
+      return `<div class="pf-card"><div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><div class="rb-entry-main"><span class="ce-strong">${esc(it.name || '')}</span></div><div class="rb-entry-right"><span class="ce-muted rb-entry-date">${esc(it.level || '')}</span>${staticVerifyBadge(it.verify, true)}</div></div>`).join('')}</div></div>`;
     case 'gallery': {
       if (!(block.data.photos || []).length) return '';
       const itemsHTML = block.data.photos.map((p, i) => {
@@ -2599,6 +2657,10 @@ function renderSidebarList(blocks) {
     const hideBtn = `<button class="sd-icon-btn sd-hide-btn ${block.hidden ? 'is-hidden' : ''}" data-action="toggle-hidden" data-id="${block.id}" title="${block.hidden ? 'Show this section' : 'Hide this section (keeps its content)'}" type="button">${block.hidden ? '🚫' : '👁'}</button>`;
     const shadowOn = block.hardShadow !== false;
     const shadowBtn = `<button class="sd-icon-btn sd-shadow-btn ${shadowOn ? '' : 'is-off'}" data-action="toggle-shadow" data-id="${block.id}" title="${shadowOn ? 'Turn off hard shadow for this section' : 'Turn on hard shadow for this section'}" type="button">◱</button>`;
+    const align = block.align === 'center' || block.align === 'right' ? block.align : 'left';
+    const alignIcon = align === 'center' ? '↔' : align === 'right' ? '➡' : '⬅';
+    const alignLabel = align === 'center' ? 'Centered' : align === 'right' ? 'Right-aligned' : 'Left-aligned';
+    const alignBtn = `<button class="sd-icon-btn sd-align-btn" data-action="cycle-align" data-id="${block.id}" data-align="${align}" title="Section alignment: ${alignLabel} (click to change)" type="button">${alignIcon}</button>`;
     const hiddenTag = block.hidden ? `<span class="sd-hidden-tag">Hidden</span>` : '';
 
     item.innerHTML = `
@@ -2607,6 +2669,7 @@ function renderSidebarList(blocks) {
         <span class="sd-title-text">${esc(titleText)} ${verifyBadge}${hiddenTag}</span>
         <span class="sd-item-actions">
           ${swapBtn}
+          ${alignBtn}
           ${shadowBtn}
           ${hideBtn}
           <button class="sd-icon-btn sd-expand-btn" data-action="toggle-expand" data-block="${block.id}" title="${isExpanded ? 'Done editing' : 'Edit this section'}" type="button">${isExpanded ? '✓' : '✎'}</button>
@@ -2669,6 +2732,10 @@ function initSidebarActions() {
         Store.toggleBlockHidden(actionBtn.dataset.id);
       } else if (action === 'toggle-shadow') {
         Store.toggleBlockShadow(actionBtn.dataset.id);
+      } else if (action === 'cycle-align') {
+        const order = ['left', 'center', 'right'];
+        const next = order[(order.indexOf(actionBtn.dataset.align) + 1) % order.length];
+        Store.setBlockAlign(actionBtn.dataset.id, next);
       } else if (action === 'toggle-expand') {
         toggleBlockExpand(actionBtn.dataset.block);
       } else if (action === 'add-item') {
@@ -2676,9 +2743,9 @@ function initSidebarActions() {
       } else if (action === 'remove-item') {
         Store.removeListItem(actionBtn.dataset.block, actionBtn.dataset.field, Number(actionBtn.dataset.index));
       } else if (action === 'view-verify') {
-        openVerifyViewModal(actionBtn.dataset.block);
+        openVerifyViewModal(actionBtn.dataset.block, actionBtn.dataset.photoIndex !== undefined ? Number(actionBtn.dataset.photoIndex) : undefined);
       } else if (action === 'edit-verify') {
-        openVerifyEditModal(actionBtn.dataset.block);
+        openVerifyEditModal(actionBtn.dataset.block, actionBtn.dataset.photoIndex !== undefined ? Number(actionBtn.dataset.photoIndex) : undefined);
       } else if (action === 'edit-photo-verify') {
         openVerifyEditModal(actionBtn.dataset.block, Number(actionBtn.dataset.photoIndex));
       }
