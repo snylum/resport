@@ -106,6 +106,66 @@ const el = {
   modalCloseBtn: document.getElementById('modalCloseBtn')
 };
 
+// ── Image upload compression ──────────────────────────────────
+// Every photo (profile, gallery, verification) ends up embedded
+// directly as a base64 data URL in the published page (see
+// buildPublishedSiteHTML) — an unmodified phone photo can be several
+// MB on its own, and base64 inflates that by another ~33% on top.
+// Downscaling + recompressing on upload keeps published pages small
+// and fast to load, and means the Worker's page-size cap (see
+// /api/publish in worker/src/index.js) practically never gets hit
+// regardless of what someone uploads.
+const IMAGE_UPLOAD_MAX_DIMENSION = 1600; // px, longest side
+const IMAGE_UPLOAD_JPEG_QUALITY = 0.82;
+
+function readAndCompressImage(file) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type || !file.type.startsWith('image/')) {
+      reject(new Error('Not an image file.'));
+      return;
+    }
+    // GIFs may be animated — decoding through <canvas> would flatten
+    // them to a single frame, so those pass through unmodified.
+    if (file.type === 'image/gif') {
+      const reader = new FileReader();
+      reader.onload = (ev) => resolve(ev.target.result);
+      reader.onerror = () => reject(reader.error || new Error('Could not read file.'));
+      reader.readAsDataURL(file);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, IMAGE_UPLOAD_MAX_DIMENSION / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        // Re-encoding as JPEG drops alpha, so PNGs (logos, cutouts —
+        // anything that might actually rely on transparency) keep
+        // their original format instead of getting a flattened black
+        // background.
+        const keepPng = file.type === 'image/png';
+        try {
+          resolve(canvas.toDataURL(keepPng ? 'image/png' : 'image/jpeg', keepPng ? undefined : IMAGE_UPLOAD_JPEG_QUALITY));
+        } catch (err) {
+          // Canvas export can fail in rare cases — fall back to the
+          // original upload rather than losing it entirely.
+          resolve(ev.target.result);
+        }
+      };
+      img.onerror = () => resolve(ev.target.result); // fall back on decode failure
+      img.src = ev.target.result;
+    };
+    reader.onerror = () => reject(reader.error || new Error('Could not read file.'));
+    reader.readAsDataURL(file);
+  });
+}
+
 // ── 1. Sidebar input <-> active-document profile sync ─────────
 // These listeners never change: they always write into whichever
 // document (portfolio or resume) is currently active. Displaying
@@ -129,9 +189,9 @@ function initInputListeners() {
   el.inPhoto.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => Store.updateProfile('photo', ev.target.result);
-    reader.readAsDataURL(file);
+    readAndCompressImage(file)
+      .then((dataUrl) => Store.updateProfile('photo', dataUrl))
+      .catch(() => {});
   });
 }
 
@@ -933,12 +993,12 @@ function openVerifyEditModal(blockId, photoIndex) {
     root.querySelector('#verifyPhotoInput').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        pendingPhoto = ev.target.result;
-        root.querySelector('#verifyPhotoPreview').style.backgroundImage = `url(${pendingPhoto})`;
-      };
-      reader.readAsDataURL(file);
+      readAndCompressImage(file)
+        .then((dataUrl) => {
+          pendingPhoto = dataUrl;
+          root.querySelector('#verifyPhotoPreview').style.backgroundImage = `url(${pendingPhoto})`;
+        })
+        .catch(() => {});
     });
 
     const removeBtn = root.querySelector('#verifyRemoveBtn');
@@ -2560,9 +2620,9 @@ function initSidebarActions() {
     const input = e.target.closest('.sd-gallery-file-input');
     if (!input || !input.files[0]) return;
     const blockId = input.dataset.block;
-    const reader = new FileReader();
-    reader.onload = (ev) => Store.addListItem(blockId, 'photos', { id: uid(), src: ev.target.result, verify: { type: 'none', photo: null, link: '', label: '' } });
-    reader.readAsDataURL(input.files[0]);
+    readAndCompressImage(input.files[0])
+      .then((dataUrl) => Store.addListItem(blockId, 'photos', { id: uid(), src: dataUrl, verify: { type: 'none', photo: null, link: '', label: '' } }))
+      .catch(() => {});
   });
 
   el.sidebarSectionsList.addEventListener('click', (e) => {

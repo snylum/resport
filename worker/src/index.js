@@ -868,8 +868,14 @@ ${resumeText}
     if (!USERNAME_RE.test(username) || RESERVED.has(username)) {
       return json({ ok: false, error: 'Username must be 3-30 lowercase letters, numbers, or hyphens.' }, 400);
     }
-    if (!html || html.length > 2_000_000) {
-      return json({ ok: false, error: 'Missing page content, or content too large (2MB limit).' }, 400);
+    // 8MB, not 2MB — the editor now downscales/recompresses every
+    // uploaded photo before it ever gets embedded (see
+    // readAndCompressImage in editor.js), so this ceiling should
+    // rarely matter in practice. It's raised anyway to give real
+    // headroom for a page carrying several gallery/verify photos, while
+    // staying well under Workers KV's 25MB per-value limit.
+    if (!html || html.length > 8_000_000) {
+      return json({ ok: false, error: 'Missing page content, or content too large (8MB limit).' }, 400);
     }
 
     const existing = await env.SITES.get(`site:${username}`, 'json');
@@ -977,8 +983,10 @@ ${resumeText}
     if (!email) return json({ ok: false, error: 'Sign in with Google to sync edits across devices.' }, 401);
 
     const stateStr = JSON.stringify(body.state ?? null);
-    if (stateStr.length > 2_000_000) {
-      return json({ ok: false, error: 'Draft too large (2MB limit).' }, 400);
+    // Matches the /api/publish limit above — a draft carries the same
+    // photos as a published page, just not yet rendered to HTML.
+    if (stateStr.length > 8_000_000) {
+      return json({ ok: false, error: 'Draft too large (8MB limit).' }, 400);
     }
 
     await env.SITES.put(`draft:${email}`, JSON.stringify({
