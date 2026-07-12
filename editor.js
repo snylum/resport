@@ -68,6 +68,7 @@ const el = {
   selBodyFont: document.getElementById('selBodyFont'),
   inTextPadding: document.getElementById('inTextPadding'),
   textPaddingLabel: document.getElementById('textPaddingLabel'),
+  dotsCenteringGroup: document.getElementById('dotsCenteringGroup'),
 
   // Resume: numeric customization sliders
   inFontSize: document.getElementById('inFontSize'),
@@ -513,6 +514,7 @@ function createPortfolioBlock(block) {
       break;
   }
   if (baseClass) wrapper.classList.add(...baseClass.split(' '));
+  if (block.hardShadow === false) wrapper.classList.add('pf-no-shadow');
   wrapper.innerHTML = innerHTML;
   return wrapper;
 }
@@ -575,7 +577,11 @@ function renderPortfolioCanvasBlocks(blocks, mode) {
   pfDotEls = slides.map((_, i) => {
     const dot = document.createElement('button');
     dot.type = 'button';
-    dot.className = `pf-dot${i === keepIndex ? ' active' : ''}`;
+    const dotsStyle = Store.active().design.dotsStyle || 'dot';
+    const classes = ['pf-dot'];
+    if (i === keepIndex) classes.push('active');
+    if (dotsStyle === 'progress' && i <= keepIndex) classes.push('passed');
+    dot.className = classes.join(' ');
     dot.dataset.pfSlide = String(i);
     dot.setAttribute('aria-label', `Section ${i + 1}`);
     el.pfSlideDots.appendChild(dot);
@@ -594,7 +600,11 @@ function renderPortfolioCanvasBlocks(blocks, mode) {
 }
 
 function pfSetActiveDot(i) {
-  pfDotEls.forEach((d, di) => d.classList.toggle('active', di === i));
+  const dotsStyle = Store.active().design.dotsStyle || 'dot';
+  pfDotEls.forEach((d, di) => {
+    d.classList.toggle('active', di === i);
+    d.classList.toggle('passed', dotsStyle === 'progress' && di <= i);
+  });
   el.pfSlideArrowTop.toggleAttribute('disabled', i <= 0);
   el.pfSlideArrowBottom.toggleAttribute('disabled', i >= pfSlideEls.length - 1);
 }
@@ -1524,8 +1534,12 @@ document.addEventListener('keydown', function (e) {
     setDots(i);
     setTimeout(function () { isProgrammatic = false; }, 500);
   }
+  var dotsStyle = root.getAttribute('data-dots-style') || 'dot';
   function setDots(i) {
-    dots.forEach(function (d, di) { d.classList.toggle('active', di === i); });
+    dots.forEach(function (d, di) {
+      d.classList.toggle('active', di === i);
+      d.classList.toggle('passed', dotsStyle === 'progress' && di <= i);
+    });
   }
   dots.forEach(function (d) {
     d.addEventListener('click', function () { goTo(parseInt(d.getAttribute('data-pf-slide'), 10)); });
@@ -1792,6 +1806,18 @@ function renderTemplateThumbnails() {
 }
 
 function renderStaticPortfolioBlock(block) {
+  const html = renderStaticPortfolioBlockInner(block);
+  // Every case below opens with a single top-level element whose first
+  // attribute is class="..." — injecting pf-no-shadow into that first
+  // match is enough to flatten the shadow on export, matching what
+  // pf-no-shadow already does on the live canvas (see
+  // createPortfolioBlock). A block with no shadow to begin with (e.g.
+  // the section-title heading) just gets a harmless, inert class.
+  if (!html || block.hardShadow !== false) return html;
+  return html.replace(/^(<[a-z0-9]+\s+class=")/i, '$1pf-no-shadow ');
+}
+
+function renderStaticPortfolioBlockInner(block) {
   const bulletsHTML = (bullets) => `<ul class="rb-bullets">${(bullets || []).map(b => `<li>${esc(b)}</li>`).join('')}</ul>`;
 
   switch (block.type) {
@@ -1903,14 +1929,19 @@ function groupBlocksIntoSlides(blocks) {
   return slides;
 }
 
-function buildHorizontalSectionsHTML(blocks) {
+function buildHorizontalSectionsHTML(blocks, dotsStyle) {
   const slides = groupBlocksIntoSlides(blocks);
   const slidesHTML = slides.map((slideBlocks, i) => `
     <div class="pf-slide" id="pfSlide-${i}">
       <div class="pf-slide-inner">${slideBlocks.map(renderStaticPortfolioBlock).join('\n')}</div>
     </div>`).join('\n');
   const dotsHTML = slides.length > 1
-    ? `<nav class="pf-slide-dots" aria-label="Portfolio sections">${slides.map((_, i) => `<button class="pf-dot${i === 0 ? ' active' : ''}" data-pf-slide="${i}" aria-label="Section ${i + 1}"></button>`).join('')}</nav>`
+    ? `<nav class="pf-slide-dots" aria-label="Portfolio sections">${slides.map((_, i) => {
+        const classes = ['pf-dot'];
+        if (i === 0) classes.push('active');
+        if (dotsStyle === 'progress' && i === 0) classes.push('passed');
+        return `<button class="${classes.join(' ')}" data-pf-slide="${i}" aria-label="Section ${i + 1}"></button>`;
+      }).join('')}</nav>`
     : '';
   return `<div class="pf-sections">${slidesHTML}</div>${dotsHTML}`;
 }
@@ -1927,7 +1958,7 @@ function buildPublishedSiteHTML(username) {
   const isHorizontal = (design.sectionAnimation || 'none') === 'horizontal';
   const isVertical = (design.sectionAnimation || 'none') === 'vertical';
   const sectionsHTML = (isHorizontal || isVertical)
-    ? buildHorizontalSectionsHTML(blocks)
+    ? buildHorizontalSectionsHTML(blocks, design.dotsStyle || 'dot')
     : `<div class="pf-sections">${blocks.map(renderStaticPortfolioBlock).join('\n')}</div>`;
 
   const pageTitle = `${esc(fullName)}${p.jobTitle ? ' — ' + esc(p.jobTitle) : ''}`;
@@ -1968,7 +1999,7 @@ ${siteUrl ? `<meta property="og:url" content="${esc(siteUrl)}" />` : ''}
 </style>
 </head>
 <body data-viewmode="portfolio">
-  <div class="portfolio-site" id="portfolioSite" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-dots-pos="${esc(design.dotsPosition || 'right')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" data-hero-photo-shape="${esc(design.heroPhotoShape || 'circle')}" data-hero-photo-size="${esc(design.heroPhotoSize || 'md')}" data-hero-size="${esc(design.heroSize || 'normal')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};--pf-header-pct:${esc(design.headerHeightPct || 30)};--pf-text-pad:${esc((Number(design.textPaddingRem) || 0) + 'rem')};--pf-line-height:${esc(LINE_SPACING_PRESETS[design.lineSpacing] || LINE_SPACING_PRESETS.normal)};--pf-section-gap:${esc(SECTION_SPACING_PRESETS[design.sectionSpacing] || SECTION_SPACING_PRESETS.normal)};--pf-card-pad:${esc(CARD_PADDING_PRESETS[design.cardPadding] || CARD_PADDING_PRESETS.normal)};">
+  <div class="portfolio-site" id="portfolioSite" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-dots-pos="${esc(design.dotsPosition || 'right')}" data-dots-center="${esc(design.dotsCentering || 'slide')}" data-dots-style="${esc(design.dotsStyle || 'dot')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" data-hero-photo-shape="${esc(design.heroPhotoShape || 'circle')}" data-hero-photo-size="${esc(design.heroPhotoSize || 'md')}" data-hero-size="${esc(design.heroSize || 'normal')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};--pf-header-pct:${esc(design.headerHeightPct || 30)};--pf-text-pad:${esc((Number(design.textPaddingRem) || 0) + 'rem')};--pf-line-height:${esc(LINE_SPACING_PRESETS[design.lineSpacing] || LINE_SPACING_PRESETS.normal)};--pf-section-gap:${esc(SECTION_SPACING_PRESETS[design.sectionSpacing] || SECTION_SPACING_PRESETS.normal)};--pf-card-pad:${esc(CARD_PADDING_PRESETS[design.cardPadding] || CARD_PADDING_PRESETS.normal)};">
     <header class="pf-hero">
       ${p.photo ? `<div class="pf-hero-photo-wrap"><img src="${esc(p.photo)}" alt="${esc(fullName)}" /></div>` : ''}
       <div class="pf-hero-text">
@@ -2049,12 +2080,15 @@ function manualSaveProgress() {
 // publish anything yet.
 function openSignInModal(opts) {
   const onLoad = !!(opts && opts.onLoad);
+  const customMessage = opts && opts.message;
   openModal(`
     <div class="signin-modal-centered">
       <h3 class="modal-title" id="modalTitle">Sign in to Google</h3>
-      <p class="modal-sub">${onLoad
-        ? `Sign in with Google so any progress you make here can be saved and loaded again later — on this device or any other.`
-        : `Sign in to save your progress and publish your portfolio to ${PUBLISH_APEX}.`}</p>
+      <p class="modal-sub">${customMessage
+        ? esc(customMessage)
+        : (onLoad
+          ? `Sign in with Google so any progress you make here can be saved and loaded again later — on this device or any other.`
+          : `Sign in to save your progress and publish your portfolio to ${PUBLISH_APEX}.`)}</p>
       <div class="field-box full-width" id="signInAccountBox"></div>
     </div>
   `, (root) => {
@@ -2309,8 +2343,9 @@ async function doPublish(username, confirmBtn, referenceNumber) {
   confirmBtn.disabled = true;
   confirmBtn.textContent = 'Publishing…';
   const account = getSavedGoogleAccount();
+  let res;
   try {
-    const res = await fetch('/api/publish', {
+    res = await fetch('/api/publish', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -2329,31 +2364,63 @@ async function doPublish(username, confirmBtn, referenceNumber) {
         buyerReferenceNumber: referenceNumber || ''
       })
     });
-    if (!res.ok) throw new Error('no-backend');
-    const data = await res.json();
-    if (!data.ok) {
-      alertModal(data.error || 'Something went wrong.');
-      return;
-    }
-    recordUsernameChangeIfNeeded(username);
-    saveUsername(username);
-    refreshSiteStatusBadge();
-    // The Worker tells us whether this went straight back out as a live
-    // update to an already-approved site, or is a fresh submission that
-    // now needs manual review — the success modal should say the right
-    // thing in each case instead of always claiming "submitted for
-    // review" (which isn't true for a routine update to a live site).
-    openPublishSuccessModal(data.url, data.status === 'live' ? 'updated' : 'pending');
   } catch (err) {
-    // No live worker to publish to from here — generate a real,
-    // fully-working local preview instead of dead-ending on a
-    // network error. Swap this branch out once the worker in
-    // /worker is actually deployed and reachable at PUBLISH_APEX.
+    // fetch() itself only throws for a genuine network-level failure
+    // (offline, DNS, CORS, no worker deployed at all) — this is the
+    // one case where there's truly no backend to talk to, so falling
+    // back to a local-only preview is the right move.
     saveUsername(username);
     const blob = new Blob([buildPublishedSiteHTML(username)], { type: 'text/html' });
     const blobUrl = URL.createObjectURL(blob);
     openPublishSuccessModal(blobUrl, 'local');
+    return;
   }
+
+  // Past this point the backend *did* respond — a non-2xx status here
+  // is a real rejection from the server (expired sign-in, ownership
+  // mismatch, a validation error, a genuine server-side failure,
+  // etc.), not an absent backend. Silently treating this the same as
+  // "no backend reachable" used to swallow the real reason and show
+  // "Local preview ready" instead — which looked like success but
+  // never actually published anything, leaving an already-approved,
+  // already-paid site stuck showing its old content with no
+  // indication anything had gone wrong.
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    data = null;
+  }
+  if (!res.ok || !data || !data.ok) {
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = 'Publish';
+    // A 401 here specifically means the signed-in session expired
+    // (Google ID tokens are only valid for about an hour) — the most
+    // helpful thing to do is send the person straight back through
+    // sign-in, which re-opens Publish automatically on success,
+    // rather than leaving them to figure out "sign in again" from a
+    // plain error message.
+    if (res.status === 401) {
+      clearGoogleAccount();
+      openSignInModal({ message: 'Your sign-in expired — sign in again to publish this update.' });
+      return;
+    }
+    alertModal(
+      (data && data.error) ||
+      `The server rejected this update (HTTP ${res.status}). Nothing was published — try signing out and back in, then republish.`
+    );
+    return;
+  }
+
+  recordUsernameChangeIfNeeded(username);
+  saveUsername(username);
+  refreshSiteStatusBadge();
+  // The Worker tells us whether this went straight back out as a live
+  // update to an already-approved site, or is a fresh submission that
+  // now needs manual review — the success modal should say the right
+  // thing in each case instead of always claiming "submitted for
+  // review" (which isn't true for a routine update to a live site).
+  openPublishSuccessModal(data.url, data.status === 'live' ? 'updated' : 'pending');
 }
 
 function openPublishSuccessModal(url, mode = 'pending') {
@@ -2430,6 +2497,8 @@ function renderSidebarList(blocks) {
     if (isExpanded) item.classList.add('expanded');
 
     const hideBtn = `<button class="sd-icon-btn sd-hide-btn ${block.hidden ? 'is-hidden' : ''}" data-action="toggle-hidden" data-id="${block.id}" title="${block.hidden ? 'Show this section' : 'Hide this section (keeps its content)'}" type="button">${block.hidden ? '🚫' : '👁'}</button>`;
+    const shadowOn = block.hardShadow !== false;
+    const shadowBtn = `<button class="sd-icon-btn sd-shadow-btn ${shadowOn ? '' : 'is-off'}" data-action="toggle-shadow" data-id="${block.id}" title="${shadowOn ? 'Turn off hard shadow for this section' : 'Turn on hard shadow for this section'}" type="button">◱</button>`;
     const hiddenTag = block.hidden ? `<span class="sd-hidden-tag">Hidden</span>` : '';
 
     item.innerHTML = `
@@ -2438,6 +2507,7 @@ function renderSidebarList(blocks) {
         <span class="sd-title-text">${esc(titleText)} ${verifyBadge}${hiddenTag}</span>
         <span class="sd-item-actions">
           ${swapBtn}
+          ${shadowBtn}
           ${hideBtn}
           <button class="sd-icon-btn sd-expand-btn" data-action="toggle-expand" data-block="${block.id}" title="${isExpanded ? 'Done editing' : 'Edit this section'}" type="button">${isExpanded ? '✓' : '✎'}</button>
           <button class="sd-icon-btn sd-delete-btn" data-action="delete" data-id="${block.id}" title="Delete section" type="button">✕</button>
@@ -2497,6 +2567,8 @@ function initSidebarActions() {
         if (block) Store.setBlockColumn(id, block.col === 'side' ? 'main' : 'side');
       } else if (action === 'toggle-hidden') {
         Store.toggleBlockHidden(actionBtn.dataset.id);
+      } else if (action === 'toggle-shadow') {
+        Store.toggleBlockShadow(actionBtn.dataset.id);
       } else if (action === 'toggle-expand') {
         toggleBlockExpand(actionBtn.dataset.block);
       } else if (action === 'add-item') {
@@ -3234,6 +3306,8 @@ function applyPortfolioDesign(design) {
   el.portfolioSite.setAttribute('data-header-style', design.headerStyle || 'scroll');
   el.portfolioSite.setAttribute('data-section-anim', design.sectionAnimation || 'none');
   el.portfolioSite.setAttribute('data-dots-pos', design.dotsPosition || 'right');
+  el.portfolioSite.setAttribute('data-dots-center', design.dotsCentering || 'slide');
+  el.portfolioSite.setAttribute('data-dots-style', design.dotsStyle || 'dot');
   el.portfolioSite.setAttribute('data-content-width', design.contentWidth || 'contained');
   el.portfolioSite.setAttribute('data-hero-align', design.heroAlign || 'left');
   el.portfolioSite.setAttribute('data-hero-photo-shape', design.heroPhotoShape || 'circle');
@@ -3270,6 +3344,11 @@ function syncCustomizeControls(design) {
       p.classList.toggle('active', Number(p.dataset.value) === pct);
     });
   });
+
+  if (el.dotsCenteringGroup) {
+    const pos = design.dotsPosition || 'right';
+    el.dotsCenteringGroup.classList.toggle('hidden', pos !== 'left' && pos !== 'right');
+  }
 
   if (el.inTextPadding) {
     const pad = Number(design.textPaddingRem) || 0;

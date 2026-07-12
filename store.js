@@ -197,7 +197,7 @@ export const FONT_OPTIONS = [
 
 // Default design for the portfolio site (independent of résumé templates —
 // the portfolio has one flowing layout, but still themeable via color/font).
-export const PORTFOLIO_DEFAULT_DESIGN = { accent: '#7C4DFF', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'contained', heroAlign: 'left', dotsPosition: 'right', heroPhotoShape: 'circle', heroPhotoSize: 'md', heroSize: 'normal', headerHeightPct: 30, textPaddingRem: 0, lineSpacing: 'normal', sectionSpacing: 'normal', cardPadding: 'normal' };
+export const PORTFOLIO_DEFAULT_DESIGN = { accent: '#7C4DFF', headingFont: 'modern', bodyFont: 'sans', headerStyle: 'scroll', sectionAnimation: 'none', contentWidth: 'contained', heroAlign: 'left', dotsPosition: 'right', dotsCentering: 'slide', dotsStyle: 'dot', heroPhotoShape: 'circle', heroPhotoSize: 'md', heroSize: 'normal', headerHeightPct: 30, textPaddingRem: 0, lineSpacing: 'normal', sectionSpacing: 'normal', cardPadding: 'normal' };
 
 // Portfolio templates: unlike résumé templates (which change structural
 // layout — columns, alignment), the portfolio has one adaptive layout,
@@ -973,6 +973,20 @@ class EditorStore {
     const block = this.active().blocks.find(b => b.id === id);
     if (!block) return;
     block.hidden = !block.hidden;
+    this.emit('blocks_changed', this.active().blocks);
+  }
+
+  // Each block's card renders with the site's "hard shadow" (the
+  // offset neubrutalist box-shadow — see .pf-card in portfolio.css)
+  // by default. This lets a section opt out individually for a
+  // flatter look, without touching any other section. Undefined
+  // (never toggled) means "on", matching every block's appearance
+  // before this setting existed.
+  toggleBlockShadow(id) {
+    const block = this.active().blocks.find(b => b.id === id);
+    if (!block) return;
+    const currentlyOn = block.hardShadow !== false;
+    block.hardShadow = !currentlyOn;
     this.emit('blocks_changed', this.active().blocks);
   }
 

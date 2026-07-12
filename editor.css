@@ -1209,6 +1209,17 @@ body {
   border-color: var(--color-text-muted);
 }
 
+/* ── Hard-shadow toggle ────────────────────────────────────
+   "On" (default) uses the same neutral icon-button look as every
+   other sidebar action. "Off" is dimmed/flattened to visually echo
+   what the toggle just did to the section itself. */
+.sd-shadow-btn.is-off {
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  box-shadow: none;
+  opacity: 0.6;
+}
+
 .sd-hidden-tag {
   font-size: 0.65rem;
   font-weight: 700;

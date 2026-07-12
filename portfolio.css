@@ -392,6 +392,26 @@
      "top" dots position already use inside the editor canvas. */
   top: calc(320px + (var(--pf-header-pct) * 3.2px));
 }
+/* "Centered on screen/display" alternative (data-dots-center="viewport")
+   — instead of centering on the section area below the header, this
+   centers the rail on the full display/canvas height, header included.
+   .portfolio-site is itself the 100vh (or, in the editor canvas, fixed
+   640px) box these percentages measure against, so a flat 50% here
+   really is dead-center on the whole thing — no header-offset math
+   needed, unlike the "slide" default above. Extra attribute selectors
+   are deliberate: this needs to out-specificity the default rule
+   above it, not just come later in the file. */
+.portfolio-site[data-section-anim="horizontal"][data-dots-center="viewport"][data-dots-pos="left"] .pf-slide-dots,
+.portfolio-site[data-section-anim="vertical"][data-dots-center="viewport"][data-dots-pos="left"] .pf-slide-dots,
+.portfolio-site[data-section-anim="horizontal"][data-dots-center="viewport"][data-dots-pos="right"] .pf-slide-dots,
+.portfolio-site[data-section-anim="vertical"][data-dots-center="viewport"][data-dots-pos="right"] .pf-slide-dots,
+#canvasZoomTarget .portfolio-site[data-section-anim="horizontal"][data-dots-center="viewport"][data-dots-pos="left"] .pf-slide-dots,
+#canvasZoomTarget .portfolio-site[data-section-anim="vertical"][data-dots-center="viewport"][data-dots-pos="left"] .pf-slide-dots,
+#canvasZoomTarget .portfolio-site[data-section-anim="horizontal"][data-dots-center="viewport"][data-dots-pos="right"] .pf-slide-dots,
+#canvasZoomTarget .portfolio-site[data-section-anim="vertical"][data-dots-center="viewport"][data-dots-pos="right"] .pf-slide-dots {
+  top: 50%;
+  transform: translateY(-50%);
+}
 .portfolio-site[data-section-anim="horizontal"][data-dots-pos="left"] .pf-slide-dots,
 .portfolio-site[data-section-anim="vertical"][data-dots-pos="left"] .pf-slide-dots {
   left: 1.25rem;
@@ -464,6 +484,92 @@
   background: var(--pf-accent, var(--color-primary));
   border-color: var(--pf-accent, var(--color-primary));
   transform: scale(1.3);
+}
+
+/* ── Slide dots: alternative styles ───────────────────────────
+   Default ("dot") is the round dot above. These are opt-in
+   alternatives (see the "Slide Dots Style" customize control),
+   selected via data-dots-style on .portfolio-site. Bar/progress
+   default to a wide, short shape (row rail: under the hero, or a
+   top/bottom dot rail) and flip to a narrow, tall shape when the
+   rail itself is vertical (left/right dot rail). */
+.portfolio-site[data-dots-style="bar"] .pf-dot {
+  width: 18px; height: 6px;
+  border-radius: 3px;
+}
+.portfolio-site[data-dots-pos="left"][data-dots-style="bar"] .pf-dot,
+.portfolio-site[data-dots-pos="right"][data-dots-style="bar"] .pf-dot {
+  width: 6px; height: 18px;
+}
+
+/* Progress bar: a row of thin segments, filled up to (and including)
+   the current slide rather than only the exact current one — .passed
+   is set by the nav script alongside .active (see the slide-deck
+   script and pfSetActiveDot). Segments have no border/scale-up so the
+   filled run reads as one continuous bar. */
+.portfolio-site[data-dots-style="progress"] .pf-slide-dots {
+  gap: 3px;
+}
+.portfolio-site[data-dots-style="progress"] .pf-dot {
+  width: 16px; height: 5px;
+  border-radius: 2.5px;
+  border: none;
+  background: var(--color-border);
+  opacity: 0.4;
+  transition: opacity 0.2s ease, background 0.2s ease;
+}
+.portfolio-site[data-dots-pos="left"][data-dots-style="progress"] .pf-dot,
+.portfolio-site[data-dots-pos="right"][data-dots-style="progress"] .pf-dot {
+  width: 5px; height: 16px;
+}
+.portfolio-site[data-dots-style="progress"] .pf-dot.passed {
+  opacity: 1;
+  background: var(--pf-accent, var(--color-primary));
+  transform: none;
+}
+/* The *current* segment stays visually distinct from ones already
+   passed — brighter/larger, not just "filled" like the rest of the
+   completed run — so a progress bar still answers "which slide am I
+   on", not only "how far have I gotten". */
+.portfolio-site[data-dots-style="progress"] .pf-dot.active {
+  opacity: 1;
+  background: var(--pf-accent, var(--color-primary));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--pf-accent, var(--color-primary)) 35%, transparent);
+  transform: none;
+}
+.portfolio-site[data-dots-pos="left"][data-dots-style="progress"] .pf-dot.active,
+.portfolio-site[data-dots-pos="right"][data-dots-style="progress"] .pf-dot.active {
+  width: 8px;
+}
+.portfolio-site:not([data-dots-pos="left"]):not([data-dots-pos="right"])[data-dots-style="progress"] .pf-dot.active {
+  height: 8px;
+}
+
+/* Symbols: a small rotating set of glyphs instead of plain dots —
+   purely a ::before content swap per position (nth-child), so it
+   needs no JS beyond what already builds/marks the dots. */
+.portfolio-site[data-dots-style="symbol"] .pf-dot {
+  width: auto; height: auto;
+  min-width: 16px; min-height: 16px;
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  transform: none !important;
+}
+.portfolio-site[data-dots-style="symbol"] .pf-dot::before { content: "●"; }
+.portfolio-site[data-dots-style="symbol"] .pf-dot:nth-child(4n+2)::before { content: "■"; }
+.portfolio-site[data-dots-style="symbol"] .pf-dot:nth-child(4n+3)::before { content: "▲"; }
+.portfolio-site[data-dots-style="symbol"] .pf-dot:nth-child(4n)::before { content: "◆"; }
+.portfolio-site[data-dots-style="symbol"] .pf-dot:hover { border-color: transparent; color: var(--pf-accent, var(--color-primary)); }
+.portfolio-site[data-dots-style="symbol"] .pf-dot.active {
+  color: var(--pf-accent, var(--color-primary));
+  transform: scale(1.25) !important;
 }
 
 /* ── Slide nav arrows (top/bottom) ────────────────────────────
@@ -599,6 +705,18 @@
 .pf-card:hover {
   transform: translate(-2px, -2px);
   box-shadow: 7px 7px 0 0 var(--color-border);
+}
+
+/* Per-section opt-out of the hard shadow (see the ◱ toggle in the
+   editor sidebar) — flattens it back to a plain bordered card, with
+   no lift-on-hover motion since there's no shadow depth to enhance. */
+.pf-card.pf-no-shadow {
+  box-shadow: none;
+}
+
+.pf-card.pf-no-shadow:hover {
+  transform: none;
+  box-shadow: none;
 }
 
 .pf-card.selected {
