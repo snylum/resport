@@ -731,11 +731,11 @@
    Scale the cap itself along with the chosen content width instead. */
 .portfolio-site[data-content-width="wide"] .pf-sections > [data-align],
 .portfolio-site[data-content-width="wide"] .pf-slide-inner > [data-align] {
-  max-width: min(920px, 100%);
+  max-width: min(860px, 100%);
 }
 .portfolio-site[data-content-width="full"] .pf-sections > [data-align],
 .portfolio-site[data-content-width="full"] .pf-slide-inner > [data-align] {
-  max-width: 100%;
+  max-width: min(1200px, 92%);
 }
 .pf-sections > [data-align="left"],
 .pf-slide-inner > [data-align="left"] {
@@ -1008,17 +1008,24 @@
   height: 10px;
 }
 
+/* The scalloped verified seal itself — flat green fill, no drop
+   shadow/border. Every badge below just sizes this SVG rather than
+   drawing its own circular background around a plain checkmark. */
+.pf-verify-seal {
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: var(--color-success, #1a8f5c);
+}
+
 .pf-verify-badge-sm {
   width: 20px;
   height: 20px;
   padding: 0;
-  border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
   justify-content: center;
 }
 .pf-verify-badge-sm.pf-verify-badge:hover {
   transform: scale(1.08);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
 }
 
 /* ── Photo gallery card ────────────────────────────────────── */
@@ -1077,16 +1084,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.6rem;
-  height: 1.6rem;
+  width: 1.5rem;
+  height: 1.5rem;
   border: none;
-  border-radius: 999px;
-  background: var(--pf-accent, var(--color-primary));
-  color: #fff;
-  font-size: 0.8rem;
-  font-weight: 700;
-  line-height: 1;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  background: none;
+  padding: 0;
   pointer-events: none;
 }
 /* Link-proof variant: unlike the plain indicator above, this one is a
@@ -1247,24 +1249,17 @@
   opacity: 0.75;
 }
 
-/* The round filled checkmark itself — this is the "badge" part,
-   styled after the small circular verified checkmarks on social
-   platforms like Twitter/X, rather than one big bordered rectangle
-   wrapping the whole "Verified" label. */
+/* The scalloped verified seal itself — this is the "badge" part,
+   styled after a notary/social verified seal (scalloped edge, flat
+   green fill, no drop shadow) rather than a plain circle or one big
+   bordered rectangle wrapping the whole "Verified" label. */
 .pf-verify-check {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--pf-accent, var(--color-primary));
-  color: #fff;
-}
-.pf-verify-check .pf-check-icon {
-  width: 9px;
-  height: 9px;
+  width: 17px;
+  height: 17px;
 }
 
 .pf-verify-label {

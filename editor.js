@@ -343,12 +343,22 @@ function videoEmbedSrc(url) {
 // font ships, and scales cleanly at the small sizes these badges use.
 const CHECK_ICON = '<svg class="pf-check-icon" width="9" height="9" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
+// The actual "verified" mark shown on the portfolio — a scalloped,
+// rounded-petal seal (like a notary/social "verified" badge) instead
+// of a plain flat circle, with the checkmark baked in. Colored green
+// (var(--color-success)) via `fill: currentColor` on the seal shape,
+// no drop shadow — just a flat, soft badge. One self-contained SVG so
+// every place that shows a verified mark (summary/experience/skills/
+// gallery/etc.) renders the exact same shape at whatever size its
+// container gives it.
+const VERIFIED_SEAL_ICON = '<svg class="pf-verify-seal" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M 50.00,4.00 C 54.02,4.00 57.55,11.44 62.05,12.91 C 66.56,14.37 73.79,10.42 77.04,12.79 C 80.29,15.15 78.77,23.24 81.55,27.08 C 84.34,30.91 92.51,31.96 93.75,35.79 C 94.99,39.61 89.00,45.26 89.00,50.00 C 89.00,54.74 94.99,60.39 93.75,64.21 C 92.51,68.04 84.34,69.09 81.55,72.92 C 78.77,76.76 80.29,84.85 77.04,87.21 C 73.79,89.58 66.56,85.63 62.05,87.09 C 57.55,88.56 54.02,96.00 50.00,96.00 C 45.98,96.00 42.45,88.56 37.95,87.09 C 33.44,85.63 26.21,89.58 22.96,87.21 C 19.71,84.85 21.23,76.76 18.45,72.92 C 15.66,69.09 7.49,68.04 6.25,64.21 C 5.01,60.39 11.00,54.74 11.00,50.00 C 11.00,45.26 5.01,39.61 6.25,35.79 C 7.49,31.96 15.66,30.91 18.45,27.08 C 21.23,23.24 19.71,15.15 22.96,12.79 C 26.21,10.42 33.44,14.37 37.95,12.91 C 42.45,11.44 45.98,4.00 50.00,4.00 Z" fill="currentColor"/><path d="M30 53 L44 67 L72 35" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
 function verifyControlHTML(block) {
   const v = block.data.verify || { type: 'none' };
   if (v.type !== 'none') {
     const labelHTML = v.label ? `<span class="pf-verify-label">${esc(v.label)}</span>` : '';
     return `
-      <button class="pf-verify-badge" data-action="view-verify" data-block="${block.id}" type="button"><span class="pf-verify-check">${CHECK_ICON}</span>Verified${labelHTML}</button>
+      <button class="pf-verify-badge" data-action="view-verify" data-block="${block.id}" type="button"><span class="pf-verify-check">${VERIFIED_SEAL_ICON}</span>Verified${labelHTML}</button>
       <button class="pf-verify-edit" data-action="edit-verify" data-block="${block.id}" title="Edit verification" type="button">✎</button>`;
   }
   return `<button class="pf-verify-add" data-action="edit-verify" data-block="${block.id}" type="button">+ Add proof</button>`;
@@ -483,7 +493,7 @@ function canvasVerifyBadge(block, index) {
   if (v.type === 'none') return '';
   const labelHTML = v.label ? `<span class="pf-verify-label">${esc(v.label)}</span>` : '';
   const idxAttr = index != null ? ` data-photo-index="${index}"` : '';
-  return `<div class="pf-verify"><button class="pf-verify-badge" data-action="view-verify" data-block="${block.id}"${idxAttr} type="button"><span class="pf-verify-check">${CHECK_ICON}</span>Verified${labelHTML}</button></div>`;
+  return `<div class="pf-verify"><button class="pf-verify-badge" data-action="view-verify" data-block="${block.id}"${idxAttr} type="button"><span class="pf-verify-check">${VERIFIED_SEAL_ICON}</span>Verified${labelHTML}</button></div>`;
 }
 
 // Compact inline version for entry-list rows (certifications, languages)
@@ -491,7 +501,7 @@ function canvasVerifyBadge(block, index) {
 function canvasEntryVerifyBadge(block, index) {
   const v = (block.data.items && block.data.items[index] && block.data.items[index].verify) || { type: 'none' };
   if (v.type === 'none') return '';
-  return `<button class="pf-verify-badge pf-verify-badge-sm" data-action="view-verify" data-block="${block.id}" data-photo-index="${index}" type="button" title="View proof">${CHECK_ICON}</button>`;
+  return `<button class="pf-verify-badge pf-verify-badge-sm" data-action="view-verify" data-block="${block.id}" data-photo-index="${index}" type="button" title="View proof">${VERIFIED_SEAL_ICON}</button>`;
 }
 
 // Small "✓" pin shown in the corner of a gallery photo that has its
@@ -508,9 +518,9 @@ function canvasPhotoVerifyBadge(photo) {
   if (v.type === 'none') return '';
   if (v.type === 'link' && v.link) {
     const safeHref = /^https?:\/\//i.test(v.link) ? v.link : `https://${v.link}`;
-    return `<button class="pf-photo-verify-badge is-link" data-action="open-verify-link" data-href="${esc(safeHref)}" type="button" title="Open verification link">${CHECK_ICON}</button>`;
+    return `<button class="pf-photo-verify-badge is-link" data-action="open-verify-link" data-href="${esc(safeHref)}" type="button" title="Open verification link">${VERIFIED_SEAL_ICON}</button>`;
   }
-  return `<span class="pf-photo-verify-badge" title="Verified">${CHECK_ICON}</span>`;
+  return `<span class="pf-photo-verify-badge" title="Verified">${VERIFIED_SEAL_ICON}</span>`;
 }
 
 function createResumeBlock(block) {
@@ -2047,7 +2057,7 @@ function renderStaticPortfolioBlockInner(block) {
     if (!v || v.type === 'none') return '';
     const labelHTML = v.label ? `<span class="pf-verify-label">${esc(v.label)}</span>` : '';
     const cls = small ? 'pf-verify-badge pf-verify-badge-sm' : 'pf-verify-badge';
-    const text = small ? CHECK_ICON : `<span class="pf-verify-check">${CHECK_ICON}</span>Verified${labelHTML}`;
+    const text = small ? VERIFIED_SEAL_ICON : `<span class="pf-verify-check">${VERIFIED_SEAL_ICON}</span>Verified${labelHTML}`;
     if (v.type === 'photo' && v.photo) {
       return `<button class="${cls}" data-verify-type="photo" data-verify-photo="${esc(v.photo)}" data-verify-label="${esc(v.label || '')}" type="button" title="View proof">${text}</button>`;
     }
@@ -2123,9 +2133,9 @@ function renderStaticPortfolioBlockInner(block) {
         let badge = '';
         if (pv.type === 'link' && pv.link) {
           const safeHref = /^https?:\/\//i.test(pv.link) ? pv.link : `https://${pv.link}`;
-          badge = `<button class="pf-photo-verify-badge is-link" data-action="open-verify-link" data-href="${esc(safeHref)}" type="button" title="Open verification link">${CHECK_ICON}</button>`;
+          badge = `<button class="pf-photo-verify-badge is-link" data-action="open-verify-link" data-href="${esc(safeHref)}" type="button" title="Open verification link">${VERIFIED_SEAL_ICON}</button>`;
         } else if (pv.type === 'photo' && pv.photo) {
-          badge = `<span class="pf-photo-verify-badge" title="Verified">${CHECK_ICON}</span>`;
+          badge = `<span class="pf-photo-verify-badge" title="Verified">${VERIFIED_SEAL_ICON}</span>`;
         }
         const hasProof = pv.type === 'photo' && !!pv.photo;
         const captionAttr = hasProof && pv.label ? ` data-caption="${esc(pv.label)}"` : '';
