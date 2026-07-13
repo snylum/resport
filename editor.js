@@ -1668,7 +1668,7 @@ document.addEventListener('click', function (e) {
     var html = '';
     if (type === 'photo') {
       var photo = btn.getAttribute('data-verify-photo');
-      html = '<h3 class="modal-title">Verified experience</h3><div class="verify-modal-body"><img src="' + photo + '" class="verify-modal-img" alt="Verification proof"/>' + (label ? '<p class="verify-modal-caption">' + label + '</p>' : '') + '</div>';
+      html = '<h3 class="modal-title">Verified</h3><div class="verify-modal-body"><img src="' + photo + '" class="verify-modal-img" alt="Verification proof"/>' + (label ? '<p class="verify-modal-caption">' + label + '</p>' : '') + '</div>';
     }
     content.innerHTML = html;
     if (box) box.className = 'modal-box';
