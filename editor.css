@@ -822,6 +822,102 @@ body {
   letter-spacing: -0.5px;
 }
 
+.sd-style-btn.active {
+  background: var(--color-accent, #1A1A1A);
+  color: #fff;
+  border-color: var(--color-accent, #1A1A1A);
+}
+
+.sd-style-body {
+  padding: 0.65rem 0.6rem;
+  border-top: 1px dashed var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.sd-style-row {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.sd-style-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+}
+
+.sd-style-label-inline { margin-left: auto; }
+
+.sd-style-num {
+  width: 5.5rem;
+  padding: 0.25rem 0.4rem;
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 0.78rem;
+}
+
+.sd-style-select {
+  padding: 0.25rem 0.4rem;
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 0.78rem;
+  max-width: 11rem;
+}
+
+.sd-style-toggle-btn {
+  width: 26px;
+  height: 26px;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.sd-style-toggle-btn.active {
+  background: var(--color-accent, #1A1A1A);
+  color: #fff;
+  border-color: var(--color-accent, #1A1A1A);
+}
+
+.sd-style-margins {
+  align-items: center;
+}
+
+.sd-style-margins-label {
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+  flex-basis: 100%;
+}
+
+.sd-style-margin-in { flex-direction: row; align-items: center; gap: 0.3rem; }
+.sd-style-margin-in .sd-style-num { width: 4rem; }
+
+.sd-style-reset-btn {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* Per-block paragraph spacing override — only takes effect when a block
+   actually has --blk-para-spacing set inline (via the Style panel), so
+   it never disturbs a template's own default rhythm. */
+.resume-block[style*="--blk-para-spacing"] > p:not(:last-child),
+.resume-block[style*="--blk-para-spacing"] .rb-bullets > li:not(:last-child),
+.resume-block[style*="--blk-para-spacing"] .rb-entry-row:not(:last-child) {
+  margin-bottom: var(--blk-para-spacing) !important;
+}
+
 .sd-delete-btn:hover {
   background: var(--color-danger);
   color: #fff;

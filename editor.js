@@ -1,4 +1,4 @@
-import { Store, esc, uid, TEMPLATES, PORTFOLIO_TEMPLATES, PORTFOLIO_STRUCTURAL_TEMPLATES, FONT_STACKS, FONT_OPTIONS, BLOCK_LIBRARY } from './store.js';
+import { Store, esc, uid, TEMPLATES, PORTFOLIO_TEMPLATES, PORTFOLIO_STRUCTURAL_TEMPLATES, FONT_STACKS, FONT_OPTIONS, BLOCK_LIBRARY, emptyBlockStyle } from './store.js';
 // (SAMPLE_PROFILES/SAMPLE_STYLES live entirely inside Store.randomizeContent()
 // in store.js — nothing in editor.js needs to reach into them directly.)
 
@@ -273,12 +273,13 @@ function skillVerify(it) {
 }
 
 function renderSkillTags(items, blockId, field) {
+  const showVerify = Store.state.viewMode === 'portfolio';
   const tags = (items || []).map((s, i) => {
     const verified = skillVerify(s).type !== 'none';
     return `
     <span class="rb-skill-tag">
       ${ceField(skillName(s), field, blockId, { index: i, subfield: 'name' })}
-      <button class="sd-gallery-thumb-verify ${verified ? 'is-verified' : ''}" data-action="edit-photo-verify" data-block="${blockId}" data-photo-index="${i}" title="${verified ? 'Edit proof for this skill' : 'Add proof for this skill'}" type="button">${verified ? '✓' : '+ proof'}</button>
+      ${showVerify ? `<button class="sd-gallery-thumb-verify ${verified ? 'is-verified' : ''}" data-action="edit-photo-verify" data-block="${blockId}" data-photo-index="${i}" title="${verified ? 'Edit proof for this skill' : 'Add proof for this skill'}" type="button">${verified ? '✓' : '+ proof'}</button>` : ''}
       <button class="tag-remove-btn" data-action="remove-item" data-block="${blockId}" data-field="${field}" data-index="${i}" title="Remove" type="button">✕</button>
     </span>`;
   }).join('');
@@ -287,6 +288,7 @@ function renderSkillTags(items, blockId, field) {
 }
 
 function renderEntryList(items, blockId, field, cols) {
+  const showVerify = Store.state.viewMode === 'portfolio';
   const rows = (items || []).map((it, i) => {
     const verified = it.verify && it.verify.type !== 'none';
     return `
@@ -298,7 +300,7 @@ function renderEntryList(items, blockId, field, cols) {
             ${ceField(it[c.key] || '', field, blockId, { index: i, subfield: c.key, cls: c.cls })}
           </div>`).join('')}
       </div>
-      <button class="sd-gallery-thumb-verify ${verified ? 'is-verified' : ''}" data-action="edit-photo-verify" data-block="${blockId}" data-photo-index="${i}" type="button" title="${verified ? 'Edit proof for this entry' : 'Add proof for this entry'}">${verified ? '✓' : '+ proof'}</button>
+      ${showVerify ? `<button class="sd-gallery-thumb-verify ${verified ? 'is-verified' : ''}" data-action="edit-photo-verify" data-block="${blockId}" data-photo-index="${i}" type="button" title="${verified ? 'Edit proof for this entry' : 'Add proof for this entry'}">${verified ? '✓' : '+ proof'}</button>` : ''}
       <button class="li-remove-btn" data-action="remove-item" data-block="${blockId}" data-field="${field}" data-index="${i}" title="Remove" type="button">✕</button>
     </div>`;
   }).join('');
@@ -378,6 +380,52 @@ function toggleBlockExpand(blockId) {
   renderSidebarList(Store.active().blocks);
 }
 
+// Same idea, for the per-block Style panel (font size/family,
+// bold/italic/underline, paragraph spacing, per-side margins).
+// Resume-only: templates already carry the portfolio's styling.
+const styleOpenBlocks = new Set();
+
+function toggleBlockStyleOpen(blockId) {
+  if (styleOpenBlocks.has(blockId)) styleOpenBlocks.delete(blockId);
+  else styleOpenBlocks.add(blockId);
+  renderSidebarList(Store.active().blocks);
+}
+
+function blockStyleFieldsHTML(block) {
+  const s = block.style || emptyBlockStyle();
+  const fontOpts = FONT_OPTIONS.map(f => `<option value="${f.id}" ${s.fontFamily === f.id ? 'selected' : ''}>${esc(f.label)}</option>`).join('');
+  return `
+    <div class="sd-style-body">
+      <div class="sd-style-row">
+        <label class="sd-style-label">Font size
+          <input type="number" class="sd-style-num" data-style-key="fontSize" data-block="${block.id}" min="6" max="72" step="1" placeholder="Default" value="${s.fontSize ?? ''}" /> px
+        </label>
+        <label class="sd-style-label">Font style
+          <select class="sd-style-select" data-style-key="fontFamily" data-block="${block.id}">
+            <option value="" ${!s.fontFamily ? 'selected' : ''}>Template default</option>
+            ${fontOpts}
+          </select>
+        </label>
+      </div>
+      <div class="sd-style-row">
+        <button type="button" class="sd-style-toggle-btn ${s.bold ? 'active' : ''}" data-action="style-toggle" data-style-toggle="bold" data-block="${block.id}" title="Bold"><strong>B</strong></button>
+        <button type="button" class="sd-style-toggle-btn ${s.italic ? 'active' : ''}" data-action="style-toggle" data-style-toggle="italic" data-block="${block.id}" title="Italic"><em>I</em></button>
+        <button type="button" class="sd-style-toggle-btn ${s.underline ? 'active' : ''}" data-action="style-toggle" data-style-toggle="underline" data-block="${block.id}" title="Underline"><u>U</u></button>
+        <label class="sd-style-label sd-style-label-inline">Paragraph spacing
+          <input type="number" class="sd-style-num" data-style-key="paraSpacing" data-block="${block.id}" min="0" max="6" step="0.05" placeholder="Default" value="${s.paraSpacing ?? ''}" /> rem
+        </label>
+      </div>
+      <div class="sd-style-row sd-style-margins">
+        <span class="sd-style-margins-label">Margin (rem, from 0)</span>
+        <label class="sd-style-label sd-style-margin-in">Top <input type="number" class="sd-style-num" data-style-key="marginTop" data-block="${block.id}" min="0" max="10" step="0.05" placeholder="0" value="${s.marginTop ?? ''}" /></label>
+        <label class="sd-style-label sd-style-margin-in">Right <input type="number" class="sd-style-num" data-style-key="marginRight" data-block="${block.id}" min="0" max="10" step="0.05" placeholder="0" value="${s.marginRight ?? ''}" /></label>
+        <label class="sd-style-label sd-style-margin-in">Bottom <input type="number" class="sd-style-num" data-style-key="marginBottom" data-block="${block.id}" min="0" max="10" step="0.05" placeholder="0" value="${s.marginBottom ?? ''}" /></label>
+        <label class="sd-style-label sd-style-margin-in">Left <input type="number" class="sd-style-num" data-style-key="marginLeft" data-block="${block.id}" min="0" max="10" step="0.05" placeholder="0" value="${s.marginLeft ?? ''}" /></label>
+      </div>
+      <button type="button" class="sd-style-reset-btn" data-action="reset-block-style" data-id="${block.id}">Reset to template default</button>
+    </div>`;
+}
+
 // Short, non-editable one-liner shown next to a collapsed sidebar item so
 // people can tell sections apart before expanding one to edit it.
 function blockSummaryLine(block) {
@@ -455,10 +503,11 @@ function blockEditFieldsHTML(block) {
         { key: 'name', cls: 'ce-strong', label: 'Language' }, { key: 'level', cls: 'ce-muted', label: 'Level' }
       ]));
     case 'gallery': {
+      const showVerify = Store.state.viewMode === 'portfolio';
       const thumbs = (d.photos || []).map((p, i) => `
         <div class="sd-gallery-thumb">
           <img src="${esc(p.src)}" alt="" />
-          <button class="sd-gallery-thumb-verify ${p.verify && p.verify.type !== 'none' ? 'is-verified' : ''}" data-action="edit-photo-verify" data-block="${block.id}" data-photo-index="${i}" type="button" title="${p.verify && p.verify.type !== 'none' ? 'Edit proof for this photo' : 'Add proof for this photo'}">${p.verify && p.verify.type !== 'none' ? '✓' : '+ proof'}</button>
+          ${showVerify ? `<button class="sd-gallery-thumb-verify ${p.verify && p.verify.type !== 'none' ? 'is-verified' : ''}" data-action="edit-photo-verify" data-block="${block.id}" data-photo-index="${i}" type="button" title="${p.verify && p.verify.type !== 'none' ? 'Edit proof for this photo' : 'Add proof for this photo'}">${p.verify && p.verify.type !== 'none' ? '✓' : '+ proof'}</button>` : ''}
           <button class="sd-gallery-thumb-remove" data-action="remove-item" data-block="${block.id}" data-field="photos" data-index="${i}" type="button" title="Remove photo">✕</button>
         </div>`).join('');
       return field('Photos', `
@@ -467,7 +516,7 @@ function blockEditFieldsHTML(block) {
           + Add photo
           <input type="file" accept="image/*" class="sd-gallery-file-input" data-block="${block.id}" hidden />
         </label>`)
-        + `<p class="sd-field-hint">Click "+ proof" on a photo to attach verification (certificate, badge, ID, or link) to that specific photo.</p>`;
+        + (showVerify ? `<p class="sd-field-hint">Click "+ proof" on a photo to attach verification (certificate, badge, ID, or link) to that specific photo.</p>` : '');
     }
     case 'video':
       return field('Video URL (YouTube, Vimeo, Loom)', ceField(d.url, 'url', block.id))
@@ -526,12 +575,35 @@ function canvasPhotoVerifyBadge(photo, blockId, index) {
   return `<span class="pf-photo-verify-badge" title="Verified">${VERIFIED_SEAL_ICON}</span>`;
 }
 
+// Turns a block.style object into a CSS style string applied to the
+// block's own wrapper div. Only properties the person actually set are
+// included, so an untouched block renders exactly as the template
+// defines it — this never overrides template CSS unless asked to.
+function blockStyleToCSS(style) {
+  if (!style) return '';
+  const s = style;
+  const parts = [];
+  if (s.fontSize) parts.push(`font-size:${Number(s.fontSize)}px`);
+  if (s.fontFamily && FONT_STACKS[s.fontFamily]) parts.push(`font-family:${FONT_STACKS[s.fontFamily]}`);
+  if (s.bold) parts.push('font-weight:700');
+  if (s.italic) parts.push('font-style:italic');
+  if (s.underline) parts.push('text-decoration:underline');
+  if (s.paraSpacing !== null && s.paraSpacing !== undefined && s.paraSpacing !== '') parts.push(`--blk-para-spacing:${Number(s.paraSpacing)}rem`);
+  if (s.marginTop !== null && s.marginTop !== undefined && s.marginTop !== '') parts.push(`margin-top:${Number(s.marginTop)}rem`);
+  if (s.marginRight !== null && s.marginRight !== undefined && s.marginRight !== '') parts.push(`margin-right:${Number(s.marginRight)}rem`);
+  if (s.marginBottom !== null && s.marginBottom !== undefined && s.marginBottom !== '') parts.push(`margin-bottom:${Number(s.marginBottom)}rem`);
+  if (s.marginLeft !== null && s.marginLeft !== undefined && s.marginLeft !== '') parts.push(`margin-left:${Number(s.marginLeft)}rem`);
+  return parts.join(';');
+}
+
 function createResumeBlock(block) {
   const wrapper = document.createElement('div');
   wrapper.className = `resume-block block-${block.type}`;
   wrapper.dataset.id = block.id;
   if (Store.state.selectedBlockId === block.id) wrapper.classList.add('selected');
   if (block.hidden) wrapper.classList.add('section-hidden-preview');
+  const styleCSS = blockStyleToCSS(block.style);
+  if (styleCSS) wrapper.setAttribute('style', styleCSS);
   wrapper.innerHTML = renderStaticResumeBlock(block);
   return wrapper;
 }
@@ -2937,6 +3009,12 @@ function renderSidebarList(blocks) {
 
     const isExpanded = expandedBlocks.has(block.id);
     if (isExpanded) item.classList.add('expanded');
+    const isResume = Store.state.viewMode === 'resume';
+    const isStyleOpen = isResume && styleOpenBlocks.has(block.id);
+    if (isStyleOpen) item.classList.add('style-open');
+    const styleBtn = isResume
+      ? `<button class="sd-icon-btn sd-style-btn ${isStyleOpen ? 'active' : ''}" data-action="toggle-style" data-block="${block.id}" title="${isStyleOpen ? 'Close styling' : 'Font, bold/italic/underline, spacing & margins'}" type="button">🎨</button>`
+      : '';
 
     const hideBtn = `<button class="sd-icon-btn sd-hide-btn ${block.hidden ? 'is-hidden' : ''}" data-action="toggle-hidden" data-id="${block.id}" title="${block.hidden ? 'Show this section' : 'Hide this section (keeps its content)'}" type="button">${block.hidden ? '🚫' : '👁'}</button>`;
     const shadowOn = block.hardShadow !== false;
@@ -2961,11 +3039,13 @@ function renderSidebarList(blocks) {
           ${contentAlignBtn}
           ${shadowBtn}
           ${hideBtn}
+          ${styleBtn}
           <button class="sd-icon-btn sd-expand-btn" data-action="toggle-expand" data-block="${block.id}" title="${isExpanded ? 'Done editing' : 'Edit this section'}" type="button">${isExpanded ? '✓' : '✎'}</button>
           <button class="sd-icon-btn sd-delete-btn" data-action="delete" data-id="${block.id}" title="Delete section" type="button">✕</button>
         </span>
       </div>
       <div class="sd-summary-line">${esc(blockSummaryLine(block))}</div>
+      ${isStyleOpen ? blockStyleFieldsHTML(block) : ''}
       ${isExpanded ? `<div class="sd-edit-body">${blockEditFieldsHTML(block)}</div>` : ''}
     `;
     el.sidebarSectionsList.appendChild(item);
@@ -2993,6 +3073,18 @@ function confirmDeleteSection(id) {
 
 function initSidebarActions() {
   el.sidebarSectionsList.addEventListener('change', (e) => {
+    const styleInput = e.target.closest('[data-style-key]');
+    if (styleInput) {
+      const blockId = styleInput.dataset.block;
+      const key = styleInput.dataset.styleKey;
+      if (styleInput.tagName === 'SELECT') {
+        Store.setBlockStyle(blockId, key, styleInput.value || null);
+      } else {
+        const raw = styleInput.value;
+        Store.setBlockStyle(blockId, key, raw === '' ? null : Number(raw));
+      }
+      return;
+    }
     const input = e.target.closest('.sd-gallery-file-input');
     if (!input || !input.files[0]) return;
     const blockId = input.dataset.block;
@@ -3031,6 +3123,16 @@ function initSidebarActions() {
         Store.setBlockContentAlign(actionBtn.dataset.id, next);
       } else if (action === 'toggle-expand') {
         toggleBlockExpand(actionBtn.dataset.block);
+      } else if (action === 'toggle-style') {
+        toggleBlockStyleOpen(actionBtn.dataset.block);
+      } else if (action === 'reset-block-style') {
+        Store.resetBlockStyle(actionBtn.dataset.id);
+      } else if (actionBtn.dataset.styleToggle) {
+        const key = actionBtn.dataset.styleToggle;
+        const blockId = actionBtn.dataset.block;
+        const block = Store.active().blocks.find(b => b.id === blockId);
+        const current = !!(block && block.style && block.style[key]);
+        Store.setBlockStyle(blockId, key, !current);
       } else if (action === 'add-item') {
         Store.addListItem(actionBtn.dataset.block, actionBtn.dataset.field, actionBtn.dataset.itemType === 'object' ? {} : '');
       } else if (action === 'remove-item') {
@@ -3217,6 +3319,16 @@ async function downloadResumeAsPDF() {
     clone.style.setProperty('--rp-body-font', FONT_STACKS[design.bodyFont] || FONT_STACKS.sans);
     clone.style.setProperty('--rp-font-scale', Number(design.fontSize || 100) / 100);
     clone.style.setProperty('--rp-line-height', design.lineHeight === 'compact' ? '1.25' : design.lineHeight === 'relaxed' ? '1.7' : '1.45');
+    const pdfPage = PAGE_SIZES_MM[design.pageSize] || PAGE_SIZES_MM.letter;
+    clone.style.setProperty('--rp-page-w', pdfPage.w + 'mm');
+    clone.style.setProperty('--rp-page-min-h', pdfPage.h + 'mm');
+    clone.style.setProperty('--rp-margin', (Number(design.pageMargin) || 2.5) + 'rem');
+    clone.style.setProperty('--rp-section-gap', (Number(design.sectionGap) ?? 1) + 'rem');
+    clone.style.setProperty('--rp-block-pad', (Number(design.blockPad) ?? 0.5) + 'rem');
+    clone.style.setProperty('--rp-bullet-scale', (Number(design.bulletSize) || 100) / 100);
+    clone.style.setProperty('--rp-col-gap', (Number(design.colGap) ?? 2) + 'rem');
+    clone.style.setProperty('--rp-side-width', (Number(design.colSplit) || 34) + '%');
+    clone.style.setProperty('--rp-col-border-w', design.colBorder === false ? '0px' : '2px');
 
     const photoHTML = profile.photo
       ? `<div class="rb-header-photo-wrap"><img src="${esc(profile.photo)}" alt="Profile" /></div>`
@@ -3231,8 +3343,8 @@ async function downloadResumeAsPDF() {
         </div>
       </header>
       <div class="tracks-layout-${design.layout || '1'}">
-        <div class="col-track main-track">${filterVisibleBlocksHidingOrphanSections(blocks.filter(b => b.col === 'main')).map(b => `<div class="resume-block block-${b.type}">${renderStaticResumeBlock(b)}</div>`).join('')}</div>
-        <div class="col-track side-track">${filterVisibleBlocksHidingOrphanSections(blocks.filter(b => b.col === 'side')).map(b => `<div class="resume-block block-${b.type}">${renderStaticResumeBlock(b)}</div>`).join('')}</div>
+        <div class="col-track main-track">${filterVisibleBlocksHidingOrphanSections(blocks.filter(b => b.col === 'main')).map(b => `<div class="resume-block block-${b.type}" style="${esc(blockStyleToCSS(b.style))}">${renderStaticResumeBlock(b)}</div>`).join('')}</div>
+        <div class="col-track side-track">${filterVisibleBlocksHidingOrphanSections(blocks.filter(b => b.col === 'side')).map(b => `<div class="resume-block block-${b.type}" style="${esc(blockStyleToCSS(b.style))}">${renderStaticResumeBlock(b)}</div>`).join('')}</div>
       </div>`;
 
     // Render off-screen (not display:none — html2canvas needs real layout).
@@ -3249,7 +3361,7 @@ async function downloadResumeAsPDF() {
         filename,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+        jsPDF: { unit: 'in', format: PAGE_SIZES_IN[design.pageSize] || PAGE_SIZES_IN.letter, orientation: 'portrait' },
         pagebreak: { mode: ['css', 'legacy'] }
       })
       .from(clone)
@@ -3696,7 +3808,17 @@ function populatePortfolioTemplateGallery() {
 const PAGE_SIZES_MM = {
   letter: { w: 215.9, h: 279.4 },
   a4: { w: 210, h: 297 },
-  legal: { w: 215.9, h: 355.6 }
+  legal: { w: 215.9, h: 355.6 },
+  folio: { w: 215.9, h: 330.2 }
+};
+
+// Same sizes in inches, used for the exported PDF's jsPDF format so the
+// download always matches whichever Document Size the template is set to.
+const PAGE_SIZES_IN = {
+  letter: [8.5, 11],
+  a4: [8.2677, 11.6929],
+  legal: [8.5, 14],
+  folio: [8.5, 13]
 };
 
 function applyResumeDesign(design) {

@@ -184,7 +184,12 @@ export const FONT_STACKS = {
   serif: "Georgia, 'Times New Roman', Times, serif",
   modern: "'Space Grotesk', 'Helvetica Neue', Arial, sans-serif",
   classic: "'Times New Roman', Times, serif",
-  mono: "'Roboto Mono', 'Courier New', Courier, monospace"
+  mono: "'Roboto Mono', 'Courier New', Courier, monospace",
+  script: "'Pacifico', 'Brush Script MT', cursive",
+  slab: "'Roboto Slab', Georgia, serif",
+  rounded: "'Quicksand', 'Helvetica Neue', Arial, sans-serif",
+  condensed: "'Bebas Neue', 'Arial Narrow', sans-serif",
+  elegant: "'Playfair Display', Georgia, serif"
 };
 
 export const FONT_OPTIONS = [
@@ -192,8 +197,32 @@ export const FONT_OPTIONS = [
   { id: 'serif', label: 'Georgia' },
   { id: 'modern', label: 'Space Grotesk' },
   { id: 'classic', label: 'Times New Roman' },
-  { id: 'mono', label: 'Roboto Mono' }
+  { id: 'mono', label: 'Roboto Mono' },
+  { id: 'script', label: 'Pacifico (script)' },
+  { id: 'slab', label: 'Roboto Slab' },
+  { id: 'rounded', label: 'Quicksand (rounded)' },
+  { id: 'condensed', label: 'Bebas Neue (condensed)' },
+  { id: 'elegant', label: 'Playfair Display (elegant)' }
 ];
+
+// Per-block text styling: font size/family, bold/italic/underline,
+// paragraph spacing, and independent per-side margins. All optional —
+// an empty {} means "use the template's own styling", so existing
+// résumés/templates render exactly as before until a value is set here.
+export function emptyBlockStyle() {
+  return {
+    fontSize: null,      // px, e.g. 14
+    fontFamily: null,    // one of FONT_STACKS keys
+    bold: false,
+    italic: false,
+    underline: false,
+    paraSpacing: null,   // rem, gap between paragraphs/entries in this block
+    marginTop: null,     // rem, each independent, default 0 when set
+    marginRight: null,
+    marginBottom: null,
+    marginLeft: null
+  };
+}
 
 // Default design for the portfolio site (independent of résumé templates —
 // the portfolio has one flowing layout, but still themeable via color/font).
@@ -893,6 +922,25 @@ class EditorStore {
     } else {
       block.data[field] = value;
     }
+    this.emit('blocks_changed', this.active().blocks);
+  }
+
+  // Per-block text styling (font size/family, bold/italic/underline,
+  // paragraph spacing, per-side margins). Lazily creates block.style
+  // the first time a block is styled, so older saved résumés without
+  // it keep rendering with the template's own defaults.
+  setBlockStyle(id, key, value) {
+    const block = this.active().blocks.find(b => b.id === id);
+    if (!block) return;
+    if (!block.style) block.style = emptyBlockStyle();
+    block.style[key] = value;
+    this.emit('blocks_changed', this.active().blocks);
+  }
+
+  resetBlockStyle(id) {
+    const block = this.active().blocks.find(b => b.id === id);
+    if (!block) return;
+    block.style = emptyBlockStyle();
     this.emit('blocks_changed', this.active().blocks);
   }
 

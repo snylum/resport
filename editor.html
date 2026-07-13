@@ -12,6 +12,9 @@
   <link rel="icon" type="image/png" sizes="192x192" href="/favicon/android-chrome-192x192.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
   <link rel="manifest" href="/favicon/site.webmanifest" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&family=Pacifico&family=Roboto+Slab:wght@400;500;700&family=Quicksand:wght@400;500;700&family=Bebas+Neue&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" />
   <link rel="stylesheet" href="dazed.css" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="editor.css" />
@@ -296,17 +299,6 @@
             </div>
           </div>
 
-          <div class="portfolio-link-wrap" data-viewmode-only="resume">
-            <div class="customize-toggle-row">
-              <p class="customize-label" style="margin:0;" id="portfolioLinkLabel">Add Portfolio Link <span id="portfolioLinkUrlPreview">yourname.proves.work</span></p>
-              <label class="customize-toggle">
-                <input type="checkbox" id="inIncludePortfolioLink" disabled />
-                <span class="customize-toggle-slider"></span>
-              </label>
-            </div>
-            <p class="customize-plan-lock" id="portfolioLinkLockMsg">Publish and get approved on a paid plan to add your live portfolio link to your résumé's contact line.</p>
-          </div>
-
           <div class="sample-content-wrap">
             <button class="btn btn-ghost btn-sm" id="btnRandomize" type="button" title="Fill this document with a random inspiring sample person">🎲 Randomize</button>
             <button class="btn btn-ghost btn-sm" id="btnResetContent" type="button" title="Restore the original starter content">↺ Reset</button>
@@ -545,59 +537,12 @@
               <div class="customize-group">
                 <p class="customize-label">Document Size</p>
                 <div class="option-pill-row" data-target="pageSize">
-                  <button class="option-pill" data-value="letter">Letter</button>
+                  <button class="option-pill" data-value="letter">Short (Letter, 8.5×11")</button>
                   <button class="option-pill" data-value="a4">A4</button>
-                  <button class="option-pill" data-value="legal">Legal</button>
+                  <button class="option-pill" data-value="legal">Long (Legal, 8.5×14")</button>
+                  <button class="option-pill" data-value="folio">Folio (8.5×13")</button>
                 </div>
-                <p class="customize-hint">Sets the exported PDF's page size and the canvas dimensions to match.</p>
-              </div>
-              <div class="customize-group">
-                <p class="customize-label">Columns</p>
-                <div class="option-pill-row" data-target="layout">
-                  <button class="option-pill" data-value="1">Single</button>
-                  <button class="option-pill" data-value="2">Two Column</button>
-                </div>
-                <p class="customize-hint">In two-column layouts, use the ⇥ icon next to a section (under "Sections") to move it into the sidebar.</p>
-              </div>
-              <div class="customize-group" id="colSplitGroup" data-layout2-only="1">
-                <p class="customize-label">Column Split <span id="colSplitLabel" class="customize-label-value">34%</span></p>
-                <div class="customize-range-wrap" style="--tick-pos: 34%;">
-                  <input type="range" id="inColSplit" class="customize-range" min="20" max="50" step="1" value="34" />
-                  <div class="customize-range-tick"></div>
-                </div>
-                <span class="customize-range-tick-label">Recommended: 34%</span>
-                <p class="customize-hint">Width of the sidebar column, as a share of the page.</p>
-              </div>
-              <div class="customize-group" id="colGapGroup" data-layout2-only="1">
-                <p class="customize-label">Column Gap <span id="colGapLabel" class="customize-label-value">2rem</span></p>
-                <div class="customize-range-wrap" style="--tick-pos: 50%;">
-                  <input type="range" id="inColGap" class="customize-range" min="0" max="4" step="0.25" value="2" />
-                  <div class="customize-range-tick"></div>
-                </div>
-                <span class="customize-range-tick-label">Recommended: 2rem</span>
-              </div>
-              <div class="customize-group" id="colBorderGroup" data-layout2-only="1">
-                <div class="customize-toggle-row">
-                  <p class="customize-label" style="margin:0;">Border Between Columns</p>
-                  <label class="customize-toggle">
-                    <input type="checkbox" id="inColBorder" checked />
-                    <span class="customize-toggle-slider"></span>
-                  </label>
-                </div>
-              </div>
-              <div class="customize-group">
-                <p class="customize-label">Header Alignment</p>
-                <div class="option-pill-row" data-target="headerAlign">
-                  <button class="option-pill" data-value="left">Left</button>
-                  <button class="option-pill" data-value="center">Center</button>
-                </div>
-              </div>
-              <div class="customize-group">
-                <p class="customize-label">Date Alignment</p>
-                <div class="option-pill-row" data-target="dateAlign">
-                  <button class="option-pill" data-value="left">Left</button>
-                  <button class="option-pill" data-value="right">Right</button>
-                </div>
+                <p class="customize-hint">Sets the exported PDF's page size and the canvas dimensions to match. Each template's layout, fonts, and spacing are fixed to keep it looking its best — pick a template, size, and color, and you're done.</p>
               </div>
             </div>
           </div>
@@ -626,7 +571,7 @@
             </div>
           </div>
 
-          <div class="form-section active">
+          <div class="form-section active" data-viewmode-only="portfolio">
             <button class="form-section-toggle" type="button">
               <span class="fs-title">Font</span>
               <span class="fs-chevron">▼</span>
@@ -639,74 +584,6 @@
               <div class="customize-group">
                 <p class="customize-label">Body Font</p>
                 <select class="customize-select" id="selBodyFont"></select>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-section active" data-viewmode-only="resume">
-            <button class="form-section-toggle" type="button">
-              <span class="fs-title">Text Details</span>
-              <span class="fs-chevron">▼</span>
-            </button>
-            <div class="form-section-content">
-              <div class="customize-group">
-                <p class="customize-label">Text Size <span id="fontSizeLabel" class="customize-label-value">100%</span></p>
-                <div class="customize-range-wrap" style="--tick-pos: 50%;">
-                  <input type="range" id="inFontSize" class="customize-range" min="80" max="130" step="1" value="100" />
-                  <div class="customize-range-tick"></div>
-                </div>
-                <span class="customize-range-tick-label">Recommended: 100%</span>
-              </div>
-              <div class="customize-group">
-                <p class="customize-label">Line Spacing <span id="lineHeightLabel" class="customize-label-value">1.45</span></p>
-                <div class="customize-range-wrap" style="--tick-pos: 41.7%;">
-                  <input type="range" id="inLineHeight" class="customize-range" min="1.1" max="2" step="0.05" value="1.45" />
-                  <div class="customize-range-tick"></div>
-                </div>
-                <span class="customize-range-tick-label">Recommended: 1.45</span>
-              </div>
-              <div class="customize-group">
-                <p class="customize-label">Section Spacing <span id="sectionGapLabel" class="customize-label-value">1rem</span></p>
-                <div class="customize-range-wrap" style="--tick-pos: 33.3%;">
-                  <input type="range" id="inSectionGap" class="customize-range" min="0.25" max="3" step="0.25" value="1" />
-                  <div class="customize-range-tick"></div>
-                </div>
-                <span class="customize-range-tick-label">Recommended: 1rem</span>
-                <p class="customize-hint">Gap between one section/entry and the next, down the page.</p>
-              </div>
-              <div class="customize-group">
-                <p class="customize-label">Block Padding <span id="blockPadLabel" class="customize-label-value">0.5rem</span></p>
-                <div class="customize-range-wrap" style="--tick-pos: 25%;">
-                  <input type="range" id="inBlockPad" class="customize-range" min="0" max="2" step="0.1" value="0.5" />
-                  <div class="customize-range-tick"></div>
-                </div>
-                <span class="customize-range-tick-label">Recommended: 0.5rem</span>
-                <p class="customize-hint">Inner padding around each entry (job, degree, project…).</p>
-              </div>
-              <div class="customize-group">
-                <p class="customize-label">Bullet Point Size <span id="bulletSizeLabel" class="customize-label-value">100%</span></p>
-                <div class="customize-range-wrap" style="--tick-pos: 50%;">
-                  <input type="range" id="inBulletSize" class="customize-range" min="70" max="130" step="5" value="100" />
-                  <div class="customize-range-tick"></div>
-                </div>
-                <span class="customize-range-tick-label">Recommended: 100%</span>
-              </div>
-              <div class="customize-group">
-                <p class="customize-label">Page Margins <span id="pageMarginLabel" class="customize-label-value">2.5rem</span></p>
-                <div class="customize-range-wrap" style="--tick-pos: 62.5%;">
-                  <input type="range" id="inPageMargin" class="customize-range" min="0.5" max="4" step="0.25" value="2.5" />
-                  <div class="customize-range-tick"></div>
-                </div>
-                <span class="customize-range-tick-label">Recommended: 2.5rem</span>
-              </div>
-              <div class="customize-group">
-                <p class="customize-label">Section Title Style</p>
-                <div class="option-pill-row" data-target="titleStyle">
-                  <button class="option-pill" data-value="plain">Plain</button>
-                  <button class="option-pill" data-value="underline">Underline</button>
-                  <button class="option-pill" data-value="bar">Bar</button>
-                  <button class="option-pill" data-value="boxed">Boxed</button>
-                </div>
               </div>
             </div>
           </div>
