@@ -1668,7 +1668,7 @@ document.addEventListener('click', function (e) {
     var html = '';
     if (type === 'photo') {
       var photo = btn.getAttribute('data-verify-photo');
-      html = '<h3 class="modal-title">Verified</h3><div class="verify-modal-body"><img src="' + photo + '" class="verify-modal-img" alt="Verification proof"/>' + (label ? '<p class="verify-modal-caption">' + label + '</p>' : '') + '</div>';
+      html = '<h3 class="modal-title">Verified experience</h3><div class="verify-modal-body"><img src="' + photo + '" class="verify-modal-img" alt="Verification proof"/>' + (label ? '<p class="verify-modal-caption">' + label + '</p>' : '') + '</div>';
     }
     content.innerHTML = html;
     if (box) box.className = 'modal-box';
@@ -1698,6 +1698,68 @@ document.addEventListener('keydown', function (e) {
     });
   }, { threshold: 0.15 });
   items.forEach(function (n) { io.observe(n); });
+})();
+
+// ── Recruiter Password Lock ──────────────────────────────────────
+// Purely client-side: window.__PW_LOCK_ACTIVE__ is baked in by the
+// Worker fresh on every request (true only while this site's Support
+// donation is currently active AND a lock key was set), and
+// window.__PW_LOCK_HASH__ is the SHA-256 hex digest of that key,
+// baked in at publish time by the editor. Nothing here ever talks to
+// a server to check a guess — the browser hashes what's typed and
+// compares strings locally, same as any other client-side gate.
+(function () {
+  var root = document.getElementById('portfolioSite');
+  if (!root || !window.__PW_LOCK_ACTIVE__ || !window.__PW_LOCK_HASH__) return;
+  // Every element that ever surfaces a piece of Verifiable Proof —
+  // per-skill/per-entry badges, gallery "+ proof" pins, and the
+  // small ✓ dot next to a skill tag.
+  var SELECTOR = '.pf-verify-badge, .pf-verify-badge-sm, .sd-gallery-thumb-verify, .pf-verify-add, .sd-verify-dot, [data-verify-type], [data-action="zoom-photo"][data-verified="1"]';
+  var UNLOCK_KEY = 'pw_recruiter_unlocked_' + (root.getAttribute('data-lock-scope') || '1');
+
+  function hide() {
+    root.querySelectorAll(SELECTOR).forEach(function (el) { el.classList.add('pw-lock-hidden'); });
+  }
+  function reveal() {
+    root.querySelectorAll(SELECTOR).forEach(function (el) { el.classList.remove('pw-lock-hidden'); });
+  }
+
+  function sha256Hex(text) {
+    var enc = new TextEncoder().encode(text);
+    return window.crypto.subtle.digest('SHA-256', enc).then(function (buf) {
+      return Array.prototype.map.call(new Uint8Array(buf), function (b) { return ('00' + b.toString(16)).slice(-2); }).join('');
+    });
+  }
+
+  if (sessionStorage.getItem(UNLOCK_KEY) === '1') return; // already unlocked this tab
+
+  hide();
+  var bar = document.createElement('div');
+  bar.className = 'pw-lock-bar';
+  bar.innerHTML = '<span class="pw-lock-bar-label">🔒 This portfolio\\u2019s Verifiable Proof is locked. Recruiters: enter the access key from this candidate\\u2019s resume.</span>' +
+    '<input type="password" class="pw-lock-bar-input" placeholder="Access key" autocomplete="off" />' +
+    '<button type="button" class="pw-lock-bar-btn">Unlock</button>' +
+    '<span class="pw-lock-bar-status"></span>';
+  root.parentNode.insertBefore(bar, root);
+
+  var input = bar.querySelector('.pw-lock-bar-input');
+  var status = bar.querySelector('.pw-lock-bar-status');
+  function attempt() {
+    var val = input.value;
+    if (!val) return;
+    sha256Hex(val).then(function (hex) {
+      if (hex === window.__PW_LOCK_HASH__) {
+        sessionStorage.setItem(UNLOCK_KEY, '1');
+        reveal();
+        bar.remove();
+      } else {
+        status.textContent = 'Incorrect key.';
+        input.value = '';
+      }
+    });
+  }
+  bar.querySelector('.pw-lock-bar-btn').addEventListener('click', attempt);
+  input.addEventListener('keydown', function (e) { if (e.key === 'Enter') attempt(); });
 })();
 // Horizontal-slide mode: dot nav, arrow keys, and wheel-to-slide —
 // scoped to .pf-sections only (the fixed hero above it is untouched),
@@ -2233,6 +2295,13 @@ function buildPublishedSiteHTML(username) {
   // needed. Falls back to the site's own favicon when no photo is set.
   const iconHref = p.photo || `https://${PUBLISH_APEX}/favicon.png`;
   const ogImage = p.photo || `https://${PUBLISH_APEX}/favicon.png`;
+  // Recruiter Password Lock: the hash itself is always baked into the
+  // page (harmless — a hash alone can't be reversed into the key),
+  // but whether it's actually *enforced* is decided fresh on every
+  // request by the Worker (see window.__PW_LOCK_ACTIVE__ in
+  // worker/src/index.js's serveSite), tied to this site's current
+  // Support-donation status.
+  const passwordLockHash = Store.state.portfolio.passwordLockHash || '';
 
   return `<!DOCTYPE html>
 <html lang="en" data-theme="dazed">
@@ -2261,7 +2330,7 @@ ${siteUrl ? `<meta property="og:url" content="${esc(siteUrl)}" />` : ''}
 </style>
 </head>
 <body data-viewmode="portfolio">
-  <div class="portfolio-site" id="portfolioSite" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-dots-pos="${esc(design.dotsPosition || 'right')}" data-dots-center="${esc(design.dotsCentering || 'slide')}" data-dots-style="${esc(design.dotsStyle || 'dot')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" data-hero-photo-shape="${esc(design.heroPhotoShape || 'circle')}" data-hero-photo-border="${design.heroPhotoBorder === false ? '0' : '1'}" data-hero-photo-size="${esc(design.heroPhotoSize || 'md')}" data-hero-size="${esc(design.heroSize || 'normal')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};--pf-header-pct:${esc(design.headerHeightPct || 30)};--pf-text-pad:${esc((Number(design.textPaddingRem) || 0) + 'rem')};--pf-line-height:${esc(LINE_SPACING_PRESETS[design.lineSpacing] || LINE_SPACING_PRESETS.normal)};--pf-section-gap:${esc(SECTION_SPACING_PRESETS[design.sectionSpacing] || SECTION_SPACING_PRESETS.normal)};--pf-card-pad:${esc(CARD_PADDING_PRESETS[design.cardPadding] || CARD_PADDING_PRESETS.normal)};">
+  <div class="portfolio-site" id="portfolioSite" data-lock-scope="${esc(username || 'preview')}" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-dots-pos="${esc(design.dotsPosition || 'right')}" data-dots-center="${esc(design.dotsCentering || 'slide')}" data-dots-style="${esc(design.dotsStyle || 'dot')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" data-hero-photo-shape="${esc(design.heroPhotoShape || 'circle')}" data-hero-photo-border="${design.heroPhotoBorder === false ? '0' : '1'}" data-hero-photo-size="${esc(design.heroPhotoSize || 'md')}" data-hero-size="${esc(design.heroSize || 'normal')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};--pf-header-pct:${esc(design.headerHeightPct || 30)};--pf-text-pad:${esc((Number(design.textPaddingRem) || 0) + 'rem')};--pf-line-height:${esc(LINE_SPACING_PRESETS[design.lineSpacing] || LINE_SPACING_PRESETS.normal)};--pf-section-gap:${esc(SECTION_SPACING_PRESETS[design.sectionSpacing] || SECTION_SPACING_PRESETS.normal)};--pf-card-pad:${esc(CARD_PADDING_PRESETS[design.cardPadding] || CARD_PADDING_PRESETS.normal)};">
     <header class="pf-hero">
       ${p.photo ? `<div class="pf-hero-photo-wrap"><img src="${esc(p.photo)}" alt="${esc(fullName)}" /></div>` : ''}
       <div class="pf-hero-text">
@@ -2281,7 +2350,7 @@ ${siteUrl ? `<meta property="og:url" content="${esc(siteUrl)}" />` : ''}
     </div>
   </div>
 
-  <script>${PUBLISHED_PAGE_SCRIPT}</script>
+  <script>window.__PW_LOCK_HASH__=${passwordLockHash ? `"${passwordLockHash}"` : 'null'};${PUBLISHED_PAGE_SCRIPT}</script>
 </body>
 </html>`;
 }
@@ -2407,7 +2476,7 @@ function openPublishModal() {
       </div>
       <p class="username-status" id="publishUsernameStatus"></p>
     </div>
-    <p class="modal-sub">Publishing is manually reviewed before it goes live and requires an active plan.</p>
+    <p class="modal-sub">Publishing is free and manually reviewed before it goes live.</p>
     ${signedIn && getSavedUsername() ? `<p class="modal-sub" style="font-size:0.78rem;">You can change your username ${MAX_USERNAME_CHANGES} times total. ${usernameChangesRemaining()} change${usernameChangesRemaining() === 1 ? '' : 's'} left.</p>` : ''}
     <div class="modal-actions">
       <button class="btn btn-secondary btn-sm" id="publishConfirmBtn" type="button" disabled>Publish</button>
@@ -2518,85 +2587,13 @@ function openPublishModal() {
 
     confirmBtn.addEventListener('click', () => {
       const username = slugifyUsername(input.value);
-      // Already paid for THIS exact address, and not rejected/deleted?
-      // This is just a content update (or a resubmission still awaiting
-      // review), not a fresh publish — skip the fee modal entirely and
-      // push the update straight through. Re-showing "Pay ₱249 &
-      // Publish" here would be charging someone again for something
-      // they already own, which used to happen for anyone whose site
-      // was marked paid in /admin but not yet separately approved to
-      // "live" (paid + pending is still "already paid").
-      const alreadyPaid = (
-        lastSiteStatusData &&
-        lastSiteStatusData.status !== 'rejected' &&
-        lastSiteStatusData.status !== 'deleted' &&
-        lastSiteStatusData.status !== 'draft' &&
-        lastSiteStatusData.paid &&
-        username === getSavedUsername() &&
-        (!lastSiteStatusData.paidUntil || new Date(lastSiteStatusData.paidUntil).getTime() > Date.now())
-      );
-      if (alreadyPaid) {
-        doPublish(username, confirmBtn);
-      } else {
-        openPublishFeeModal(username);
-      }
-    });
-  });
-}
-
-// One-time publishing fee, valid for a fixed window — shown as a
-// confirmation step before the actual publish request goes out.
-// (No real payment processor is wired up yet: "Pay & Publish" just
-// proceeds, the same way the rest of this prototype mocks payment.)
-const PUBLISH_FEE = { amount: 249, originalAmount: 399, currency: '₱', validityMonths: 3 };
-
-function openPublishFeeModal(username) {
-  const html = `
-    <h3 class="modal-title" id="modalTitle">Active Job Hunter</h3>
-    <p class="modal-sub">Keeping <strong>${esc(username)}.${PUBLISH_APEX}</strong> live — plus a ★ starred, front-of-line spot in the Showcase — costs a one-time fee of <s style="color:var(--color-text-muted);font-weight:400;">${PUBLISH_FEE.currency}${PUBLISH_FEE.originalAmount}</s> <strong>${PUBLISH_FEE.currency}${PUBLISH_FEE.amount}</strong>, valid for <strong>${PUBLISH_FEE.validityMonths} months</strong> (perfect timing for a job hunt). After that, republish (same fee) to keep your address live.</p>
-    <p class="modal-sub" style="font-size:0.8rem;">This covers review, hosting, and abuse protection for your subdomain. No recurring charge — it simply expires after ${PUBLISH_FEE.validityMonths} months unless renewed.</p>
-    <div class="modal-actions">
-      <button class="btn btn-ghost btn-sm" id="publishFeeBackBtn" type="button">Back</button>
-      <button class="btn btn-secondary btn-sm" id="publishFeeConfirmBtn" type="button">Pay ${PUBLISH_FEE.currency}${PUBLISH_FEE.amount} & Publish</button>
-    </div>
-  `;
-  openModal(html, (root) => {
-    root.querySelector('#publishFeeBackBtn').addEventListener('click', () => openPublishModal());
-    root.querySelector('#publishFeeConfirmBtn').addEventListener('click', () => openPublishPaymentModal(username));
-  });
-}
-
-// Shown right after "Pay & Publish" is confirmed — the same QR +
-// reference-number step already used for domain purchases (see
-// index.html's renderPaymentStep). Without this, clicking "Pay &
-// Publish" used to skip straight to doPublish() with no QR code and
-// no way to record a reference number, so an admin reviewing the
-// dashboard had nothing to match a payment against.
-function openPublishPaymentModal(username) {
-  const html = `
-    <h3 class="modal-title" id="modalTitle">Pay ${PUBLISH_FEE.currency}${PUBLISH_FEE.amount} to publish</h3>
-    <p class="modal-sub">Scan the QR below to pay <strong>${PUBLISH_FEE.currency}${PUBLISH_FEE.amount}</strong>, then enter the reference number from your payment so an admin can confirm it.</p>
-    <img src="payment-qr.png" alt="Payment QR code" width="220" height="220" style="display:block;margin:0 auto 1rem;border-radius:12px;border:1px solid rgba(0,0,0,0.08);" />
-    <input type="text" id="publishRefInput" class="field-input" placeholder="Payment reference number" autocomplete="off" />
-    <div class="username-status" id="publishRefStatus"></div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost btn-sm" id="publishRefLaterBtn" type="button">I'll do this later</button>
-      <button class="btn btn-secondary btn-sm" id="publishRefSubmitBtn" type="button">Submit reference & Publish</button>
-    </div>
-  `;
-  openModal(html, (root) => {
-    const status = root.querySelector('#publishRefStatus');
-    root.querySelector('#publishRefLaterBtn').addEventListener('click', () => {
-      doPublish(username, root.querySelector('#publishRefLaterBtn'), '');
-    });
-    root.querySelector('#publishRefSubmitBtn').addEventListener('click', (e) => {
-      const ref = root.querySelector('#publishRefInput').value.trim();
-      if (!ref) {
-        status.textContent = 'Enter your payment reference number.';
-        status.className = 'username-status warn';
-        return;
-      }
-      doPublish(username, e.target, ref);
+      // Publishing itself is free and unconditional now — hosting at
+      // username.proves.work is never gated on payment. The old
+      // "Active Job Hunter" fee-before-publish flow has moved to a
+      // separate, optional Support flow (see openSupportModal) reached
+      // from the publish-success screen and /manage, since it now only
+      // grants the badge + Recruiter Password Lock, not hosting itself.
+      doPublish(username, confirmBtn);
     });
   });
 }
@@ -2623,7 +2620,11 @@ async function doPublish(username, confirmBtn, referenceNumber) {
         // openPublishPaymentModal). It does NOT mark the site as paid
         // by itself; only an admin's explicit "Mark as paid" in
         // /admin does that (see /api/admin/set-paid).
-        buyerReferenceNumber: referenceNumber || ''
+        buyerReferenceNumber: referenceNumber || '',
+        // Always sent (even as null to clear) — see the 'passwordLockHash'
+        // in body check in /api/publish, which is what lets a cleared
+        // lock actually take effect instead of silently keeping the old one.
+        passwordLockHash: Store.state.portfolio.passwordLockHash || null
       })
     });
   } catch (err) {
@@ -2696,16 +2697,19 @@ function openPublishSuccessModal(url, mode = 'pending') {
     ? `No live backend reachable from here — this is a local preview only, nothing was published.`
     : (mode === 'updated'
       ? `Your changes are live now — no additional review needed since this address was already approved.`
-      : `Your address is reserved. It'll go live once payment and admin review are complete.`);
+      : `Your address is reserved and free to keep — it'll go live once an admin reviews it (usually quick).`);
   const linkLabel = mode === 'local' ? 'Open preview ↗' : (mode === 'updated' ? 'View live site ↗' : 'Preview address ↗');
   const showCopy = mode !== 'local';
+  const showSupport = mode !== 'local';
 
   openModal(`
     <h3 class="modal-title" id="modalTitle">${title}</h3>
     <p class="modal-sub">${sub}</p>
     ${showCopy ? `<p class="publish-url">${esc(url)}</p>` : ''}
+    ${showSupport ? `<p class="modal-sub" style="font-size:0.82rem;">Want the ★ Active Job Hunter badge (front-of-line in the Showcase) and the Recruiter Password Lock? It's an optional one-off donation to keep this project running.</p>` : ''}
     <div class="modal-actions">
       ${showCopy ? `<button class="btn btn-ghost btn-sm" id="publishCopyBtn" type="button">Copy link</button>` : ''}
+      ${showSupport ? `<button class="btn btn-ghost btn-sm" id="publishSupportBtn" type="button">Support the project →</button>` : ''}
       <a class="btn btn-secondary btn-sm" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${linkLabel}</a>
     </div>
   `, (root) => {
@@ -2720,6 +2724,177 @@ function openPublishSuccessModal(url, mode = 'pending') {
         }
       });
     }
+    const supportBtn = root.querySelector('#publishSupportBtn');
+    if (supportBtn) supportBtn.addEventListener('click', () => openSupportModal(getSavedUsername()));
+  });
+}
+
+// ── Support the project: donation slider + Recruiter Password Lock ──
+// A completely separate, optional flow from publishing itself — hosting
+// is always free. This grants two things for the chosen duration: the
+// ★ Active Job Hunter badge (front-of-line in the Showcase) and,
+// if a lock key is set, the Recruiter Password Lock on the
+// Verifiable Proof badges. Same trust model as everywhere else in
+// this app: nothing here is a real payment gateway — it's a QR +
+// reference number an admin manually confirms (see /api/admin/set-paid).
+const SUPPORT_ANCHORS = {
+  PHP: { 1: 99, 3: 249, 6: 499, 12: 999, symbol: '₱' },
+  USD: { 1: 4.99, 3: 11.49, 6: 24.99, 12: 49.99, symbol: '$' }
+};
+function snapToFriendlyPrice(raw) {
+  const base = Math.floor(raw);
+  const candidates = [base - 1 + 0.49, base - 1 + 0.99, base + 0.49, base + 0.99];
+  let best = candidates[0], bestDiff = Math.abs(raw - best);
+  for (const c of candidates) {
+    if (c <= 0) continue;
+    const diff = Math.abs(raw - c);
+    if (diff < bestDiff) { best = c; bestDiff = diff; }
+  }
+  return Math.max(best, 0.49);
+}
+function supportPrice(months, currency) {
+  const anchors = SUPPORT_ANCHORS[currency] || SUPPORT_ANCHORS.PHP;
+  const m = Math.min(Math.max(Number(months) || 1, 1), 12);
+  const points = [1, 3, 6, 12];
+  let lo = 1, hi = 12;
+  for (let i = 0; i < points.length - 1; i++) {
+    if (m >= points[i] && m <= points[i + 1]) { lo = points[i]; hi = points[i + 1]; break; }
+  }
+  const t = hi === lo ? 0 : (m - lo) / (hi - lo);
+  const raw = anchors[lo] + (anchors[hi] - anchors[lo]) * t;
+  const snapped = snapToFriendlyPrice(raw);
+  return Math.min(Math.max(snapped, anchors[1]), anchors[12]);
+}
+function formatSupportPrice(months, currency) {
+  const anchors = SUPPORT_ANCHORS[currency] || SUPPORT_ANCHORS.PHP;
+  const amount = supportPrice(months, currency);
+  return `${anchors.symbol}${currency === 'USD' ? amount.toFixed(2) : Math.round(amount)}`;
+}
+
+async function sha256Hex(text) {
+  const enc = new TextEncoder().encode(text);
+  const buf = await window.crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function openSupportModal(username) {
+  if (!username) { openSignInModal({ message: 'Publish your portfolio first, then come back to support the project.' }); return; }
+  let currency = 'PHP';
+  let months = 3;
+  const existingLockHash = Store.state.portfolio.passwordLockHash || '';
+
+  const html = `
+    <h3 class="modal-title" id="modalTitle">Support the project</h3>
+    <p class="modal-sub">A one-off donation to keep this a self-sustained passion project — not a subscription. It grants the ★ Active Job Hunter badge and (if you set one) the Recruiter Password Lock for the months you pick. Your portfolio stays live and free either way.</p>
+    <div class="field-box full-width">
+      <span>Currency</span>
+      <div class="modal-actions" style="justify-content:flex-start;gap:0.5rem;margin:0.35rem 0 0.75rem;">
+        <button type="button" class="btn btn-ghost btn-sm" id="supportCurrencyPHP" data-active="1">₱ PHP</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="supportCurrencyUSD">$ USD</button>
+      </div>
+    </div>
+    <div class="field-box full-width">
+      <span>Duration</span>
+      <input type="range" min="1" max="12" step="1" value="${months}" id="supportMonthsSlider" style="width:100%;" />
+      <div class="price-duration-label">
+        <span id="supportMonthsLabel">${months} months</span>
+        <span id="supportAmountLabel">${formatSupportPrice(months, currency)} one-time</span>
+      </div>
+    </div>
+    <div class="field-box full-width">
+      <span>Recruiter Password Lock (optional)</span>
+      <input type="password" class="field-input" id="supportLockInput" placeholder="${existingLockHash ? 'Key already set — type to change it' : 'Set an access key for recruiters'}" autocomplete="off" />
+      <p class="username-status" style="font-size:0.75rem;">Hashed in your browser before it's ever sent — we never see or store the plain key. Leave blank to keep it off (or leave your existing key unchanged). This only actually locks anything while your Support period is active.</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="supportBackBtn" type="button">Cancel</button>
+      <button class="btn btn-secondary btn-sm" id="supportContinueBtn" type="button">Continue to pay</button>
+    </div>
+  `;
+  openModal(html, (root) => {
+    const slider = root.querySelector('#supportMonthsSlider');
+    const monthsLabel = root.querySelector('#supportMonthsLabel');
+    const amountLabel = root.querySelector('#supportAmountLabel');
+    const btnPHP = root.querySelector('#supportCurrencyPHP');
+    const btnUSD = root.querySelector('#supportCurrencyUSD');
+
+    function refresh() {
+      months = Number(slider.value);
+      monthsLabel.textContent = `${months} month${months > 1 ? 's' : ''}`;
+      amountLabel.textContent = `${formatSupportPrice(months, currency)} one-time`;
+      btnPHP.classList.toggle('btn-secondary', currency === 'PHP');
+      btnUSD.classList.toggle('btn-secondary', currency === 'USD');
+    }
+    slider.addEventListener('input', refresh);
+    btnPHP.addEventListener('click', () => { currency = 'PHP'; refresh(); });
+    btnUSD.addEventListener('click', () => { currency = 'USD'; refresh(); });
+    refresh();
+
+    root.querySelector('#supportBackBtn').addEventListener('click', closeModal);
+    root.querySelector('#supportContinueBtn').addEventListener('click', async () => {
+      const lockPlain = root.querySelector('#supportLockInput').value;
+      let newHash = existingLockHash || null;
+      if (lockPlain) newHash = await sha256Hex(lockPlain);
+      if (newHash !== existingLockHash) {
+        Store.state.portfolio.passwordLockHash = newHash;
+        // Republish so the new hash is baked into the live page and
+        // synced to the server record right away, rather than waiting
+        // for the next unrelated edit.
+        try {
+          await fetch('/api/publish', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              username,
+              googleCredential: getSavedGoogleAccount() ? getSavedGoogleAccount().credential : null,
+              html: buildPublishedSiteHTML(username),
+              passwordLockHash: newHash
+            })
+          });
+        } catch { /* offline — the lock still applies locally on next successful publish */ }
+      }
+      openSupportPaymentModal(username, months, currency);
+    });
+  });
+}
+
+function openSupportPaymentModal(username, months, currency) {
+  const amountLabel = formatSupportPrice(months, currency);
+  const html = `
+    <h3 class="modal-title" id="modalTitle">Pay ${amountLabel} to support</h3>
+    <p class="modal-sub">Scan the QR below to donate <strong>${amountLabel}</strong> (${months} month${months > 1 ? 's' : ''}), then enter the reference number so an admin can confirm it.</p>
+    <img src="payment-qr.png" alt="Payment QR code" width="220" height="220" style="display:block;margin:0 auto 1rem;border-radius:12px;border:1px solid rgba(0,0,0,0.08);" />
+    <input type="text" id="supportRefInput" class="field-input" placeholder="Payment reference number" autocomplete="off" />
+    <div class="username-status" id="supportRefStatus"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="supportRefLaterBtn" type="button">I'll do this later</button>
+      <button class="btn btn-secondary btn-sm" id="supportRefSubmitBtn" type="button">Submit reference</button>
+    </div>
+  `;
+  openModal(html, (root) => {
+    const status = root.querySelector('#supportRefStatus');
+    async function submit(ref) {
+      const account = getSavedGoogleAccount();
+      try {
+        await fetch('/api/support/claim', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ username, googleCredential: account ? account.credential : null, months, currency, referenceNumber: ref })
+        });
+      } catch { /* handled as a generic network error below via the finally-success UX */ }
+      closeModal();
+      openModal(`
+        <h3 class="modal-title">Thank you 🎉</h3>
+        <p class="modal-sub">Your support request is recorded. An admin confirms every payment by hand before the badge/lock actually turn on — check <strong>proves.work/manage</strong> anytime for status.</p>
+        <div class="modal-actions"><button class="btn btn-secondary btn-sm" id="supportDoneBtn" type="button">Got it</button></div>
+      `, (r) => r.querySelector('#supportDoneBtn').addEventListener('click', closeModal));
+    }
+    root.querySelector('#supportRefLaterBtn').addEventListener('click', () => submit(''));
+    root.querySelector('#supportRefSubmitBtn').addEventListener('click', () => {
+      const ref = root.querySelector('#supportRefInput').value.trim();
+      if (!ref) { status.textContent = 'Enter your payment reference number.'; status.className = 'username-status warn'; return; }
+      submit(ref);
+    });
   });
 }
 
@@ -3408,6 +3583,10 @@ function initToolbar() {
   refreshPublishToolbarButton();
   refreshSaveOrPreviewButton();
   refreshSiteStatusBadge();
+  document.getElementById('btnSupportProject').addEventListener('click', () => {
+    if (!getSavedGoogleAccount()) { openSignInModal(); return; }
+    openSupportModal(getSavedUsername());
+  });
   document.getElementById('btnPreviewShowcase').addEventListener('click', (e) => {
     if (e.currentTarget.dataset.mode === 'save') {
       manualSaveProgress();

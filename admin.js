@@ -542,12 +542,34 @@ function domainPriceForMonths(months) {
   return Math.round(199 + (599 - 199) * (m - 1) / 11);
 }
 
-// Active Job Hunter is priced flat at ₱249 for its standard 3-month
-// window — scaled proportionally (₱83/mo) if an admin picks a
-// different duration for a promo, partial period, or renewal.
+// "Support the project" — Active Job Hunter badge + Recruiter
+// Password Lock bundle. Interpolated between 1/3/6/12-month anchors
+// and snapped to a friendly .49/.99 ending, same formula as
+// supportPriceForMonths in worker/src/index.js (PHP anchors shown
+// here since this dashboard bookkeeps in ₱ regardless of which
+// currency the buyer actually paid in — see requestedCurrency).
+const SUPPORT_ANCHORS_PHP = { 1: 99, 3: 249, 6: 499, 12: 999 };
+function snapToFriendlyPrice(raw) {
+  const base = Math.floor(raw);
+  const candidates = [base - 1 + 0.49, base - 1 + 0.99, base + 0.49, base + 0.99];
+  let best = candidates[0], bestDiff = Math.abs(raw - best);
+  for (const c of candidates) {
+    if (c <= 0) continue;
+    const diff = Math.abs(raw - c);
+    if (diff < bestDiff) { best = c; bestDiff = diff; }
+  }
+  return Math.max(best, 0.49);
+}
 function sitePriceForMonths(months) {
-  const m = Math.max(Number(months) || 1, 1);
-  return Math.round((249 / 3) * m);
+  const m = Math.min(Math.max(Number(months) || 1, 1), 12);
+  const points = [1, 3, 6, 12];
+  let lo = 1, hi = 12;
+  for (let i = 0; i < points.length - 1; i++) {
+    if (m >= points[i] && m <= points[i + 1]) { lo = points[i]; hi = points[i + 1]; break; }
+  }
+  const t = hi === lo ? 0 : (m - lo) / (hi - lo);
+  const raw = SUPPORT_ANCHORS_PHP[lo] + (SUPPORT_ANCHORS_PHP[hi] - SUPPORT_ANCHORS_PHP[lo]) * t;
+  return Math.min(Math.max(snapToFriendlyPrice(raw), SUPPORT_ANCHORS_PHP[1]), SUPPORT_ANCHORS_PHP[12]);
 }
 
 function priceForMonths(kind, months) {
@@ -563,7 +585,7 @@ function openMarkPaidModal(username, currentRef, kind = 'site', requestedMonths,
     <h3 class="modal-title" id="modalTitle">Mark @${esc(username)} as paid</h3>
     <p class="modal-sub">${isDomain
       ? `Domain-only reservation — scaling rate from ₱199 (1 mo) to ₱599 (12 mo, max). ${requestedMonths ? `They requested ${requestedMonths} month${requestedMonths > 1 ? 's' : ''}.` : ''} Adjust if this was a promo or partial payment.`
-      : 'Active Job Hunter — standard rate is ₱249 for 3 months. Record what was actually received, how long it covers, and optionally a reference number for your own records.'}</p>
+      : `Support donation — Active Job Hunter badge + Recruiter Password Lock. ₱99 (1 mo) up to ₱999 (12 mo, max), or the buyer may have paid in USD ($4.99-$49.99)${requestedMonths ? ` — they requested ${requestedMonths} month${requestedMonths > 1 ? 's' : ''}` : ''}. Record what was actually received, how long it covers, and optionally a reference number.`}</p>
     ${needsApproval ? `<p class="modal-sub" style="font-size:0.8rem;">This site is still <strong>pending</strong> — marking it paid will also approve it live, otherwise it stays invisible (no showcase badge) despite being paid.</p>` : ''}
     <div class="admin-modal-field">
       <label for="paidAmountInput" style="display:block;font-size:0.8rem;color:var(--color-text-muted);margin-bottom:0.3rem;">Amount received (${CURRENCY})</label>

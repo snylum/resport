@@ -193,6 +193,57 @@ function isPaidActive(record) {
   return !!(record && record.paid && (!record.paidUntil || new Date(record.paidUntil).getTime() > Date.now()));
 }
 
+// ── "Support the project" one-off donation pricing ─────────────────
+// This is a completely separate price ladder from the domain-only
+// reservation's linear ₱199-₱599 formula above — it prices the
+// "Active Job Hunter" badge + Recruiter Password Lock bundle on an
+// already-free portfolio. Two currency tracks, both anchored at 1/3/
+// 6/12 months and both snapped to a friendly .49/.99 ending — USD is
+// priced noticeably higher than a straight PHP conversion (not just
+// FX, a deliberate "international/inflation" markup), while PHP stays
+// inside a fixed ₱99-₱999 band no matter the duration picked.
+const SUPPORT_ANCHORS_PHP = { 1: 99, 3: 249, 6: 499, 12: 999 };
+const SUPPORT_ANCHORS_USD = { 1: 4.99, 3: 11.49, 6: 24.99, 12: 49.99 };
+const SUPPORT_MAX_MONTHS = 12;
+
+// Rounds a raw interpolated amount to the nearest clean .49/.99
+// ending — e.g. 17.10 -> 17.49 (not 16.99, since that's further away),
+// 21.80 -> 21.99. Keeps every in-between month count (4, 9, ...) on a
+// psychologically "friendly" price instead of an odd interpolated
+// decimal, for both currencies (PHP just happens to always want the
+// whole-number-ish .99 in practice since anchors are whole pesos).
+function snapToFriendlyPrice(raw) {
+  const base = Math.floor(raw);
+  const candidates = [base - 1 + 0.49, base - 1 + 0.99, base + 0.49, base + 0.99];
+  let best = candidates[0];
+  let bestDiff = Math.abs(raw - best);
+  for (const c of candidates) {
+    if (c <= 0) continue;
+    const diff = Math.abs(raw - c);
+    if (diff < bestDiff) { best = c; bestDiff = diff; }
+  }
+  return Math.max(best, 0.49);
+}
+
+// Piecewise-linear interpolation between the nearest two anchor
+// points (1/3/6/12), then snapped to .49/.99. Clamped to the
+// currency's stated min/max regardless of interpolation drift.
+function supportPriceForMonths(months, currency) {
+  const m = Math.min(Math.max(Number(months) || 1, 1), SUPPORT_MAX_MONTHS);
+  const anchors = currency === 'USD' ? SUPPORT_ANCHORS_USD : SUPPORT_ANCHORS_PHP;
+  const points = [1, 3, 6, 12];
+  let lo = 1, hi = 12;
+  for (let i = 0; i < points.length - 1; i++) {
+    if (m >= points[i] && m <= points[i + 1]) { lo = points[i]; hi = points[i + 1]; break; }
+  }
+  const t = hi === lo ? 0 : (m - lo) / (hi - lo);
+  const raw = anchors[lo] + (anchors[hi] - anchors[lo]) * t;
+  const snapped = snapToFriendlyPrice(raw);
+  const min = currency === 'USD' ? SUPPORT_ANCHORS_USD[1] : SUPPORT_ANCHORS_PHP[1];
+  const max = currency === 'USD' ? SUPPORT_ANCHORS_USD[12] : SUPPORT_ANCHORS_PHP[12];
+  return Math.min(Math.max(snapped, min), max);
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -400,21 +451,35 @@ async function serveSite(username, env, pathAndQuery) {
     return new Response(domainReservedPage(username), { status: 200, headers: { 'content-type': 'text/html;charset=UTF-8' } });
   }
 
-  // A portfolio's live hosting is itself the paid perk — the Free
-  // tier only ever gets the editor + Showcase listing, never the
-  // subdomain (see index.html's pricing card). Once paidUntil passes,
-  // stop serving the real site here until it's renewed, rather than
-  // keeping it up for free indefinitely.
-  if (!isPaidActive(record)) {
-    return new Response(expiredPortfolioPage(username), { status: 200, headers: { 'content-type': 'text/html;charset=UTF-8' } });
-  }
+  // Portfolio hosting itself is free — every approved portfolio gets
+  // its live username.proves.work address regardless of payment
+  // status. `isPaidActive` still gates the "Active Job Hunter" badge
+  // (see the showcase/tier logic below) and the Recruiter Password
+  // Lock, but never the hosting itself. (Domain-only reservations
+  // above are a different product and keep their own paywall — you
+  // don't get an address there without paying, since there's no
+  // portfolio underneath it.)
+  const liveHtml = record.liveHtml || record.html;
+  const lockActive = isPaidActive(record) && !!record.passwordLockHash;
+
+  // Bake whether the Recruiter Password Lock currently applies into
+  // the served page, computed fresh on every request rather than at
+  // publish time — this is what lets the lock silently stop
+  // enforcing the moment a Support period lapses (or start enforcing
+  // again on renewal) without the owner needing to republish. The
+  // editor's template reads this global alongside the stored hash to
+  // decide whether to show the lock overlay over the Verifiable
+  // Proof section.
+  const withLockFlag = liveHtml.includes('</head>')
+    ? liveHtml.replace('</head>', `<script>window.__PW_LOCK_ACTIVE__=${lockActive};</script></head>`)
+    : `<script>window.__PW_LOCK_ACTIVE__=${lockActive};</script>` + liveHtml;
 
   // Serve the last *approved* snapshot (liveHtml) when we have one —
   // record.html may be a newer, not-yet-approved draft that was
   // uploaded after this site went live (edits don't go public until
   // re-approved). Records saved before liveHtml existed fall back to
   // record.html so old published sites keep working.
-  return new Response(record.liveHtml || record.html, {
+  return new Response(withLockFlag, {
     status: 200,
     headers: {
       'content-type': 'text/html;charset=UTF-8',
@@ -683,6 +748,52 @@ ${resumeText}
     return json({ ok: true });
   }
 
+  // ── Support the project (Active Job Hunter + Password Lock) ────
+  // Lets the owner of an already-published (and already free) portfolio
+  // record a one-off "donation" request to unlock the Active Job
+  // Hunter badge and the Recruiter Password Lock for a chosen number
+  // of months. This never touches whether the portfolio is hosted —
+  // that's unconditionally free — it only ever sets paid/paidUntil,
+  // exactly like a domain reservation's payment does. Same trust
+  // model throughout this file: the amount is recomputed server-side
+  // from the requested months/currency (never trusted from the
+  // client), and nothing actually goes live until an admin manually
+  // confirms the reference number via /api/admin/set-paid.
+  if (url.pathname === '/api/support/claim' && request.method === 'POST') {
+    let body;
+    try { body = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON body.' }, 400); }
+
+    const username = String(body.username || '').toLowerCase().trim();
+    const ownerEmail = await verifyGoogleCredential(body.googleCredential);
+    if (!ownerEmail) return json({ ok: false, error: 'Sign in with Google first.' }, 401);
+
+    const existing = await env.SITES.get(`site:${username}`, 'json');
+    if (!existing || existing.status === 'deleted') return json({ ok: false, error: 'Not found.' }, 404);
+    if (existing.ownerEmail !== ownerEmail) {
+      return json({ ok: false, error: 'Not authorized — sign in with the account that published this address.' }, 403);
+    }
+    if (existing.kind === 'domain') {
+      return json({ ok: false, error: 'Domain-only reservations use the reservation slider, not this one.' }, 400);
+    }
+
+    const currency = body.currency === 'USD' ? 'USD' : 'PHP';
+    const requestedMonths = Math.min(Math.max(Number(body.months) || 1, 1), SUPPORT_MAX_MONTHS);
+    const expectedAmount = supportPriceForMonths(requestedMonths, currency);
+    const buyerReferenceNumber = String(body.referenceNumber || '').trim().slice(0, 120);
+
+    await env.SITES.put(`site:${username}`, JSON.stringify({
+      ...existing,
+      requestedMonths,
+      requestedAmount: expectedAmount,
+      requestedCurrency: currency,
+      buyerReferenceNumber: buyerReferenceNumber || existing.buyerReferenceNumber || '',
+      buyerReferenceSubmittedAt: buyerReferenceNumber ? new Date().toISOString() : (existing.buyerReferenceSubmittedAt || null),
+      updatedAt: new Date().toISOString()
+    }));
+
+    return json({ ok: true, amount: expectedAmount, currency });
+  }
+
   // Lets a signed-in owner see every proves.work address tied to their
   // account (domain-only reservations and full portfolios alike) for
   // the /manage page — their payment status, and the redirect target
@@ -705,8 +816,10 @@ ${resumeText}
         paidUntil: record.paidUntil || null,
         requestedAmount: record.requestedAmount || null,
         requestedMonths: record.requestedMonths || null,
+        requestedCurrency: record.requestedCurrency || 'PHP',
         redirectUrl: record.redirectUrl || '',
-        buyerReferenceNumber: record.buyerReferenceNumber || ''
+        buyerReferenceNumber: record.buyerReferenceNumber || '',
+        hasPasswordLock: !!record.passwordLockHash
       };
     }));
     return json({ ok: true, sites: sites.filter(Boolean) }, 200, { 'cache-control': 'no-store' });
@@ -848,6 +961,16 @@ ${resumeText}
     const username = String(body.username || '').toLowerCase().trim();
     const html = String(body.html || '');
     const buyerReferenceNumber = String(body.buyerReferenceNumber || '').trim().slice(0, 120);
+    // A SHA-256 hex digest computed client-side (Web Crypto) from the
+    // owner's chosen Recruiter Password Lock key — the plaintext key
+    // itself is never sent to or stored on the server, only this hash.
+    // `null`/omitted clears the lock; a 64-char hex string sets it.
+    // Whether it actually *enforces* on the public page is decided at
+    // request time in serveSite (see lockActive there), not here.
+    const passwordLockHashRaw = body.passwordLockHash;
+    const passwordLockHash = (typeof passwordLockHashRaw === 'string' && /^[a-f0-9]{64}$/i.test(passwordLockHashRaw))
+      ? passwordLockHashRaw.toLowerCase()
+      : null;
     // Signed in: verified Google email ties this username to an
     // account, so it can be updated later from any device by signing
     // in again. Signed out: published anonymously — same as before,
@@ -927,6 +1050,12 @@ ${resumeText}
       // against the QR payment before calling /api/admin/set-paid.
       // Never overwrites an existing one with a blank resubmission.
       buyerReferenceNumber: buyerReferenceNumber || (existing && existing.buyerReferenceNumber) || '',
+      // 'passwordLockHash' in body distinguishes "the editor explicitly
+      // sent an updated lock state this publish" from "this field
+      // wasn't part of the payload at all" (e.g. an older editor
+      // build) — only the former should ever overwrite what's stored,
+      // including clearing it back to null.
+      passwordLockHash: ('passwordLockHash' in body) ? passwordLockHash : ((existing && existing.passwordLockHash) || null),
       ...(wasAlreadyLive ? { reviewedAt: new Date().toISOString(), reviewedBy: 'auto (already-approved update)' } : {})
     }));
 

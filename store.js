@@ -790,7 +790,11 @@ class EditorStore {
         profile: { ...defaultProfile },
         blocks: ensureVerifyShape(deepClone(defaultBlocks)),
         template: 'general',
-        design: { ...PORTFOLIO_DEFAULT_DESIGN }
+        design: { ...PORTFOLIO_DEFAULT_DESIGN },
+        // SHA-256 hex digest of the owner's Recruiter Password Lock
+        // key (see openSupportModal/sha256Hex in editor.js) — never
+        // the plaintext key itself. null/absent = lock is off.
+        passwordLockHash: null
       },
 
       resume: null // built just below, from the portfolio

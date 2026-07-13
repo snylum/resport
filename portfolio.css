@@ -1642,3 +1642,49 @@
   .pf-sections { padding: 1.75rem 1.25rem 2.25rem; }
   .pf-tagline { max-width: none; }
 }
+
+/* ── Recruiter Password Lock ──────────────────────────────────────
+   .pw-lock-hidden is toggled by PUBLISHED_PAGE_SCRIPT (editor.js),
+   never by CSS alone — visibility:hidden (not display:none) keeps
+   layout stable so nothing jumps around once a recruiter unlocks. */
+.pw-lock-hidden {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.pw-lock-bar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--color-surface, #fff);
+  border-bottom: 2px solid var(--color-border, #000);
+  font-size: 0.85rem;
+}
+.pw-lock-bar-label { flex: 1 1 260px; }
+.pw-lock-bar-input {
+  padding: 0.4rem 0.6rem;
+  border: 1.5px solid var(--color-border, #000);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  min-width: 140px;
+}
+.pw-lock-bar-btn {
+  padding: 0.4rem 0.9rem;
+  border: 1.5px solid var(--color-border, #000);
+  border-radius: 6px;
+  background: var(--pf-accent, #000);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pw-lock-bar-status { color: #b91c1c; font-size: 0.8rem; }
+
+@media (max-width: 640px) {
+  .pw-lock-bar { flex-direction: column; align-items: stretch; }
+  .pw-lock-bar-input, .pw-lock-bar-btn { width: 100%; }
+}
