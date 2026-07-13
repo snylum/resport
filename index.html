@@ -373,23 +373,18 @@
     <!-- SLIDE 4: SPLIT DEMO / TESTIMONIAL -->
     <section class="panel panel-split" id="slide-3">
       <div class="split-left">
-        <p class="eyebrow">Real results</p>
-        <h2>Portfolios that<br>close deals.</h2>
-        <div class="testimonials">
-          <blockquote class="testi">
-            <p>"Switching to an integrated profile and canvas model completely altered client negotiations. They can view the work before jumping on a call."</p>
-            <cite>— Joven R., Technical Designer</cite>
-          </blockquote>
-          <blockquote class="testi">
-            <p>"The ability to present my live artifacts and print a cleanly sync'd PDF at the exact same moment saves hours."</p>
-            <cite>— Patricia M., Product Engineer</cite>
-          </blockquote>
-        </div>
+        <p class="eyebrow">See it in action</p>
+        <h2>Build your<br>profile visually.</h2>
+        <p class="intro-sub">Drag blocks around, edit inline, preview instantly — no code needed.</p>
         <button class="btn btn-gradient" onclick="scrollToSlide(4)">See pricing →</button>
       </div>
       <div class="split-right">
         <div class="editor-preview-demo" id="liveBlockDemo">
-          <div class="epd-window">
+          <div class="demo-tabs">
+            <button type="button" class="demo-tab active" id="demoTabEditor">Editor</button>
+            <button type="button" class="demo-tab" id="demoTabPortfolio">Published portfolio</button>
+          </div>
+          <div class="epd-window" id="epdWindowEditor">
             <div class="epd-titlebar">
               <span class="epd-dot" style="background:#FF5F57"></span>
               <span class="epd-dot" style="background:#FEBC2E"></span>
@@ -431,6 +426,42 @@
               </div>
             </div>
           </div>
+          <div class="epd-window hidden" id="epdWindowPortfolio">
+            <div class="epd-titlebar">
+              <span class="epd-dot" style="background:#FF5F57"></span>
+              <span class="epd-dot" style="background:#FEBC2E"></span>
+              <span class="epd-dot" style="background:#28C840"></span>
+              <span class="epd-titlebar-label">yourname.proves.work</span>
+            </div>
+            <div class="pvd-body">
+              <div class="pvd-hero">
+                <div class="pvd-avatar"></div>
+                <div class="pvd-hero-lines">
+                  <div class="epd-preview-line epd-preview-line-title" style="width:70%"></div>
+                  <div class="epd-preview-line epd-preview-line-sub" style="width:45%"></div>
+                </div>
+              </div>
+              <div class="pvd-section">
+                <div class="pvd-section-label">Experience</div>
+                <div class="pvd-row">
+                  <div class="epd-preview-line epd-preview-line-wide" style="width:80%"></div>
+                  <span class="pvd-verify-badge" title="Verifiable proof attached">✓ Verified</span>
+                </div>
+                <div class="pvd-row">
+                  <div class="epd-preview-line epd-preview-line-wide" style="width:60%"></div>
+                  <span class="pvd-verify-badge" title="Verifiable proof attached">✓ Verified</span>
+                </div>
+              </div>
+              <div class="pvd-section">
+                <div class="pvd-section-label">Portfolio</div>
+                <div class="epd-preview-tiles">
+                  <div class="epd-tile"></div>
+                  <div class="epd-tile"></div>
+                  <div class="epd-tile"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -439,38 +470,38 @@
     <section class="panel panel-pricing" id="slide-4">
       <div class="panel-intro">
         <p class="eyebrow">Pricing</p>
-        <h2>Start free.<br>Upgrade when ready.</h2>
-        <p class="intro-sub">No credit card needed to start. Customize your first layout block today.</p>
+        <h2>Free to use.<br>Donations optional.</h2>
+        <p class="intro-sub">No credit card needed to start, and hosting your portfolio never requires one. This is a one-person, AI-assisted side project running on Cloudflare's free tier — it's given as-is, with no promised uptime, support, or new features. Donations don't buy a service contract; they just help cover real costs (the domain itself) and are appreciated if this was useful to you.</p>
       </div>
       <div class="pricing-cards">
         <div class="price-card">
           <div class="price-name">Free</div>
-          <div class="price-amount">₱0 <span>forever</span></div>
+          <div class="price-amount">₱0 <span>always</span></div>
           <ul class="price-features">
             <li>✓ Blockcraft canvas editor</li>
-            <li>✓ Edit &amp; preview your portfolio</li>
+            <li>✓ Live at your-name.proves.work</li>
             <li>✓ Add it to the Showcase</li>
             <li>✓ PDF résumé export</li>
           </ul>
           <a href="editor.html" class="btn btn-ghost" style="width:100%;justify-content:center">Start free</a>
         </div>
         <div class="price-card price-featured">
-          <div class="price-badge">Most popular</div>
-          <div class="price-name">Active Job Hunter</div>
-          <div class="price-amount"><div class="price-amount-row"><s class="price-was">₱399</s>₱249</div> <span>one-time · 3mo</span></div>
-          <p class="price-tagline">Perfect length for a job hunt — no subscription.</p>
+          <div class="price-badge">Optional support</div>
+          <div class="price-name">Support the project</div>
+          <div class="price-amount"><div class="price-amount-row">₱99–₱999</div> <span>one-off donation</span></div>
+          <p class="price-tagline">Pick your own duration (1–12 months) in the editor. Not a subscription, not a service plan — just a thank-you that happens to unlock two extras.</p>
           <ul class="price-features">
-            <li>✓ Everything in Free</li>
-            <li>✓ Live at your-name.proves.work</li>
+            <li>✓ Everything in Free (already yours either way)</li>
             <li>✓ ★ Starred, front-of-line Showcase spot</li>
-            <li>✓ Stays live for 3 months</li>
+            <li>✓ Recruiter Password Lock, if you set one</li>
+            <li>✓ Helps cover the domain's real cost</li>
           </ul>
-          <a href="editor.html" class="btn btn-primary" style="width:100%;justify-content:center">Go Active</a>
+          <a href="editor.html" class="btn btn-primary" style="width:100%;justify-content:center">Open the editor</a>
         </div>
         <div class="price-card">
           <div class="price-name">Just the name</div>
           <div class="price-amount" id="homeDomainPriceDisplay"><div class="price-amount-row"><s class="price-was">₱1,999</s>₱199</div><span class="price-amount-duration">/ 1 mo</span></div>
-          <p class="price-tagline">Lock in longer, pay less overall — max ₱599 for a full year.</p>
+          <p class="price-tagline">This one's a real, ongoing cost (the actual domain), so it's not optional the way the donation above is — max ₱599 for a full year.</p>
           <div class="price-duration-row">
             <input type="range" min="1" max="12" step="1" value="1" id="homeDomainMonthsSlider" aria-label="Reservation length in months" />
             <div class="price-duration-label"><span id="homeDomainMonthsLabel">1 month</span><span>one-time</span></div>
@@ -498,6 +529,7 @@
           <span>·</span>
           <a href="editor.html">Open Editor</a>
         </div>
+        <p class="cta-copy" style="max-width:520px;margin:1.25rem auto 0.5rem;opacity:0.75;font-size:0.8rem;line-height:1.5;">Built solo with a lot of AI assistance, run on Cloudflare's free tier, and offered as-is — no guaranteed uptime, no support line, and no roadmap of new features to expect. If something breaks, it may just stay broken. Donations aren't payment for a service; they help cover the one real recurring cost (the domain) and are genuinely appreciated either way.</p>
         <p class="cta-copy">© 2026 proves.work · Built with ❤️</p>
       </div>
     </section>
@@ -505,6 +537,27 @@
   </div>
 
   <script src="home.js"></script>
+  <script>
+    (function () {
+      const tabEditor = document.getElementById('demoTabEditor');
+      const tabPortfolio = document.getElementById('demoTabPortfolio');
+      const winEditor = document.getElementById('epdWindowEditor');
+      const winPortfolio = document.getElementById('epdWindowPortfolio');
+      if (!tabEditor || !tabPortfolio) return;
+      tabEditor.addEventListener('click', () => {
+        tabEditor.classList.add('active');
+        tabPortfolio.classList.remove('active');
+        winEditor.classList.remove('hidden');
+        winPortfolio.classList.add('hidden');
+      });
+      tabPortfolio.addEventListener('click', () => {
+        tabPortfolio.classList.add('active');
+        tabEditor.classList.remove('active');
+        winPortfolio.classList.remove('hidden');
+        winEditor.classList.add('hidden');
+      });
+    })();
+  </script>
   
   <!-- FIX ROOT DOMAIN RAPID TICKER ENGINE -->
   <script type="module">

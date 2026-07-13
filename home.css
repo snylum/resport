@@ -555,6 +555,105 @@ body {
   .epd-body { min-height: 220px; }
 }
 
+/* Tab switcher above the demo window — lets the "See it in action"
+   panel show either the editor mockup or what the published
+   portfolio actually looks like, without needing two separate
+   slides. */
+.demo-tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.demo-tab {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.4rem 0.75rem;
+  border: 2px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.demo-tab.active {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+
+.epd-window.hidden { display: none; }
+
+/* Published-portfolio mockup — same mini-browser chrome as the
+   editor demo, but the body mimics an actual live page: hero photo +
+   name, then a couple of "Verified" proof badges next to experience
+   lines (nodding at the Recruiter Password Lock / Verifiable Proof
+   feature), then a small portfolio grid. */
+.pvd-body {
+  padding: 1.1rem 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  background: var(--color-bg, #fff);
+  min-height: 260px;
+}
+
+.pvd-hero {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.pvd-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--gradient);
+  flex-shrink: 0;
+}
+
+.pvd-hero-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex: 1;
+}
+
+.pvd-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.pvd-section-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.pvd-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pvd-row .epd-preview-line { flex: 1; margin: 0; }
+
+.pvd-verify-badge {
+  flex-shrink: 0;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--color-success, #16a34a);
+  background: rgba(22, 163, 74, 0.1);
+  border: 1.5px solid var(--color-success, #16a34a);
+  border-radius: 999px;
+  padding: 0.15rem 0.45rem;
+  white-space: nowrap;
+}
+
 /* Animated block stack */
 .block-demo {
   display: flex;

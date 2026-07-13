@@ -2785,7 +2785,7 @@ function openSupportModal(username) {
 
   const html = `
     <h3 class="modal-title" id="modalTitle">Support the project</h3>
-    <p class="modal-sub">A one-off donation to keep this a self-sustained passion project — not a subscription. It grants the ★ Active Job Hunter badge and (if you set one) the Recruiter Password Lock for the months you pick. Your portfolio stays live and free either way.</p>
+    <p class="modal-sub">A one-off donation to help cover the real cost of running this — not a subscription, and not payment for support or new features. This is a solo, AI-assisted project offered as-is on Cloudflare's free tier; your portfolio stays live and free either way. In return, this grants the ★ Active Job Hunter badge and (if you set one) the Recruiter Password Lock for the months you pick.</p>
     <div class="field-box full-width">
       <span>Currency</span>
       <div class="modal-actions" style="justify-content:flex-start;gap:0.5rem;margin:0.35rem 0 0.75rem;">
