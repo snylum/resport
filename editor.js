@@ -3462,7 +3462,7 @@ async function downloadResumeAsPDF() {
     const contactLine = [profile.email, profile.phone, profile.address].filter(Boolean).join(' • ');
 
     const clone = document.createElement('div');
-    clone.className = 'resume-paper';
+    clone.className = 'resume-paper is-pdf-export';
     clone.setAttribute('data-template', resume.template || 'ats');
     clone.setAttribute('data-layout', design.layout || '1');
     clone.setAttribute('data-header-align', design.headerAlign || 'left');
@@ -3501,19 +3501,28 @@ async function downloadResumeAsPDF() {
         <div class="col-track side-track">${filterVisibleBlocksHidingOrphanSections(blocks.filter(b => b.col === 'side')).map(b => `<div class="resume-block block-${b.type}" style="${esc(blockStyleToCSS(b.style))}">${renderStaticResumeBlock(b)}</div>`).join('')}</div>
       </div>`;
 
-    // Render off-screen (not display:none — html2canvas needs real layout).
-    // NOTE: a huge negative offset like -99999px is unreliable with
-    // html2canvas — it can miscalculate the capture region and produce a
-    // blank/mis-sized canvas, which is also why pagination silently failed
-    // (there was nothing real to paginate). Keep it just barely off-screen
-    // and hide it visually instead.
-    clone.style.position = 'fixed';
-    clone.style.top = '0';
-    clone.style.left = '0';
-    clone.style.zIndex = '-1';
-    clone.style.visibility = 'hidden';
-    clone.style.pointerEvents = 'none';
-    document.body.appendChild(clone);
+    // Render off-screen but still fully "visible" to the browser's paint
+    // pipeline — html2canvas only captures pixels that are actually
+    // rendered, so `visibility:hidden` / `display:none` / `opacity:0` all
+    // produce a blank canvas. A huge negative offset (-99999px) is also
+    // unreliable: html2canvas can miscalculate the capture region against
+    // such extreme coordinates and again come back blank / wrong size,
+    // which is also why pagination silently failed (nothing real to
+    // paginate). Instead, clip the clone out of view with a zero-size,
+    // overflow:hidden wrapper — the clone inside still lays out and paints
+    // at its real, full size; only its visual overflow is hidden from the
+    // user.
+    const wrapper = document.createElement('div');
+    wrapper.className = 'resume-paper-export-wrapper';
+    wrapper.style.position = 'fixed';
+    wrapper.style.top = '0';
+    wrapper.style.left = '0';
+    wrapper.style.width = '0';
+    wrapper.style.height = '0';
+    wrapper.style.overflow = 'hidden';
+    wrapper.style.pointerEvents = 'none';
+    wrapper.appendChild(clone);
+    document.body.appendChild(wrapper);
 
     // Make sure web fonts and any images (profile photo, etc.) have
     // actually finished loading before html2canvas measures/paints the
@@ -3539,16 +3548,17 @@ async function downloadResumeAsPDF() {
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, windowWidth: clone.scrollWidth, windowHeight: clone.scrollHeight },
         jsPDF: { unit: 'in', format: PAGE_SIZES_IN[design.pageSize] || PAGE_SIZES_IN.letter, orientation: 'portrait' },
-        pagebreak: { mode: ['css', 'legacy'] }
+        pagebreak: { mode: ['css'], avoid: ['.resume-block', '.rb-entry-row', '.rb-header'] }
       })
       .from(clone)
       .save();
 
-    document.body.removeChild(clone);
+    wrapper.remove();
   } catch (err) {
     console.error(err);
     alert('Sorry — the PDF could not be generated. Please try again.');
   } finally {
+    document.querySelectorAll('.resume-paper-export-wrapper').forEach(w => w.remove());
     if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
   }
 }

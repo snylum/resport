@@ -2260,6 +2260,28 @@ body.is-printing-resume #resumePaper {
     background: #fff;
   }
 }
+
+/* ── PDF export pagination ────────────────────────────────────
+   html2pdf's 'legacy' pagebreak mode only finds break points among an
+   element's *top-level* children — and the export clone's top level is
+   just <header> + one two-column layout div, so there was nowhere for it
+   to break and everything rendered as one endless page instead of real
+   Letter/A4/etc. pages. Switching to 'css'-mode pagebreak (see
+   downloadResumeAsPDF) and giving these actual content blocks explicit
+   page-break rules gives it real, correctly-sized break points: never
+   split a single entry/header/block awkwardly in half, but do allow a
+   break between blocks so long resumes paginate properly. */
+.resume-paper.is-pdf-export .resume-block,
+.resume-paper.is-pdf-export .rb-entry-row,
+.resume-paper.is-pdf-export .rb-header {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.resume-paper.is-pdf-export .col-track > .resume-block {
+  page-break-after: auto;
+  break-after: auto;
+}
+
 /* ── AI/automated Résumé Check panel ─────────────────────────── */
 .ai-review-wrap {
   padding: 1rem 1.25rem;
