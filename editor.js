@@ -1705,29 +1705,57 @@ function slugifyUsername(str) {
 // verification badges stay clickable there too — without shipping the
 // whole editor. No dependency on Store/editor.js.
 const PUBLISHED_PAGE_SCRIPT = `
+// ── Verifiable Proof: fetched at runtime, never embedded in this page's
+// source. window.__PW_PROOF__ is populated either immediately on load
+// (when no Recruiter Password Lock is active on this site) or after a
+// correct guess in the unlock modal below. Until it's populated, proof
+// buttons resolve to nothing rather than showing stale/empty content.
+window.__PW_PROOF__ = null;
+function pwFetchProof(guess) {
+  var scope = (document.getElementById('portfolioSite') || {}).getAttribute
+    ? document.getElementById('portfolioSite').getAttribute('data-lock-scope')
+    : '';
+  var payload = { username: scope || '' };
+  if (guess) payload.guess = guess;
+  return fetch('https://${PUBLISH_APEX}/api/site/proof', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).then(function (res) { return res.json().catch(function () { return { ok: false }; }); })
+    .catch(function () { return { ok: false, error: 'network' }; });
+}
+if (!window.__PW_LOCK_ACTIVE__) {
+  // No lock on this site (or it lapsed) — proof was always meant to be
+  // public here, so fetch it right away rather than waiting on a guess.
+  pwFetchProof().then(function (result) {
+    if (result && result.ok) window.__PW_PROOF__ = result.proof || {};
+  });
+}
 document.addEventListener('click', function (e) {
   var linkBadge = e.target.closest('[data-action="open-verify-link"]');
   if (linkBadge) {
-    var href = linkBadge.getAttribute('data-href');
-    if (href) window.open(href, '_blank', 'noopener,noreferrer');
+    var entry = window.__PW_PROOF__ && window.__PW_PROOF__[linkBadge.getAttribute('data-verify-id')];
+    if (entry && entry.link) window.open(entry.link, '_blank', 'noopener,noreferrer');
     return;
   }
   var verifyBtn = e.target.closest('[data-verify-type]');
   if (verifyBtn) {
     var type = verifyBtn.getAttribute('data-verify-type');
+    var vEntry = window.__PW_PROOF__ && window.__PW_PROOF__[verifyBtn.getAttribute('data-verify-id')];
     if (type === 'link') {
-      var link = verifyBtn.getAttribute('data-verify-link');
-      if (link) window.open(link, '_blank', 'noopener,noreferrer');
+      if (vEntry && vEntry.link) window.open(vEntry.link, '_blank', 'noopener,noreferrer');
       return;
     }
     var overlay = document.getElementById('modalOverlay');
     var content = document.getElementById('modalContent');
     var box = document.getElementById('modalBox');
-    var label = verifyBtn.getAttribute('data-verify-label') || '';
     var html = '';
-    if (type === 'photo') {
-      var photo = verifyBtn.getAttribute('data-verify-photo');
-      html = '<h3 class="modal-title-proof">Proof</h3><div class="verify-modal-body"><img src="' + photo + '" class="verify-modal-img" alt="Verification proof"/>' + (label ? '<p class="verify-modal-caption">' + label + '</p>' : '') + '</div>';
+    if (type === 'photo' && vEntry && vEntry.photo) {
+      var label = vEntry.label || '';
+      html = '<h3 class="modal-title-proof">Proof</h3><div class="verify-modal-body"><img src="' + vEntry.photo + '" class="verify-modal-img" alt="Verification proof"/>' + (label ? '<p class="verify-modal-caption">' + label + '</p>' : '') + '</div>';
+    } else {
+      // Proof not loaded yet (e.g. still locked) — nothing to show.
+      return;
     }
     content.innerHTML = html;
     if (box) box.className = 'modal-box';
@@ -1741,7 +1769,9 @@ document.addEventListener('click', function (e) {
     var box = document.getElementById('modalBox');
     var src = zoomEl.getAttribute('data-src');
     var verified = zoomEl.getAttribute('data-verified') === '1';
-    var caption = zoomEl.getAttribute('data-caption') || '';
+    var captionId = zoomEl.getAttribute('data-caption-id');
+    var captionEntry = captionId && window.__PW_PROOF__ && window.__PW_PROOF__[captionId];
+    var caption = captionEntry ? (captionEntry.label || '') : '';
     var footer = verified
       ? '<div class="pf-zoom-verified"><span class="pf-zoom-verified-check">Proof</span>' + (caption ? '<p class="pf-zoom-caption">' + caption + '</p>' : '') + '</div>'
       : '';
@@ -1776,16 +1806,16 @@ document.addEventListener('keydown', function (e) {
 })();
 
 // ── Recruiter Password Lock ──────────────────────────────────────
-// Purely client-side: window.__PW_LOCK_ACTIVE__ is baked in by the
-// Worker fresh on every request (true only while this site's Support
-// donation is currently active AND a lock key was set), and
-// window.__PW_LOCK_HASH__ is the SHA-256 hex digest of that key,
-// baked in at publish time by the editor. Nothing here ever talks to
-// a server to check a guess — the browser hashes what's typed and
-// compares strings locally, same as any other client-side gate.
+// window.__PW_LOCK_ACTIVE__ is baked in by the Worker fresh on every
+// request (true only while this site's Support donation is currently
+// active AND a lock key was set). Unlike before, no hash is baked
+// into the page at all — a typed guess is sent to the Worker's
+// POST /api/lock/verify, which hashes it server-side with the site's
+// salted PBKDF2 parameters and rate-limits attempts. Nothing worth
+// brute-forcing ever appears in this page's source.
 (function () {
   var root = document.getElementById('portfolioSite');
-  if (!root || !window.__PW_LOCK_ACTIVE__ || !window.__PW_LOCK_HASH__) return;
+  if (!root || !window.__PW_LOCK_ACTIVE__) return;
   // Every element that ever surfaces a piece of Verifiable Proof —
   // per-skill/per-entry badges, gallery "+ proof" pins, and the
   // small ✓ dot next to a skill tag.
@@ -1799,42 +1829,113 @@ document.addEventListener('keydown', function (e) {
     root.querySelectorAll(SELECTOR).forEach(function (el) { el.classList.remove('pw-lock-hidden'); });
   }
 
-  function sha256Hex(text) {
-    var enc = new TextEncoder().encode(text);
-    return window.crypto.subtle.digest('SHA-256', enc).then(function (buf) {
-      return Array.prototype.map.call(new Uint8Array(buf), function (b) { return ('00' + b.toString(16)).slice(-2); }).join('');
-    });
+  var USERNAME_FOR_VERIFY = root.getAttribute('data-lock-scope') || '';
+
+  function verifyGuess(guess) {
+    return fetch('https://${PUBLISH_APEX}/api/site/proof', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ username: USERNAME_FOR_VERIFY, guess: guess })
+    }).then(function (res) { return res.json().catch(function () { return { ok: false }; }); })
+      .catch(function () { return { ok: false, error: 'network' }; });
   }
 
-  if (sessionStorage.getItem(UNLOCK_KEY) === '1') return; // already unlocked this tab
-
-  hide();
-  var bar = document.createElement('div');
-  bar.className = 'pw-lock-bar';
-  bar.innerHTML = '<span class="pw-lock-bar-label">🔒 This portfolio\\u2019s Verifiable Proof is locked. Recruiters: enter the access key from this candidate\\u2019s resume.</span>' +
-    '<input type="password" class="pw-lock-bar-input" placeholder="Access key" autocomplete="off" />' +
-    '<button type="button" class="pw-lock-bar-btn">Unlock</button>' +
-    '<span class="pw-lock-bar-status"></span>';
-  root.parentNode.insertBefore(bar, root);
-
-  var input = bar.querySelector('.pw-lock-bar-input');
-  var status = bar.querySelector('.pw-lock-bar-status');
-  function attempt() {
-    var val = input.value;
-    if (!val) return;
-    sha256Hex(val).then(function (hex) {
-      if (hex === window.__PW_LOCK_HASH__) {
-        sessionStorage.setItem(UNLOCK_KEY, '1');
+  // Session persistence stores the guess itself (sessionStorage,
+  // scoped to this tab only — never localStorage/cookies) rather than
+  // just a boolean, because proof content is never cached in the
+  // page: a fresh load has to re-ask the server for it, and the
+  // server needs the key again to release it. This still costs one
+  // rate-limited PBKDF2 check per reload (same cost as a real guess),
+  // it just doesn't require the recruiter to type the key again
+  // within the same browser tab.
+  var remembered = sessionStorage.getItem(UNLOCK_KEY);
+  if (remembered) {
+    verifyGuess(remembered).then(function (result) {
+      if (result && result.ok) {
+        window.__PW_PROOF__ = result.proof || {};
         reveal();
-        bar.remove();
       } else {
-        status.textContent = 'Incorrect key.';
-        input.value = '';
+        sessionStorage.removeItem(UNLOCK_KEY);
+        hide();
+        showFabAndPrompt();
       }
     });
+  } else {
+    hide();
+    showFabAndPrompt();
   }
-  bar.querySelector('.pw-lock-bar-btn').addEventListener('click', attempt);
-  input.addEventListener('keydown', function (e) { if (e.key === 'Enter') attempt(); });
+
+  var fab, openModal;
+  function showFabAndPrompt() {
+    if (fab) { fab.style.display = 'none'; openModal(); return; }
+    // A small fixed lock icon, bottom-right, that's always available once
+    // the popup has been dismissed — clicking it reopens the same prompt.
+    fab = document.createElement('button');
+    fab.type = 'button';
+    fab.className = 'pw-lock-fab';
+    fab.setAttribute('aria-label', 'Unlock verified proof');
+    fab.innerHTML = '🔒';
+    fab.style.display = 'none';
+    document.body.appendChild(fab);
+
+    var backdrop = null;
+
+    openModal = function () {
+    if (backdrop) return;
+    backdrop = document.createElement('div');
+    backdrop.className = 'pw-lock-backdrop';
+    backdrop.innerHTML =
+      '<div class="pw-lock-modal" role="dialog" aria-modal="true">' +
+        '<button type="button" class="pw-lock-modal-close" aria-label="Close">✕</button>' +
+        '<div class="pw-lock-modal-icon">🔒</div>' +
+        '<p class="pw-lock-modal-label">This portfolio\u2019s Verifiable Proof is locked. Recruiters: enter the access key from this candidate\u2019s résumé.</p>' +
+        '<input type="password" class="pw-lock-modal-input" placeholder="Access key" autocomplete="off" />' +
+        '<button type="button" class="pw-lock-modal-btn">Unlock</button>' +
+        '<span class="pw-lock-modal-status"></span>' +
+      '</div>';
+    document.body.appendChild(backdrop);
+
+    var input = backdrop.querySelector('.pw-lock-modal-input');
+    var status = backdrop.querySelector('.pw-lock-modal-status');
+    input.focus();
+
+    function attempt() {
+      var val = input.value;
+      if (!val) return;
+      status.textContent = 'Checking…';
+      verifyGuess(val).then(function (result) {
+        if (result && result.ok) {
+          window.__PW_PROOF__ = result.proof || {};
+          sessionStorage.setItem(UNLOCK_KEY, val);
+          reveal();
+          closeModal();
+          fab.style.display = 'none';
+        } else if (result && result.error && /too many/i.test(result.error)) {
+          status.textContent = result.error;
+        } else {
+          status.textContent = 'Incorrect key.';
+          input.value = '';
+        }
+      });
+    }
+    function closeModal() {
+      if (!backdrop) return;
+      backdrop.remove();
+      backdrop = null;
+      // Popup was crossed/dismissed without unlocking — leave the
+      // lock icon visible at the bottom of the page as the way back in.
+      fab.style.display = 'flex';
+    }
+
+    backdrop.querySelector('.pw-lock-modal-btn').addEventListener('click', attempt);
+    backdrop.querySelector('.pw-lock-modal-close').addEventListener('click', closeModal);
+    backdrop.addEventListener('click', function (e) { if (e.target === backdrop) closeModal(); });
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') attempt(); if (e.key === 'Escape') closeModal(); });
+    };
+
+    fab.addEventListener('click', openModal);
+    openModal();
+  }
 })();
 // Horizontal-slide mode: dot nav, arrow keys, and wheel-to-slide —
 // scoped to .pf-sections only (the fixed hero above it is untouched),
@@ -2064,9 +2165,9 @@ function renderStaticResumeBlock(block) {
     case 'skills':
       return `<div class="rb-skills-wrap">${(block.data.items || []).map(s => `<span class="rb-skill-tag">${esc(skillName(s))}</span>`).join('')}</div>`;
     case 'certifications':
-      return `<div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.issuer || '')}</span><span class="ce-muted">${esc(it.date || '')}</span></div>`).join('')}</div>`;
+      return `<div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><div class="rb-entry-main"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.issuer || '')}</span></div><span class="ce-muted rb-entry-date">${esc(it.date || '')}</span></div>`).join('')}</div>`;
     case 'languages':
-      return `<div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><span class="ce-strong">${esc(it.name || '')}</span><span class="ce-muted">${esc(it.level || '')}</span></div>`).join('')}</div>`;
+      return `<div class="rb-entry-list">${(block.data.items || []).map(it => `<div class="rb-entry-row"><div class="rb-entry-main"><span class="ce-strong">${esc(it.name || '')}</span></div><span class="ce-muted rb-entry-date">${esc(it.level || '')}</span></div>`).join('')}</div>`;
     case 'spacer': {
       const size = ['sm', 'md', 'lg'].includes(block.data.size) ? block.data.size : 'md';
       return `<div class="rb-spacer rb-spacer-${size}" aria-hidden="true"></div>`;
@@ -2162,6 +2263,33 @@ function renderTemplateThumbnails() {
   });
 }
 
+// ── Verifiable Proof content: kept out of the public page ──────────
+// Proof photos/links used to be embedded directly as data-verify-*
+// attributes in the exported HTML — always present in the DOM/page
+// source regardless of whether the Recruiter Password Lock was
+// "unlocked" in the UI, since that lock only ever toggled a CSS
+// class. That meant the lock protected nothing for anyone willing to
+// view-source or open devtools.
+//
+// Now, static badge rendering below emits only a stable
+// data-verify-id per proof item and records the real content (photo
+// data-URI, link, label) in this collector instead of inlining it.
+// buildPublishedSiteHTML drains the collector into a `proofItems` map
+// that's uploaded to the Worker *separately* from the HTML (see
+// /api/publish's proofItems handling) and never baked into the page.
+// The published page fetches that map from /api/site/proof at
+// runtime — freely if no lock is active on the site, or only after a
+// correct guess via /api/lock/verify if one is.
+let CURRENT_PROOF_COLLECTOR = null;
+let CURRENT_PROOF_SEQ = 0;
+
+function collectProof(entry) {
+  if (!CURRENT_PROOF_COLLECTOR) return null; // collector not active (e.g. live-canvas preview, not a static export)
+  const id = 'v' + (++CURRENT_PROOF_SEQ);
+  CURRENT_PROOF_COLLECTOR[id] = entry;
+  return id;
+}
+
 function renderStaticPortfolioBlock(block) {
   const html = renderStaticPortfolioBlockInner(block);
   if (!html) return html;
@@ -2196,11 +2324,13 @@ function renderStaticPortfolioBlockInner(block) {
     const cls = small ? 'pf-verify-badge pf-verify-badge-sm' : 'pf-verify-badge';
     const text = small ? VERIFIED_SEAL_ICON : `<span class="pf-verify-check">${VERIFIED_SEAL_ICON}</span>Verified${labelHTML}`;
     if (v.type === 'photo' && v.photo) {
-      return `<button class="${cls}" data-verify-type="photo" data-verify-photo="${esc(v.photo)}" data-verify-label="${esc(v.label || '')}" type="button" title="View proof">${text}</button>`;
+      const id = collectProof({ type: 'photo', photo: v.photo, label: v.label || '' });
+      return `<button class="${cls}" data-verify-type="photo" data-verify-id="${esc(id)}" type="button" title="View proof">${text}</button>`;
     }
     if (v.type === 'link' && v.link) {
       const safeHref = /^https?:\/\//i.test(v.link) ? v.link : `https://${v.link}`;
-      return `<button class="${cls}" data-verify-type="link" data-verify-link="${esc(safeHref)}" data-verify-label="${esc(v.label || '')}" type="button" title="View proof">${text}</button>`;
+      const id = collectProof({ type: 'link', link: safeHref, label: v.label || '' });
+      return `<button class="${cls}" data-verify-type="link" data-verify-id="${esc(id)}" type="button" title="View proof">${text}</button>`;
     }
     return '';
   };
@@ -2268,14 +2398,21 @@ function renderStaticPortfolioBlockInner(block) {
         // used for experience/skills badges); the rest of the tile
         // still zooms as normal.
         let badge = '';
+        let photoProofId = null;
         if (pv.type === 'link' && pv.link) {
           const safeHref = /^https?:\/\//i.test(pv.link) ? pv.link : `https://${pv.link}`;
-          badge = `<button class="pf-photo-verify-badge is-link" data-action="open-verify-link" data-href="${esc(safeHref)}" type="button" title="Open verification link">${VERIFIED_SEAL_ICON}</button>`;
+          const id = collectProof({ type: 'link', link: safeHref, label: pv.label || '' });
+          badge = `<button class="pf-photo-verify-badge is-link" data-action="open-verify-link" data-verify-id="${esc(id)}" type="button" title="Open verification link">${VERIFIED_SEAL_ICON}</button>`;
         } else if (pv.type === 'photo' && pv.photo) {
-          badge = `<button class="pf-photo-verify-badge is-link" data-verify-type="photo" data-verify-photo="${esc(pv.photo)}" data-verify-label="${esc(pv.label || '')}" type="button" title="View proof photo">${VERIFIED_SEAL_ICON}</button>`;
+          photoProofId = collectProof({ type: 'photo', photo: pv.photo, label: pv.label || '' });
+          badge = `<button class="pf-photo-verify-badge is-link" data-verify-type="photo" data-verify-id="${esc(photoProofId)}" type="button" title="View proof photo">${VERIFIED_SEAL_ICON}</button>`;
         }
         const hasProof = pv.type === 'photo' && !!pv.photo;
-        const captionAttr = hasProof && pv.label ? ` data-caption="${esc(pv.label)}"` : '';
+        // The caption is drawn from the same proof entry (looked up
+        // by id at unlock/hydrate time) rather than embedded here, so
+        // a recruiter's private note doesn't leak via view-source
+        // either.
+        const captionAttr = hasProof && pv.label ? ` data-caption-id="${esc(photoProofId)}"` : '';
         return `<div class="pf-gallery-item" data-action="zoom-photo" data-src="${esc(p.src)}" data-verified="${hasProof ? '1' : '0'}"${captionAttr}>${badge}<img src="${esc(p.src)}" alt="" /></div>`;
       }).join('');
       return `<div class="pf-card pf-gallery-card"><div class="pf-gallery-grid">${itemsHTML}</div></div>`;
@@ -2356,9 +2493,19 @@ function buildPublishedSiteHTML(username) {
   const contactLine = [p.email, p.phone, p.address].filter(Boolean).join('   •   ');
   const isHorizontal = (design.sectionAnimation || 'none') === 'horizontal';
   const isVertical = (design.sectionAnimation || 'none') === 'vertical';
+  // Drain real proof content (photos/links/labels) into a side map
+  // instead of the returned HTML — see collectProof above. Reset
+  // before, and stash onto the function itself right after, so
+  // publishPortfolio (below) can pick it up without changing every
+  // caller's signature; each call to buildPublishedSiteHTML fully
+  // replaces the previous map.
+  CURRENT_PROOF_COLLECTOR = {};
+  CURRENT_PROOF_SEQ = 0;
   const sectionsHTML = (isHorizontal || isVertical)
     ? buildHorizontalSectionsHTML(blocks, design.dotsStyle || 'dot')
     : `<div class="pf-sections">${blocks.map(renderStaticPortfolioBlock).join('\n')}</div>`;
+  buildPublishedSiteHTML.lastProofItems = CURRENT_PROOF_COLLECTOR;
+  CURRENT_PROOF_COLLECTOR = null;
 
   const pageTitle = `${esc(fullName)}${p.jobTitle ? ' — ' + esc(p.jobTitle) : ''}`;
   const pageDescription = esc(p.tagline || (fullName + ' — portfolio, built with ' + PUBLISH_APEX));
@@ -2370,13 +2517,14 @@ function buildPublishedSiteHTML(username) {
   // needed. Falls back to the site's own favicon when no photo is set.
   const iconHref = p.photo || `https://${PUBLISH_APEX}/favicon.png`;
   const ogImage = p.photo || `https://${PUBLISH_APEX}/favicon.png`;
-  // Recruiter Password Lock: the hash itself is always baked into the
-  // page (harmless — a hash alone can't be reversed into the key),
-  // but whether it's actually *enforced* is decided fresh on every
-  // request by the Worker (see window.__PW_LOCK_ACTIVE__ in
-  // worker/src/index.js's serveSite), tied to this site's current
-  // Support-donation status.
-  const passwordLockHash = Store.state.portfolio.passwordLockHash || '';
+  // Recruiter Password Lock: whether it's currently *enforced* is
+  // decided fresh on every request by the Worker (see
+  // window.__PW_LOCK_ACTIVE__ in worker/src/index.js's serveSite),
+  // tied to this site's current Support-donation status. Unlike
+  // before, no password hash is baked into this page at all — a
+  // typed guess is checked against a salted, iterated hash kept only
+  // on the server, via POST /api/lock/verify, so there's nothing here
+  // worth lifting from view-source and brute-forcing offline.
 
   return `<!DOCTYPE html>
 <html lang="en" data-theme="dazed">
@@ -2425,7 +2573,7 @@ ${siteUrl ? `<meta property="og:url" content="${esc(siteUrl)}" />` : ''}
     </div>
   </div>
 
-  <script>window.__PW_LOCK_HASH__=${passwordLockHash ? `"${passwordLockHash}"` : 'null'};${PUBLISHED_PAGE_SCRIPT}</script>
+  <script>${PUBLISHED_PAGE_SCRIPT}</script>
 </body>
 </html>`;
 }
@@ -2690,16 +2838,25 @@ async function doPublish(username, confirmBtn, referenceNumber) {
         // this point unless signed in).
         googleCredential: account ? account.credential : null,
         html: buildPublishedSiteHTML(username),
+        // Real proof photo/link/label content, drained out of the
+        // HTML above by collectProof — stored separately server-side
+        // and served only via /api/site/proof (gated by the
+        // Recruiter Password Lock when one is active). Always resent
+        // on every publish since it's tied 1:1 to this snapshot's
+        // content/ids, not something to leave stale.
+        proofItems: buildPublishedSiteHTML.lastProofItems || {},
         // Purely informational — lets an admin match this submission
         // against the payment shown on the QR step (see
         // openPublishPaymentModal). It does NOT mark the site as paid
         // by itself; only an admin's explicit "Mark as paid" in
         // /admin does that (see /api/admin/set-paid).
-        buyerReferenceNumber: referenceNumber || '',
-        // Always sent (even as null to clear) — see the 'passwordLockHash'
-        // in body check in /api/publish, which is what lets a cleared
-        // lock actually take effect instead of silently keeping the old one.
-        passwordLockHash: Store.state.portfolio.passwordLockHash || null
+        buyerReferenceNumber: referenceNumber || ''
+        // No passwordLockKey field here on purpose: the plaintext key
+        // is never retained in the browser after it's sent once (see
+        // openSupportModal), so a regular publish must omit this
+        // field entirely to leave whatever lock is already stored on
+        // the server untouched — only the support modal's own publish
+        // call includes 'passwordLockKey' to actually change it.
       })
     });
   } catch (err) {
@@ -2846,17 +3003,15 @@ function formatSupportPrice(months, currency) {
   return `${anchors.symbol}${currency === 'USD' ? amount.toFixed(2) : Math.round(amount)}`;
 }
 
-async function sha256Hex(text) {
-  const enc = new TextEncoder().encode(text);
-  const buf = await window.crypto.subtle.digest('SHA-256', enc);
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
 function openSupportModal(username) {
   if (!username) { openSignInModal({ message: 'Publish your portfolio first, then come back to support the project.' }); return; }
   let currency = 'PHP';
   let months = 3;
-  const existingLockHash = Store.state.portfolio.passwordLockHash || '';
+  // The plaintext key is never kept in the browser once it's been
+  // sent to publish — only whether one is currently set is tracked
+  // locally, so this modal can show "already set" without ever
+  // holding onto (or being able to leak) the key itself.
+  const hasExistingLock = !!(Store.state.portfolio.hasPasswordLock || (lastSiteStatusData && lastSiteStatusData.hasPasswordLock));
 
   const html = `
     <h3 class="modal-title" id="modalTitle">Support the project</h3>
@@ -2878,8 +3033,8 @@ function openSupportModal(username) {
     </div>
     <div class="field-box full-width">
       <span>Recruiter Password Lock (optional)</span>
-      <input type="password" class="field-input" id="supportLockInput" placeholder="${existingLockHash ? 'Key already set — type to change it' : 'Set an access key for recruiters'}" autocomplete="off" />
-      <p class="username-status" style="font-size:0.75rem;">Hashed in your browser before it's ever sent — we never see or store the plain key. Leave blank to keep it off (or leave your existing key unchanged). This only actually locks anything while your Support period is active.</p>
+      <input type="password" class="field-input" id="supportLockInput" placeholder="${hasExistingLock ? 'Key already set — type to change it' : 'Set an access key for recruiters'}" autocomplete="off" />
+      <p class="username-status" style="font-size:0.75rem;">Sent over HTTPS and hashed on the server with a per-site salt — never stored or shown as plain text once set. Leave blank to keep it off (or leave your existing key unchanged). This only actually locks anything while your Support period is active.</p>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost btn-sm" id="supportBackBtn" type="button">Cancel</button>
@@ -2908,13 +3063,11 @@ function openSupportModal(username) {
     root.querySelector('#supportBackBtn').addEventListener('click', closeModal);
     root.querySelector('#supportContinueBtn').addEventListener('click', async () => {
       const lockPlain = root.querySelector('#supportLockInput').value;
-      let newHash = existingLockHash || null;
-      if (lockPlain) newHash = await sha256Hex(lockPlain);
-      if (newHash !== existingLockHash) {
-        Store.state.portfolio.passwordLockHash = newHash;
-        // Republish so the new hash is baked into the live page and
-        // synced to the server record right away, rather than waiting
-        // for the next unrelated edit.
+      if (lockPlain) {
+        // Only ever sent when actually changing the key — the server
+        // salts and hashes it (PBKDF2) and never stores or returns
+        // the plaintext. Not kept locally beyond this request.
+        Store.state.portfolio.hasPasswordLock = true;
         try {
           await fetch('/api/publish', {
             method: 'POST',
@@ -2923,10 +3076,11 @@ function openSupportModal(username) {
               username,
               googleCredential: getSavedGoogleAccount() ? getSavedGoogleAccount().credential : null,
               html: buildPublishedSiteHTML(username),
-              passwordLockHash: newHash
+              proofItems: buildPublishedSiteHTML.lastProofItems || {},
+              passwordLockKey: lockPlain
             })
           });
-        } catch { /* offline — the lock still applies locally on next successful publish */ }
+        } catch { /* offline — try again from this modal once back online */ }
       }
       openSupportPaymentModal(username, months, currency);
     });

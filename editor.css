@@ -1600,7 +1600,58 @@ body {
   flex-shrink: 0;
 }
 
-/* ── Add-item / remove-item controls (shown per block) ────────── */
+/* ── Plain (non-boxed) resume document styling ──────────────────
+   .rb-skill-tag and .rb-entry-row above are deliberately boxed —
+   that's the sidebar's own "editable chip" / "editable card" look,
+   used for the add/remove-item controls while filling in a section.
+   But that same markup is also what renderStaticResumeBlock() feeds
+   both the live canvas and the html2pdf export (see .resume-paper in
+   editor.js) — so before this override, every exported résumé PDF
+   inherited the sidebar's editing-UI boxes, regardless of template.
+   This scopes a plain, LaTeX-style look (inline comma-separated
+   skills; a bare name/issuer/date line, no border or fill) to just
+   the actual document — .resume-paper covers the live canvas, the
+   PDF-export clone, and template thumbnails, so all three inherit it
+   identically and never drift out of sync with each other. */
+.resume-paper .rb-skills-wrap {
+  display: block;
+}
+
+.resume-paper .rb-skill-tag {
+  display: inline;
+  border: none;
+  padding: 0;
+  font-weight: 400;
+  color: var(--color-text);
+}
+
+.resume-paper .rb-skill-tag:not(:last-child)::after {
+  content: ", ";
+}
+
+.resume-paper .rb-entry-row {
+  border: none;
+  border-radius: 0;
+  background: none;
+  padding: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.resume-paper .rb-entry-main {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.resume-paper .rb-entry-date {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .add-item-btn {
   display: inline-block;
   margin-top: 0.4rem;

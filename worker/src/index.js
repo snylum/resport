@@ -51,6 +51,94 @@ function json(obj, status = 200, extraHeaders = {}) {
   });
 }
 
+// ── Recruiter Password Lock: strong, server-side verification ──────
+// The old scheme baked a single unsalted SHA-256 digest of the
+// recruiter key straight into the public HTML page and let the
+// browser compare guesses to it client-side. That's effectively no
+// protection: anyone can view-source the page, lift the digest, and
+// brute-force it offline at billions of guesses/second (unsalted
+// SHA-256 is designed to be fast, and human-picked keys are
+// low-entropy), with zero rate limiting since the check never
+// touched a server.
+//
+// This replaces that with:
+//   1. A salted, iterated hash (PBKDF2-HMAC-SHA256) computed and
+//      stored server-side only. The plaintext key is sent to the
+//      Worker once (over HTTPS) to be hashed; the hash + salt never
+//      go back to the browser, so nothing worth brute-forcing ever
+//      appears in page source.
+//   2. Guesses are checked via /api/lock/verify, which runs the same
+//      slow hash server-side and applies per-IP/per-site rate
+//      limiting stored in KV — no unlimited/instant guessing.
+// Runs entirely on the free tier: just the KV namespace the Worker
+// already has, no paid Rate Limiting Rules/WAF product needed.
+
+const PBKDF2_ITERATIONS = 120_000; // native SubtleCrypto PBKDF2 runs
+// outside the JS engine and is typically well under Workers' free-plan
+// per-request CPU-time ceiling even at this count — if /api/publish or
+// /api/lock/verify ever start erroring with CPU-limit exceptions,
+// lower this (e.g. to 50_000) first.
+
+function randomSaltHex() {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function hexToBytes(hex) {
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i * 2, 2), 16);
+  return out;
+}
+
+async function pbkdf2Hash(password, saltHex, iterations = PBKDF2_ITERATIONS) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', hash: 'SHA-256', salt: hexToBytes(saltHex), iterations },
+    keyMaterial,
+    256
+  );
+  return Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Always walks the full length of the longer string instead of
+// returning on the first mismatch, so response timing doesn't leak
+// how many leading characters of a guess were correct.
+function safeEqual(a, b) {
+  const len = Math.max(a.length, b.length);
+  let diff = a.length === b.length ? 0 : 1;
+  for (let i = 0; i < len; i++) diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  return diff === 0;
+}
+
+async function buildPasswordLock(plainKey) {
+  const salt = randomSaltHex();
+  const hash = await pbkdf2Hash(plainKey, salt, PBKDF2_ITERATIONS);
+  return { salt, hash, iter: PBKDF2_ITERATIONS };
+}
+
+// Rate limiting for /api/lock/verify: per (IP, username) so one nosy
+// visitor can't lock out everyone else guessing a different site's
+// key, plus a per-username ceiling so distributed guessing against
+// one site is still capped. Counters live in the same SITES KV
+// namespace with a short TTL so they self-clear.
+const LOCK_MAX_ATTEMPTS_PER_IP = 6;
+const LOCK_IP_WINDOW_SECONDS = 15 * 60;      // 6 tries / 15 min / IP+site
+const LOCK_MAX_ATTEMPTS_PER_SITE = 30;
+const LOCK_SITE_WINDOW_SECONDS = 60 * 60;    // 30 tries / hour / site total
+
+async function checkAndBumpRateLimit(env, key, max, windowSeconds) {
+  const raw = await env.SITES.get(key, 'json');
+  const now = Date.now();
+  let count = 1;
+  if (raw && typeof raw.count === 'number' && raw.expiresAt > now) count = raw.count + 1;
+  if (count > max) return false; // over limit — don't extend the window further
+  await env.SITES.put(key, JSON.stringify({ count, expiresAt: now + windowSeconds * 1000 }), {
+    expirationTtl: windowSeconds
+  });
+  return true;
+}
+
 // Open-source instruction-tuned models occasionally wrap their JSON in
 // ```fences``` or a sentence of preamble even when told not to — pull
 // out the first {...} block and parse that instead of trusting the
@@ -64,6 +152,57 @@ function parseAIJson(text) {
   } catch {
     return null;
   }
+}
+
+// ── Verifiable Proof photo storage ──────────────────────────────────
+// Photo entries in proofItems/liveProofItems can be large (data-URI
+// images), and a site's KV record already carries draft+live copies of
+// both `html` and the proof map — inlining photo bytes there
+// multiplies that further and pushes toward KV's 25MB per-value
+// ceiling as a site accumulates edits. Instead, each photo's bytes
+// live in their own KV entry (`proof:<username>:<id>`), and the site
+// record only keeps a small `{ type:'photo', photoRef:id, label }`
+// pointer. Link-type proof entries are tiny (a URL + label) and stay
+// inline as before — only photos get split out.
+function proofBlobKey(username, id) {
+  return `proof:${username}:${id}`;
+}
+
+// Turns a pointer map ({ id: {type, photoRef|link, label} }, as stored
+// on the site record) into the full shape the client expects
+// ({ id: {type, photo|link, label} }) by reading each photo's bytes
+// back out of its own KV entry. Missing/expired blobs degrade to an
+// empty photo rather than throwing, so one bad entry can't break the
+// whole proof response.
+async function hydrateProofItems(env, username, pointerMap) {
+  const entries = Object.entries(pointerMap || {});
+  const hydrated = await Promise.all(entries.map(async ([id, entry]) => {
+    if (entry && entry.type === 'photo') {
+      const photo = await env.SITES.get(proofBlobKey(username, entry.photoRef || id));
+      return [id, { type: 'photo', photo: photo || '', label: entry.label || '' }];
+    }
+    return [id, entry];
+  }));
+  return Object.fromEntries(hydrated);
+}
+
+// Deletes any proof:<username>:* blob that isn't referenced by any of
+// the pointer maps passed in (typically the freshly-published draft
+// and whatever ends up as the live proof map), so editing/republishing
+// doesn't leave orphaned photo blobs sitting in KV forever. Passing no
+// maps (or maps with no photo entries) reclaims every blob for that
+// username — used when a site is hard-deleted.
+async function cleanupOrphanedProofBlobs(env, username, ...pointerMaps) {
+  const keep = new Set();
+  for (const map of pointerMaps) {
+    for (const entry of Object.values(map || {})) {
+      if (entry && entry.type === 'photo' && entry.photoRef) keep.add(proofBlobKey(username, entry.photoRef));
+    }
+  }
+  const prefix = `proof:${username}:`;
+  const list = await env.SITES.list({ prefix });
+  const stale = list.keys.map(k => k.name).filter(name => !keep.has(name));
+  await Promise.all(stale.map(name => env.SITES.delete(name)));
 }
 
 function notFoundPage(username) {
@@ -460,16 +599,18 @@ async function serveSite(username, env, pathAndQuery) {
   // don't get an address there without paying, since there's no
   // portfolio underneath it.)
   const liveHtml = record.liveHtml || record.html;
-  const lockActive = isPaidActive(record) && !!record.passwordLockHash;
+  const lockActive = isPaidActive(record) && !!(record.passwordLock && record.passwordLock.hash);
 
   // Bake whether the Recruiter Password Lock currently applies into
   // the served page, computed fresh on every request rather than at
   // publish time — this is what lets the lock silently stop
   // enforcing the moment a Support period lapses (or start enforcing
   // again on renewal) without the owner needing to republish. The
-  // editor's template reads this global alongside the stored hash to
-  // decide whether to show the lock overlay over the Verifiable
-  // Proof section.
+  // editor's template reads this global to decide whether to show the
+  // lock overlay over the Verifiable Proof section. Unlike before,
+  // the salted hash itself is never included here — a guess is
+  // checked by calling /api/lock/verify instead, so nothing worth
+  // brute-forcing ever sits in this page's source.
   const withLockFlag = liveHtml.includes('</head>')
     ? liveHtml.replace('</head>', `<script>window.__PW_LOCK_ACTIVE__=${lockActive};</script></head>`)
     : `<script>window.__PW_LOCK_ACTIVE__=${lockActive};</script>` + liveHtml;
@@ -819,7 +960,7 @@ ${resumeText}
         requestedCurrency: record.requestedCurrency || 'PHP',
         redirectUrl: record.redirectUrl || '',
         buyerReferenceNumber: record.buyerReferenceNumber || '',
-        hasPasswordLock: !!record.passwordLockHash
+        hasPasswordLock: !!(record.passwordLock && record.passwordLock.hash)
       };
     }));
     return json({ ok: true, sites: sites.filter(Boolean) }, 200, { 'cache-control': 'no-store' });
@@ -950,6 +1091,116 @@ ${resumeText}
     return json({ ok: true, sites: filtered }, 200, { 'cache-control': 'no-store' });
   }
 
+  // Serves this site's Verifiable Proof content (photos/links/labels
+  // that used to sit directly in the public HTML — see collectProof
+  // in editor.js). Two paths:
+  //   - No lock active on the site: proof is returned immediately,
+  //     no guess needed — matches the pre-lock-feature behavior where
+  //     proof was always just part of the public page.
+  //   - Lock active: a `guess` is required and checked server-side
+  //     against the salted PBKDF2 hash, rate-limited the same way the
+  //     old /api/lock/verify was, before any proof content is
+  //     returned.
+  if (url.pathname === '/api/site/proof' && request.method === 'POST') {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ ok: false, error: 'Invalid JSON body.' }, 400);
+    }
+
+    const username = String(body.username || '').toLowerCase().trim();
+    if (!USERNAME_RE.test(username)) {
+      return json({ ok: false, error: 'Missing username.' }, 400);
+    }
+
+    const record = await env.SITES.get(`site:${username}`, 'json');
+    if (!record || record.status !== 'live') {
+      return json({ ok: false, error: 'Not found.' }, 404);
+    }
+    const liveProofPointers = record.liveProofItems || {};
+    const lockActive = isPaidActive(record) && !!(record.passwordLock && record.passwordLock.hash);
+
+    if (!lockActive) {
+      const liveProof = await hydrateProofItems(env, username, liveProofPointers);
+      return json({ ok: true, proof: liveProof }, 200, { 'cache-control': 'public, max-age=10, must-revalidate' });
+    }
+
+    const guess = typeof body.guess === 'string' ? body.guess.slice(0, 200) : '';
+    if (!guess) {
+      return json({ ok: false, error: 'Locked.' }, 401);
+    }
+
+    const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+
+    // Rate-limit BEFORE doing the (deliberately slow) hash work, so a
+    // flood of guesses can't be used to burn CPU/time even when every
+    // guess is wrong. Site-wide ceiling checked first since it's the
+    // one attacker can't route around by spoofing/rotating IPs alone.
+    const siteOk = await checkAndBumpRateLimit(env, `lockrl:site:${username}`, LOCK_MAX_ATTEMPTS_PER_SITE, LOCK_SITE_WINDOW_SECONDS);
+    if (!siteOk) {
+      return json({ ok: false, error: 'Too many attempts on this portfolio. Try again later.' }, 429);
+    }
+    const ipOk = await checkAndBumpRateLimit(env, `lockrl:ip:${ip}:${username}`, LOCK_MAX_ATTEMPTS_PER_IP, LOCK_IP_WINDOW_SECONDS);
+    if (!ipOk) {
+      return json({ ok: false, error: 'Too many attempts. Try again in a while.' }, 429);
+    }
+
+    const { salt, hash, iter } = record.passwordLock;
+    const guessHash = await pbkdf2Hash(guess, salt, iter || PBKDF2_ITERATIONS);
+    const correct = safeEqual(guessHash, hash);
+    if (!correct) {
+      return json({ ok: false, error: 'Incorrect key.' }, 401);
+    }
+    const liveProof = await hydrateProofItems(env, username, liveProofPointers);
+    return json({ ok: true, proof: liveProof }, 200, { 'cache-control': 'no-store' });
+  }
+
+  // Kept as a thin wrapper around /api/site/proof for a pass/fail
+  // check with no proof content in the response — some callers just
+  // want to know "was that guess right" without also fetching every
+  // proof item (e.g. re-verifying to keep a session alive).
+  if (url.pathname === '/api/lock/verify' && request.method === 'POST') {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ ok: false, error: 'Invalid JSON body.' }, 400);
+    }
+
+    const username = String(body.username || '').toLowerCase().trim();
+    const guess = typeof body.guess === 'string' ? body.guess.slice(0, 200) : '';
+    if (!USERNAME_RE.test(username) || !guess) {
+      return json({ ok: false, error: 'Missing username or key.' }, 400);
+    }
+
+    const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+
+    const siteOk = await checkAndBumpRateLimit(env, `lockrl:site:${username}`, LOCK_MAX_ATTEMPTS_PER_SITE, LOCK_SITE_WINDOW_SECONDS);
+    if (!siteOk) {
+      return json({ ok: false, error: 'Too many attempts on this portfolio. Try again later.' }, 429);
+    }
+    const ipOk = await checkAndBumpRateLimit(env, `lockrl:ip:${ip}:${username}`, LOCK_MAX_ATTEMPTS_PER_IP, LOCK_IP_WINDOW_SECONDS);
+    if (!ipOk) {
+      return json({ ok: false, error: 'Too many attempts. Try again in a while.' }, 429);
+    }
+
+    const record = await env.SITES.get(`site:${username}`, 'json');
+    const lockActive = record && isPaidActive(record) && record.passwordLock && record.passwordLock.hash;
+    if (!lockActive) {
+      return json({ ok: false, error: 'No active lock to verify.' }, 404);
+    }
+
+    const { salt, hash, iter } = record.passwordLock;
+    const guessHash = await pbkdf2Hash(guess, salt, iter || PBKDF2_ITERATIONS);
+    const correct = safeEqual(guessHash, hash);
+
+    return json({ ok: correct });
+  }
+
+    return json({ ok: correct });
+  }
+
   if (url.pathname === '/api/publish' && request.method === 'POST') {
     let body;
     try {
@@ -961,16 +1212,53 @@ ${resumeText}
     const username = String(body.username || '').toLowerCase().trim();
     const html = String(body.html || '');
     const buyerReferenceNumber = String(body.buyerReferenceNumber || '').trim().slice(0, 120);
-    // A SHA-256 hex digest computed client-side (Web Crypto) from the
-    // owner's chosen Recruiter Password Lock key — the plaintext key
-    // itself is never sent to or stored on the server, only this hash.
-    // `null`/omitted clears the lock; a 64-char hex string sets it.
-    // Whether it actually *enforces* on the public page is decided at
-    // request time in serveSite (see lockActive there), not here.
-    const passwordLockHashRaw = body.passwordLockHash;
-    const passwordLockHash = (typeof passwordLockHashRaw === 'string' && /^[a-f0-9]{64}$/i.test(passwordLockHashRaw))
-      ? passwordLockHashRaw.toLowerCase()
-      : null;
+    // Real Verifiable Proof content (photos/links/labels), collected
+    // client-side by collectProof and kept OUT of `html` entirely —
+    // see the big comment on collectProof in editor.js. Stored here
+    // as its own field so it can be served separately, gated by the
+    // Recruiter Password Lock, instead of always sitting in the
+    // public page's source. Validated defensively since it's
+    // attacker-controlled input just like `html` is.
+    // proofItems holds only small pointers ({type, photoRef|link, label})
+    // — the actual photo bytes are staged in photoBlobsToWrite and land
+    // in their own `proof:<username>:<id>` KV entries below, so they're
+    // never inlined into (and don't multiply within) the site record.
+    let proofItems = {};
+    const photoBlobsToWrite = {};
+    if (body.proofItems && typeof body.proofItems === 'object' && !Array.isArray(body.proofItems)) {
+      for (const [id, entry] of Object.entries(body.proofItems)) {
+        if (typeof id !== 'string' || id.length > 40 || !/^v[0-9]+$/.test(id)) continue;
+        if (!entry || typeof entry !== 'object') continue;
+        const label = typeof entry.label === 'string' ? entry.label.slice(0, 300) : '';
+        if (entry.type === 'photo' && typeof entry.photo === 'string' && entry.photo.length <= 4_000_000) {
+          proofItems[id] = { type: 'photo', photoRef: id, label };
+          photoBlobsToWrite[id] = entry.photo;
+        } else if (entry.type === 'link' && typeof entry.link === 'string' && entry.link.length <= 2000) {
+          proofItems[id] = { type: 'link', link: entry.link, label };
+        }
+      }
+    }
+    // Each photo blob is its own KV value (well under the 25MB/value
+    // ceiling on its own thanks to the 4MB per-photo cap above); this
+    // just bounds how much one publish call can push at once.
+    const totalPhotoBytes = Object.values(photoBlobsToWrite).reduce((sum, p) => sum + p.length, 0);
+    if (totalPhotoBytes > 20_000_000) {
+      return json({ ok: false, error: 'Too many/too large proof photos in one publish (20MB total).' }, 400);
+    }
+    // The owner's chosen Recruiter Password Lock key, in plaintext,
+    // sent over HTTPS and hashed here with a per-site salt and 120k
+    // rounds of PBKDF2-SHA256 — never stored or echoed back as
+    // plaintext, and never a raw/fast digest the client could leak
+    // via page source (see buildPasswordLock above). `''`/omitted
+    // clears the lock. Capped at 200 chars, generous for any
+    // realistic passphrase while keeping the hash call bounded.
+    // Whether the lock actually *enforces* on the public page is
+    // decided at request time in serveSite (see lockActive there),
+    // not here.
+    const passwordLockKeyRaw = typeof body.passwordLockKey === 'string' ? body.passwordLockKey.slice(0, 200) : '';
+    const clearingLock = ('passwordLockKey' in body) && !passwordLockKeyRaw;
+    const settingLock = ('passwordLockKey' in body) && !!passwordLockKeyRaw;
+    const newPasswordLock = settingLock ? await buildPasswordLock(passwordLockKeyRaw) : null;
     // Signed in: verified Google email ties this username to an
     // account, so it can be updated later from any device by signing
     // in again. Signed out: published anonymously — same as before,
@@ -1031,6 +1319,12 @@ ${resumeText}
     // so a site that had already been paid for came back from a
     // delete+republish as unpaid, showing the expired-plan page even
     // though it had a valid paidUntil before it was deleted.)
+    // Write new photo blobs first so the site record (put below) never
+    // ends up pointing at a photoRef that isn't in KV yet.
+    await Promise.all(Object.entries(photoBlobsToWrite).map(
+      ([id, data]) => env.SITES.put(proofBlobKey(username, id), data)
+    ));
+
     await env.SITES.put(`site:${username}`, JSON.stringify({
       ...existing,
       ownerEmail: ownerEmail || (existing ? existing.ownerEmail : null) || null,
@@ -1039,6 +1333,12 @@ ${resumeText}
       // is itself going straight to live (see wasAlreadyLive above) — in
       // that case this draft is that new approved snapshot.
       liveHtml: wasAlreadyLive ? html : ((existing && existing.liveHtml) || null),
+      proofItems,
+      // Same draft-vs-approved split as liveHtml — the *served*
+      // Verifiable Proof content only ever moves forward once this
+      // publish has actually gone live, so an unapproved edit can't
+      // leak new proof content early via /api/site/proof.
+      liveProofItems: wasAlreadyLive ? proofItems : ((existing && existing.liveProofItems) || {}),
       status: nextStatus,
       updatedAt: new Date().toISOString(),
       createdAt: (existing && existing.createdAt) || new Date().toISOString(),
@@ -1050,14 +1350,25 @@ ${resumeText}
       // against the QR payment before calling /api/admin/set-paid.
       // Never overwrites an existing one with a blank resubmission.
       buyerReferenceNumber: buyerReferenceNumber || (existing && existing.buyerReferenceNumber) || '',
-      // 'passwordLockHash' in body distinguishes "the editor explicitly
+      // 'passwordLockKey' in body distinguishes "the editor explicitly
       // sent an updated lock state this publish" from "this field
       // wasn't part of the payload at all" (e.g. an older editor
-      // build) — only the former should ever overwrite what's stored,
-      // including clearing it back to null.
-      passwordLockHash: ('passwordLockHash' in body) ? passwordLockHash : ((existing && existing.passwordLockHash) || null),
+      // build) — only the former should ever overwrite what's stored.
+      // Stores {salt, hash, iter} from buildPasswordLock, never the
+      // plaintext key. Old records may still carry the legacy
+      // `passwordLockHash` (raw SHA-256 hex) field from before this
+      // fix — those are treated as unset going forward (see
+      // lockActive/serveSite and /api/lock/verify below), so an owner
+      // just needs to re-enter their key once to upgrade to the new
+      // scheme; it's never silently trusted as-is.
+      passwordLock: clearingLock ? null : (newPasswordLock || (existing && existing.passwordLock) || null),
+      passwordLockHash: null, // legacy field, permanently retired
       ...(wasAlreadyLive ? { reviewedAt: new Date().toISOString(), reviewedBy: 'auto (already-approved update)' } : {})
     }));
+
+    // Reclaim any photo blobs from a previous publish that neither this
+    // new draft nor the resulting live proof map still reference.
+    await cleanupOrphanedProofBlobs(env, username, proofItems, wasAlreadyLive ? proofItems : ((existing && existing.liveProofItems) || {}));
 
     return json({ ok: true, pending: nextStatus === 'pending', status: nextStatus, url: `https://${username}.${APP_HOST}` });
   }
@@ -1212,10 +1523,18 @@ ${resumeText}
     const nextLiveHtml = nextStatus === 'live'
       ? (existing.html || existing.liveHtml || null)
       : (existing.liveHtml || null);
+    // Same draft-vs-approved promotion as liveHtml, so approving a
+    // site's first-ever submission actually makes its proof pointers
+    // servable via /api/site/proof (previously only /api/publish's own
+    // "already live, re-publish" path did this promotion).
+    const nextLiveProofItems = nextStatus === 'live'
+      ? (existing.proofItems || existing.liveProofItems || null)
+      : (existing.liveProofItems || null);
 
     await env.SITES.put(`site:${username}`, JSON.stringify({
       ...existing,
       liveHtml: nextLiveHtml,
+      liveProofItems: nextLiveProofItems,
       status: nextStatus,
       reviewedAt: new Date().toISOString(),
       reviewedBy: adminEmail,
@@ -1267,6 +1586,10 @@ ${resumeText}
     }));
 
     await env.SITES.delete(`site:${username}`);
+    // Nothing references this username's proof pointers anymore —
+    // reclaim every proof:<username>:* photo blob (empty maps below
+    // mean "keep nothing").
+    await cleanupOrphanedProofBlobs(env, username, {}, {});
     return json({ ok: true, freed: username });
   }
 

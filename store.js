@@ -820,10 +820,11 @@ class EditorStore {
         blocks: ensureVerifyShape(deepClone(defaultBlocks)),
         template: 'general',
         design: { ...PORTFOLIO_DEFAULT_DESIGN },
-        // SHA-256 hex digest of the owner's Recruiter Password Lock
-        // key (see openSupportModal/sha256Hex in editor.js) — never
-        // the plaintext key itself. null/absent = lock is off.
-        passwordLockHash: null
+        // Whether a Recruiter Password Lock key is currently set —
+        // the key itself (and its salted server-side hash) never
+        // lives in the browser; see openSupportModal in editor.js and
+        // /api/lock/verify in worker/src/index.js.
+        hasPasswordLock: false
       },
 
       resume: null // built just below, from the portfolio
