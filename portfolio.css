@@ -789,6 +789,14 @@
 .pf-slide-inner > [data-content-align="right"] .rb-skills-wrap {
   justify-content: flex-end;
 }
+.pf-sections > [data-content-align="center"] .pf-verify,
+.pf-slide-inner > [data-content-align="center"] .pf-verify {
+  justify-content: center;
+}
+.pf-sections > [data-content-align="right"] .pf-verify,
+.pf-slide-inner > [data-content-align="right"] .pf-verify {
+  justify-content: flex-end;
+}
 
 /* ── Blank space block ─────────────────────────────────────────
    A plain empty-height spacer for manually controlling gaps between

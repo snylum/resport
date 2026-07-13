@@ -814,7 +814,7 @@ body {
   align-items: center;
   text-align: center;
   gap: 1.5rem;
-  max-width: 560px;
+  max-width: 620px;
   padding: 2rem;
 }
 
@@ -838,7 +838,36 @@ body {
 .cta-links a { color: var(--color-accent); text-decoration: none; }
 .cta-links a:hover { text-decoration: underline; }
 
-.cta-copy { font-size: 0.72rem; color: rgba(255,255,255,0.3); margin-top: 1rem; }
+.cta-honesty {
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 1.1rem 1.35rem;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
+  background: rgba(255,255,255,0.04);
+  text-align: left;
+}
+
+.cta-honesty-label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  margin-bottom: 0.5rem;
+}
+
+.cta-honesty p {
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.62);
+  margin: 0;
+}
+
+.cta-honesty p + p { margin-top: 0.6rem; }
+
+.cta-copy { font-size: 0.72rem; color: rgba(255,255,255,0.3); margin-top: 0.25rem; }
 
 /* ── Page load transition ────────────────────────────────── */
 #wrapper {

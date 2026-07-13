@@ -293,7 +293,7 @@
             <a href="editor.html" class="btn btn-primary btn-lg">Show yours</a>
             <button class="btn btn-ghost btn-lg" onclick="scrollToSlide(1)">See how →</button>
           </div>
-          <span class="user-count-tag">1,420 people have already proven theirs.</span>
+          <span class="user-count-tag"><span id="visitCount">—</span> visitors and counting.</span>
         </div>
       </header>
     </section>
@@ -521,15 +521,19 @@
     <section class="panel panel-cta" id="slide-5">
       <div class="cta-inner">
         <p class="eyebrow" style="color:var(--color-accent)">You're one link away</p>
-        <h2 class="cta-title">Ready to back up<br>your statements?</h2>
-        <p class="cta-sub">Your work is your best proof. Make it visible.</p>
+        <h2 class="cta-title">Ready to back up your statements?</h2>
+        <p class="cta-sub">Stop telling people what you've done. Show them, with a link.</p>
         <a href="editor.html" class="btn btn-gradient cta-btn">Open your workspace — it's free →</a>
         <div class="cta-links">
           <a href="showcase.html">Browse Showcase</a>
           <span>·</span>
           <a href="editor.html">Open Editor</a>
         </div>
-        <p class="cta-copy" style="max-width:520px;margin:1.25rem auto 0.5rem;opacity:0.75;font-size:0.8rem;line-height:1.5;">Built solo with a lot of AI assistance, run on Cloudflare's free tier, and offered as-is — no guaranteed uptime, no support line, and no roadmap of new features to expect. If something breaks, it may just stay broken. Donations aren't payment for a service; they help cover the one real recurring cost (the domain) and are genuinely appreciated either way.</p>
+        <div class="cta-honesty">
+          <span class="cta-honesty-label">The fine print, honestly</span>
+          <p>Built solo with a lot of AI assistance and run on Cloudflare's free tier. It's offered as-is: no guaranteed uptime, no support line, no roadmap. If something breaks, it may stay broken for a while.</p>
+          <p>Donations aren't payment for a service — they just help cover the one recurring cost (the domain), and they're genuinely appreciated either way.</p>
+        </div>
         <p class="cta-copy">© 2026 proves.work · Built with ❤️</p>
       </div>
     </section>

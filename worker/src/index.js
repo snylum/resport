@@ -1370,5 +1370,24 @@ ${resumeText}
     return json({ ok: true });
   }
 
+  // ── Site-wide visitor counter ───────────────────────────────────
+  // A single KV key holds a running total. Every real page load hits
+  // this once (see index.html), we bump it by 1 and hand back the new
+  // total — no per-visitor dedup, so it's a "page views" counter, not
+  // a unique-visitor counter. KV writes aren't atomic increments, but
+  // traffic on this marketing page is far too low for the occasional
+  // lost increment on a simultaneous read-modify-write to matter.
+  if (url.pathname === '/api/visits' && request.method === 'POST') {
+    const current = parseInt((await env.SITES.get('meta:visit-count')) || '0', 10) || 0;
+    const next = current + 1;
+    await env.SITES.put('meta:visit-count', String(next));
+    return json({ ok: true, count: next });
+  }
+
+  if (url.pathname === '/api/visits' && request.method === 'GET') {
+    const current = parseInt((await env.SITES.get('meta:visit-count')) || '0', 10) || 0;
+    return json({ ok: true, count: current });
+  }
+
   return json({ ok: false, error: 'Unknown API route.' }, 404);
 }

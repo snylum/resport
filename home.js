@@ -113,3 +113,28 @@ window.addEventListener('load', () => {
     updateDots(0);
   }, 100);
 });
+
+/* ── Live visitor counter ────────────────────────────────────
+   Registers this load as a visit (POST bumps the shared KV total by
+   one) and prints the number back into the hero. Falls back to just
+   reading the current count if the bump fails, and hides the whole
+   line if neither works rather than showing a stale/fake number. */
+(function initVisitCounter() {
+  const el = document.getElementById('visitCount');
+  if (!el) return;
+
+  fetch('/api/visits', { method: 'POST' })
+    .then(res => res.ok ? res.json() : Promise.reject())
+    .then(data => {
+      el.textContent = data.count.toLocaleString();
+    })
+    .catch(() => {
+      fetch('/api/visits')
+        .then(res => res.ok ? res.json() : Promise.reject())
+        .then(data => { el.textContent = data.count.toLocaleString(); })
+        .catch(() => {
+          const tag = el.closest('.user-count-tag');
+          if (tag) tag.style.display = 'none';
+        });
+    });
+})();
