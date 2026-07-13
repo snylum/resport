@@ -3502,10 +3502,33 @@ async function downloadResumeAsPDF() {
       </div>`;
 
     // Render off-screen (not display:none — html2canvas needs real layout).
+    // NOTE: a huge negative offset like -99999px is unreliable with
+    // html2canvas — it can miscalculate the capture region and produce a
+    // blank/mis-sized canvas, which is also why pagination silently failed
+    // (there was nothing real to paginate). Keep it just barely off-screen
+    // and hide it visually instead.
     clone.style.position = 'fixed';
     clone.style.top = '0';
-    clone.style.left = '-99999px';
+    clone.style.left = '0';
+    clone.style.zIndex = '-1';
+    clone.style.visibility = 'hidden';
+    clone.style.pointerEvents = 'none';
     document.body.appendChild(clone);
+
+    // Make sure web fonts and any images (profile photo, etc.) have
+    // actually finished loading before html2canvas measures/paints the
+    // clone — otherwise the captured canvas can come out blank, wrongly
+    // sized, or too short to trigger a page break.
+    const imgEls = Array.from(clone.querySelectorAll('img'));
+    await Promise.all([
+      document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve(),
+      ...imgEls.map(img => img.complete ? Promise.resolve() : new Promise(res => {
+        img.addEventListener('load', res, { once: true });
+        img.addEventListener('error', res, { once: true });
+      }))
+    ]);
+    // One extra frame so layout/paint has settled before capture.
+    await new Promise(res => requestAnimationFrame(() => requestAnimationFrame(res)));
 
     const filename = `${fullName.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'resume'}.pdf`;
 
@@ -3514,7 +3537,7 @@ async function downloadResumeAsPDF() {
         margin: 0,
         filename,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
+        html2canvas: { scale: 2, useCORS: true, windowWidth: clone.scrollWidth, windowHeight: clone.scrollHeight },
         jsPDF: { unit: 'in', format: PAGE_SIZES_IN[design.pageSize] || PAGE_SIZES_IN.letter, orientation: 'portrait' },
         pagebreak: { mode: ['css', 'legacy'] }
       })
