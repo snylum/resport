@@ -20,7 +20,7 @@
 </head>
 <body>
   <nav class="site-nav">
-    <div class="nav-logo">proves.work <span style="opacity:.55;font-weight:600;">/ admin</span></div>
+    <div class="nav-logo"><a href="index.html" style="color:inherit;text-decoration:none;">proves.work</a> <span style="opacity:.55;font-weight:600;">/ admin</span></div>
     <ul class="nav-links">
       <li id="adminAccountSlot"></li>
     </ul>
@@ -46,6 +46,7 @@
       <div class="admin-view-tabs">
         <button class="admin-view-tab active" data-view="overview" type="button">📊 Overview</button>
         <button class="admin-view-tab" data-view="sites" type="button">🗂️ Sites</button>
+        <button class="admin-view-tab" data-view="messages" type="button">📨 Messages</button>
         <button class="admin-view-tab" data-view="audit" type="button">🧾 Audit log</button>
       </div>
 
@@ -74,13 +75,22 @@
 
       <div id="adminSitesView" class="admin-view hidden">
         <div class="admin-tabs">
-          <button class="admin-tab active" data-filter="pending" type="button">Pending review</button>
+          <button class="admin-tab" data-filter="pending" type="button">Pending review</button>
           <button class="admin-tab" data-filter="live" type="button">Live</button>
           <button class="admin-tab" data-filter="rejected" type="button">Rejected</button>
           <button class="admin-tab" data-filter="deleted" type="button">Deleted / lost</button>
-          <button class="admin-tab" data-filter="all" type="button">All</button>
+          <button class="admin-tab active" data-filter="all" type="button">All</button>
         </div>
         <div id="adminSitesList" class="admin-sites-list"></div>
+      </div>
+
+      <div id="adminMessagesView" class="admin-view hidden">
+        <p class="modal-sub" style="margin-top:0;">
+          Messages from the site's Contact form. These only show up here when email delivery hasn't gone out yet
+          (no <code>RESEND_API_KEY</code> configured, or a send failed) — otherwise they're delivered straight to
+          your inbox and never stored. Mark one as handled to clear it from this queue.
+        </p>
+        <div id="adminMessagesList" class="admin-sites-list"></div>
       </div>
 
       <div id="adminAuditView" class="admin-view hidden">

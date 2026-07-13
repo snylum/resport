@@ -120,6 +120,18 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
 }
 .btn-ghost:hover { background: var(--color-surface-alt); box-shadow: var(--shadow-lg); transform: translate(-2px,-2px); }
 
+/* Ghost buttons placed on dark panels (e.g. the "See it in action" button
+   on the dark features section) can't use --color-surface-alt on hover —
+   that var resolves to a light color meant for light backgrounds, which
+   combined with the white text these buttons use inline makes the label
+   disappear (white text on a near-white hover background). Give them a
+   translucent white hover fill instead so the white text stays readable. */
+.btn-ghost-on-dark:hover {
+  background: rgba(255,255,255,0.14) !important;
+  border-color: rgba(255,255,255,0.5) !important;
+  box-shadow: none;
+}
+
 .btn-danger {
   background: #FDEAEA;
   color: #B3261E;

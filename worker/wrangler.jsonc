@@ -30,4 +30,12 @@
   "ai": {
     "binding": "AI"
   }
+
+  // The public Contact form (POST /api/contact) sends via Resend
+  // (https://resend.com). Set the API key as a secret — never commit
+  // it here — with:
+  //   npx wrangler secret put RESEND_API_KEY
+  // Until that secret is set, contact messages are still safely kept
+  // (in the SITES KV namespace, under the "contact:" prefix) rather
+  // than being dropped, but no email is actually sent.
 }

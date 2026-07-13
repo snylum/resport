@@ -260,9 +260,41 @@
       <li><a href="showcase.html">Showcase</a></li>
       <li><a href="#" onclick="scrollToSlide(4);return false;">Pricing</a></li>
       <li><a href="manage.html">Manage</a></li>
+      <li><a href="#" id="navContactLink" onclick="openContactModal();return false;">Contact</a></li>
       <li><a href="editor.html" class="btn btn-primary btn-sm">Open Editor →</a></li>
     </ul>
   </nav>
+
+  <!-- CONTACT MODAL -->
+  <div class="domain-modal-overlay hidden" id="contactModalOverlay" style="z-index:1002;">
+    <div class="domain-modal" id="contactModalContent">
+      <button type="button" class="close-x" onclick="closeContactModal()" aria-label="Close">&times;</button>
+      <h3>Get in touch</h3>
+      <p class="sub">Questions, feedback, bug reports — send a message and we'll get back to you.</p>
+      <form id="contactForm">
+        <label for="contactName" style="display:block;font-size:0.8rem;font-weight:600;margin-bottom:0.25rem;">Name</label>
+        <input type="text" id="contactName" placeholder="Your name" maxlength="120" />
+
+        <label for="contactEmail" style="display:block;font-size:0.8rem;font-weight:600;margin-bottom:0.25rem;">Email <span style="opacity:.6;font-weight:400;">(optional, so we can reply)</span></label>
+        <input type="email" id="contactEmail" placeholder="you@example.com" maxlength="200" />
+
+        <!-- Honeypot — hidden from real visitors via CSS, skipped by
+             keyboard/screen-reader nav. Bots that auto-fill every field
+             trip this; real people never see or touch it. -->
+        <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;" aria-hidden="true">
+          <label for="contactCompany">Company</label>
+          <input type="text" id="contactCompany" name="company" tabindex="-1" autocomplete="off" />
+        </div>
+
+        <label for="contactMessage" style="display:block;font-size:0.8rem;font-weight:600;margin-bottom:0.25rem;">Message</label>
+        <textarea id="contactMessage" rows="5" maxlength="5000" placeholder="What's on your mind?" required
+          style="width:100%;padding:0.65rem 0.85rem;border:2px solid var(--color-border,#000);font-size:1rem;font-family:inherit;margin-bottom:0.75rem;box-sizing:border-box;resize:vertical;"></textarea>
+
+        <button type="submit" class="btn btn-gradient" id="contactSubmitBtn" style="width:100%;">Send message</button>
+        <p class="status-line" id="contactStatus" aria-live="polite" style="margin-top:0.6rem;"></p>
+      </form>
+    </div>
+  </div>
 
   <!-- SLIDE DOTS (right side) -->
   <nav class="slide-dots" aria-label="Page sections">
@@ -334,7 +366,7 @@
         <p class="eyebrow" style="color:var(--color-accent)">What you get</p>
         <h2>Everything a<br>creator needs.</h2>
         <p class="intro-sub" style="color:rgba(255,255,255,0.6)">Built for modern professionals who want to display verifiable portfolios.</p>
-        <button class="btn btn-ghost btn-sm" onclick="scrollToSlide(3)" style="border-color:rgba(255,255,255,0.3);color:#fff">See it in action →</button>
+        <button class="btn btn-ghost btn-sm btn-ghost-on-dark" onclick="scrollToSlide(3)" style="border-color:rgba(255,255,255,0.3);color:#fff">See it in action →</button>
       </div>
       <div class="panel-feature-grid">
         <div class="feat">
@@ -374,8 +406,8 @@
     <section class="panel panel-split" id="slide-3">
       <div class="split-left">
         <p class="eyebrow">See it in action</p>
-        <h2>Build your<br>profile visually.</h2>
-        <p class="intro-sub">Drag blocks around, edit inline, preview instantly — no code needed.</p>
+        <h2>Build your<br>résumé &amp; portfolio.</h2>
+        <p class="intro-sub">Add and reorder real sections — summary, experience, education, skills, photos — edit them inline, and preview both your résumé and your live portfolio site at once.</p>
         <button class="btn btn-gradient" onclick="scrollToSlide(4)">See pricing →</button>
       </div>
       <div class="split-right">
@@ -395,20 +427,20 @@
               <div class="epd-sidebar">
                 <div class="epd-sidebar-label">Blocks</div>
                 <div class="epd-block epd-block-active">
-                  <span class="epd-icon">📌</span>
-                  <span>Profile Header</span>
+                  <span class="epd-icon">📝</span>
+                  <span>Summary</span>
                 </div>
                 <div class="epd-block">
-                  <span class="epd-icon">🎓</span>
+                  <span class="epd-icon">💼</span>
                   <span>Experience</span>
                 </div>
                 <div class="epd-block">
-                  <span class="epd-icon">⚡</span>
-                  <span>Portfolio Grid</span>
+                  <span class="epd-icon">🎓</span>
+                  <span>Education</span>
                 </div>
                 <div class="epd-block">
-                  <span class="epd-icon">📄</span>
-                  <span>Résumé PDF</span>
+                  <span class="epd-icon">🖼️</span>
+                  <span>Photo Gallery</span>
                 </div>
               </div>
               <div class="epd-canvas">
@@ -651,7 +683,8 @@
       justify-content: center;
       margin: 0.25rem 0 1.5rem;
     }
-    .domain-modal input[type="text"] {
+    .domain-modal input[type="text"],
+    .domain-modal input[type="email"] {
       width: 100%; padding: 0.65rem 0.85rem; border: 2px solid var(--color-border, #000);
       font-size: 1rem; font-family: inherit; margin-bottom: 0.5rem; box-sizing: border-box;
     }
@@ -966,6 +999,67 @@
     document.getElementById('domainClaimOpenBtn').addEventListener('click', () => {
       overlay.classList.remove('hidden');
       renderClaimStep();
+    });
+
+    // ── Contact form ──────────────────────────────────────────────
+    // Posts to /api/contact on the Worker; the destination address
+    // and any send credentials live only server-side, never here.
+    const contactOverlay = document.getElementById('contactModalOverlay');
+    const contactForm = document.getElementById('contactForm');
+    const contactStatus = document.getElementById('contactStatus');
+    const contactSubmitBtn = document.getElementById('contactSubmitBtn');
+
+    function openContactModal() {
+      contactOverlay.classList.remove('hidden');
+      contactStatus.textContent = '';
+      contactStatus.className = 'status-line';
+      document.getElementById('contactMessage').focus();
+    }
+    function closeContactModal() {
+      contactOverlay.classList.add('hidden');
+    }
+    contactOverlay.addEventListener('click', (e) => { if (e.target === contactOverlay) closeContactModal(); });
+    window.openContactModal = openContactModal;
+    window.closeContactModal = closeContactModal;
+
+    contactForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const message = document.getElementById('contactMessage').value.trim();
+      if (!message) return;
+
+      contactSubmitBtn.disabled = true;
+      contactSubmitBtn.textContent = 'Sending…';
+      contactStatus.textContent = '';
+      contactStatus.className = 'status-line';
+
+      try {
+        const res = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: document.getElementById('contactName').value.trim(),
+            email: document.getElementById('contactEmail').value.trim(),
+            message,
+            company: document.getElementById('contactCompany').value // honeypot
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.ok) {
+          contactStatus.textContent = "Sent — thanks! We'll get back to you soon.";
+          contactStatus.className = 'status-line ok';
+          contactForm.reset();
+          setTimeout(closeContactModal, 1600);
+        } else {
+          contactStatus.textContent = data.error || 'Could not send. Please try again.';
+          contactStatus.className = 'status-line warn';
+        }
+      } catch {
+        contactStatus.textContent = 'Network error — please try again.';
+        contactStatus.className = 'status-line warn';
+      } finally {
+        contactSubmitBtn.disabled = false;
+        contactSubmitBtn.textContent = 'Send message';
+      }
     });
   </script>
 </body>

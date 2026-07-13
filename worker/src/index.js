@@ -640,6 +640,13 @@ const GOOGLE_CLIENT_ID = '41010460965-oti1phnr8kdbij312qijrg82bc2japj7.apps.goog
 // dashboard. Add more addresses here if more admins are needed.
 const ADMIN_EMAILS = new Set(['snylumagbas@gmail.com']);
 
+// Destination for the public "Contact" form on the marketing site.
+// Lives only here, server-side — the client only ever calls
+// POST /api/contact and never sees this address.
+const CONTACT_TO_EMAIL = 'snylumagbas@gmail.com';
+const CONTACT_MAX_PER_IP = 5;
+const CONTACT_IP_WINDOW_SECONDS = 60 * 60; // 5 messages / hour / IP
+
 // Verifies a Google ID token (JWT) server-side via Google's tokeninfo
 // endpoint — this is the real trust boundary; the editor's own decode
 // of the JWT is only for display and must never be trusted on its own.
@@ -701,8 +708,78 @@ async function handleApi(request, env, url) {
     return json({ available: false, ownedByYou });
   }
 
-  // ── AI: résumé check ───────────────────────────────────────────
-  // Runs an open-source model (Llama 3.1 8B) on Cloudflare Workers AI —
+  // ── Public "Contact" form (marketing site) ──────────────────────
+  // Delivers straight to CONTACT_TO_EMAIL via Resend. That address
+  // (and the API key) live only in this Worker — the client only ever
+  // POSTs {name, email, message} to this route and gets back {ok},
+  // never the destination address itself.
+  if (url.pathname === '/api/contact' && request.method === 'POST') {
+    let body;
+    try { body = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON body.' }, 400); }
+
+    // Honeypot field: real visitors never fill in a field that's
+    // hidden via CSS, so anything here means it's a bot. Pretend
+    // success so the bot doesn't learn to work around it.
+    if (body.company) return json({ ok: true });
+
+    const name = String(body.name || '').trim().slice(0, 120);
+    const fromEmail = String(body.email || '').trim().slice(0, 200);
+    const message = String(body.message || '').trim().slice(0, 5000);
+    if (!message) return json({ ok: false, error: 'Message is required.' }, 400);
+    if (fromEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromEmail)) {
+      return json({ ok: false, error: 'That email address looks invalid.' }, 400);
+    }
+
+    const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+    const rateOk = await checkAndBumpRateLimit(env, `contactrl:ip:${ip}`, CONTACT_MAX_PER_IP, CONTACT_IP_WINDOW_SECONDS);
+    if (!rateOk) {
+      return json({ ok: false, error: 'Too many messages sent. Please try again later.' }, 429);
+    }
+
+    const record = {
+      name: name || '(no name given)',
+      email: fromEmail || '(no email given)',
+      message,
+      ip,
+      createdAt: new Date().toISOString()
+    };
+
+    let delivered = false;
+    if (env.RESEND_API_KEY) {
+      try {
+        const sendRes = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: 'proves.work contact form <contact@proves.work>',
+            to: [CONTACT_TO_EMAIL],
+            reply_to: fromEmail || undefined,
+            subject: `New contact form message from ${name || 'a visitor'}`,
+            text: `From: ${name || '(no name given)'} <${fromEmail || 'no email given'}>\nIP: ${ip}\n\n${message}`
+          })
+        });
+        delivered = sendRes.ok;
+      } catch {
+        delivered = false;
+      }
+    }
+
+    // Always keep a copy in KV — either as the only record (if no
+    // RESEND_API_KEY is configured yet) or as a safety net if the send
+    // above failed, so a message is never silently lost.
+    if (!delivered) {
+      await env.SITES.put(`contact:${Date.now()}:${crypto.randomUUID()}`, JSON.stringify(record), {
+        expirationTtl: 60 * 60 * 24 * 180 // 180 days
+      });
+    }
+
+    return json({ ok: true });
+  }
+
+
   // free tier, no external API key. Résumé text is sent for this one
   // request only; nothing is stored server-side.
   if (url.pathname === '/api/ai/resume-check' && request.method === 'POST') {
@@ -1604,6 +1681,40 @@ ${resumeText}
     const entries = await Promise.all(list.keys.map(k => env.SITES.get(k.name, 'json')));
     const cleaned = entries.filter(Boolean).sort((a, b) => new Date(b.deletedAt) - new Date(a.deletedAt));
     return json({ ok: true, entries: cleaned, truncated: list.list_complete === false });
+  }
+
+  // Lets an admin read contact-form messages that landed in the KV
+  // fallback — either because RESEND_API_KEY isn't set yet, or a send
+  // attempt failed — so nothing submitted through /api/contact is ever
+  // silently lost even without email working.
+  if (url.pathname === '/api/admin/contact-messages' && request.method === 'POST') {
+    let body;
+    try { body = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON body.' }, 400); }
+    const adminEmail = await verifyAdminCredential(body.googleCredential);
+    if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
+
+    const list = await env.SITES.list({ prefix: 'contact:', limit: 200 });
+    const entries = await Promise.all(list.keys.map(async k => {
+      const value = await env.SITES.get(k.name, 'json');
+      return value ? { key: k.name, ...value } : null;
+    }));
+    const cleaned = entries.filter(Boolean).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return json({ ok: true, entries: cleaned, truncated: list.list_complete === false });
+  }
+
+  // Lets an admin clear a contact message out of the KV fallback queue
+  // once they've read/handled it (e.g. replied manually), so the queue
+  // doesn't grow forever.
+  if (url.pathname === '/api/admin/contact-messages/delete' && request.method === 'POST') {
+    let body;
+    try { body = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON body.' }, 400); }
+    const adminEmail = await verifyAdminCredential(body.googleCredential);
+    if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
+
+    const key = String(body.key || '');
+    if (!key.startsWith('contact:')) return json({ ok: false, error: 'Invalid key.' }, 400);
+    await env.SITES.delete(key);
+    return json({ ok: true });
   }
 
   // Lets an admin manually attach/replace an external reference link on

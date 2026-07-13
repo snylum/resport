@@ -30,6 +30,8 @@ const el = {
   adminSitesView: document.getElementById('adminSitesView'),
   adminAuditView: document.getElementById('adminAuditView'),
   adminAuditList: document.getElementById('adminAuditList'),
+  adminMessagesView: document.getElementById('adminMessagesView'),
+  adminMessagesList: document.getElementById('adminMessagesList'),
   adminStatsGrid: document.getElementById('adminStatsGrid'),
   adminRevenueChart: document.getElementById('adminRevenueChart'),
   adminStatusChart: document.getElementById('adminStatusChart'),
@@ -123,7 +125,7 @@ el.modalCloseBtn.addEventListener('click', closeModal);
 el.modalOverlay.addEventListener('click', (e) => { if (e.target === el.modalOverlay) closeModal(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
-let activeFilter = 'pending';
+let activeFilter = 'all';
 let activeView = 'overview';
 let allSites = [];
 const CURRENCY = '₱';
@@ -203,8 +205,10 @@ document.querySelectorAll('.admin-view-tab').forEach(tab => {
     activeView = tab.dataset.view;
     el.adminOverviewView.classList.toggle('hidden', activeView !== 'overview');
     el.adminSitesView.classList.toggle('hidden', activeView !== 'sites');
+    el.adminMessagesView.classList.toggle('hidden', activeView !== 'messages');
     el.adminAuditView.classList.toggle('hidden', activeView !== 'audit');
     if (activeView === 'audit') loadAuditLog();
+    if (activeView === 'messages') loadContactMessages();
   });
 });
 
@@ -457,6 +461,67 @@ function renderAuditLog(entries) {
     </div>
   `;
   }).join('');
+}
+
+async function loadContactMessages() {
+  const account = getSavedAdminAccount();
+  el.adminMessagesList.innerHTML = `<p class="admin-empty admin-empty-sm">Loading…</p>`;
+  try {
+    const res = await fetch('/api/admin/contact-messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ googleCredential: account.credential })
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      el.adminMessagesList.innerHTML = `<p class="admin-empty">${esc(data.error || 'Not authorized.')}</p>`;
+      return;
+    }
+    renderContactMessages(data.entries || []);
+  } catch (err) {
+    el.adminMessagesList.innerHTML = `<p class="admin-empty">Could not reach the admin API — check the Worker is deployed.</p>`;
+  }
+}
+
+function renderContactMessages(entries) {
+  if (!entries.length) {
+    el.adminMessagesList.innerHTML = `<p class="admin-empty">No queued messages — either nobody's written in, or Resend is delivering everything straight to your inbox already.</p>`;
+    return;
+  }
+  el.adminMessagesList.innerHTML = entries.map(m => `
+    <div class="admin-site-row" data-key="${esc(m.key)}">
+      <div class="admin-site-main">
+        <div class="admin-site-username">${esc(m.name || '(no name given)')} ${m.email ? `&lt;${esc(m.email)}&gt;` : ''}</div>
+        <div class="admin-site-meta" style="white-space:pre-wrap;">${esc(m.message)}</div>
+        <div class="admin-site-meta">${new Date(m.createdAt).toLocaleString()} · from ${esc(m.ip || 'unknown IP')}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm admin-msg-done-btn" type="button" data-key="${esc(m.key)}">Mark handled</button>
+    </div>
+  `).join('');
+  el.adminMessagesList.querySelectorAll('.admin-msg-done-btn').forEach(btn => {
+    btn.addEventListener('click', () => deleteContactMessage(btn.dataset.key));
+  });
+}
+
+async function deleteContactMessage(key) {
+  const account = getSavedAdminAccount();
+  try {
+    const res = await fetch('/api/admin/contact-messages/delete', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ googleCredential: account.credential, key })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      const row = el.adminMessagesList.querySelector(`[data-key="${CSS.escape(key)}"]`);
+      if (row) row.remove();
+      if (!el.adminMessagesList.querySelector('.admin-site-row')) {
+        el.adminMessagesList.innerHTML = `<p class="admin-empty">No queued messages — either nobody's written in, or Resend is delivering everything straight to your inbox already.</p>`;
+      }
+    }
+  } catch {
+    // silent — worst case the row just stays until next refresh
+  }
 }
 
 async function setStatus(username, status) {
