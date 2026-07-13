@@ -1198,9 +1198,6 @@ ${resumeText}
     return json({ ok: correct });
   }
 
-    return json({ ok: correct });
-  }
-
   if (url.pathname === '/api/publish' && request.method === 'POST') {
     let body;
     try {
