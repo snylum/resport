@@ -506,19 +506,22 @@ function canvasEntryVerifyBadge(block, index) {
 
 // Small "✓" pin shown in the corner of a gallery photo that has its
 // own proof attached. The photo tile itself always just zooms the
-// image on click. For link-type proof, the checkmark badge is its
-// own clickable control — only clicking the checkmark opens the
-// verification URL (in a new tab); clicking anywhere else on the
-// tile (including the rest of the badge's surrounding photo) still
-// zooms the photo like normal. For photo-type proof the badge stays
-// a plain, non-interactive indicator (the zoom popup itself shows
-// the "Verified" + caption footer).
-function canvasPhotoVerifyBadge(photo) {
+// image on click. Both link-type and photo-type proof make the
+// checkmark badge its own clickable control — for link-type it opens
+// the verification URL in a new tab; for photo-type it opens the
+// actual proof photo (via the same view-proof modal used elsewhere)
+// instead of just zooming the gallery photo itself. Clicking anywhere
+// else on the tile (including the rest of the badge's surrounding
+// photo) still zooms the gallery photo like normal.
+function canvasPhotoVerifyBadge(photo, blockId, index) {
   const v = photo.verify || { type: 'none' };
   if (v.type === 'none') return '';
   if (v.type === 'link' && v.link) {
     const safeHref = /^https?:\/\//i.test(v.link) ? v.link : `https://${v.link}`;
     return `<button class="pf-photo-verify-badge is-link" data-action="open-verify-link" data-href="${esc(safeHref)}" type="button" title="Open verification link">${VERIFIED_SEAL_ICON}</button>`;
+  }
+  if (v.type === 'photo' && v.photo) {
+    return `<button class="pf-photo-verify-badge is-link" data-action="view-verify" data-block="${blockId}" data-photo-index="${index}" type="button" title="View proof photo">${VERIFIED_SEAL_ICON}</button>`;
   }
   return `<span class="pf-photo-verify-badge" title="Verified">${VERIFIED_SEAL_ICON}</span>`;
 }
@@ -618,7 +621,7 @@ function createPortfolioBlock(block) {
       innerHTML = (block.data.photos || []).length
         ? `<div class="pf-gallery-grid">${(block.data.photos || []).map((p, i) => {
             const pv = p.verify || { type: 'none' };
-            const badge = canvasPhotoVerifyBadge(p);
+            const badge = canvasPhotoVerifyBadge(p, block.id, i);
             const hasProof = pv.type === 'photo' && !!pv.photo;
             const captionAttr = hasProof && pv.label ? ` data-caption="${esc(pv.label)}"` : '';
             return `<div class="pf-gallery-item" data-action="zoom-photo" data-src="${esc(p.src)}" data-verified="${hasProof ? '1' : '0'}"${captionAttr} title="Click to zoom">${badge}<img src="${esc(p.src)}" alt="" /></div>`;
@@ -994,7 +997,7 @@ function openInfoModal(title, message) {
 function openPhotoZoomModal(src, verified, caption) {
   if (!src) return;
   const footer = verified
-    ? `<div class="pf-zoom-verified"><span class="pf-zoom-verified-check">${CHECK_ICON}Verified</span>${caption ? `<p class="pf-zoom-caption">${esc(caption)}</p>` : ''}</div>`
+    ? `<div class="pf-zoom-verified"><span class="pf-zoom-verified-check">Proof</span>${caption ? `<p class="pf-zoom-caption">${esc(caption)}</p>` : ''}</div>`
     : '';
   openModal(`<div class="verify-modal-body pf-zoom-modal-body"><img src="${esc(src)}" alt="" class="pf-zoom-img" />${footer}</div>`, null, 'modal-box--zoom');
 }
@@ -1637,6 +1640,28 @@ document.addEventListener('click', function (e) {
     if (href) window.open(href, '_blank', 'noopener,noreferrer');
     return;
   }
+  var verifyBtn = e.target.closest('[data-verify-type]');
+  if (verifyBtn) {
+    var type = verifyBtn.getAttribute('data-verify-type');
+    if (type === 'link') {
+      var link = verifyBtn.getAttribute('data-verify-link');
+      if (link) window.open(link, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    var overlay = document.getElementById('modalOverlay');
+    var content = document.getElementById('modalContent');
+    var box = document.getElementById('modalBox');
+    var label = verifyBtn.getAttribute('data-verify-label') || '';
+    var html = '';
+    if (type === 'photo') {
+      var photo = verifyBtn.getAttribute('data-verify-photo');
+      html = '<h3 class="modal-title-proof">Proof</h3><div class="verify-modal-body"><img src="' + photo + '" class="verify-modal-img" alt="Verification proof"/>' + (label ? '<p class="verify-modal-caption">' + label + '</p>' : '') + '</div>';
+    }
+    content.innerHTML = html;
+    if (box) box.className = 'modal-box';
+    overlay.classList.remove('hidden');
+    return;
+  }
   var zoomEl = e.target.closest('[data-action="zoom-photo"]');
   if (zoomEl) {
     var overlay = document.getElementById('modalOverlay');
@@ -1646,32 +1671,10 @@ document.addEventListener('click', function (e) {
     var verified = zoomEl.getAttribute('data-verified') === '1';
     var caption = zoomEl.getAttribute('data-caption') || '';
     var footer = verified
-      ? '<div class="pf-zoom-verified"><span class="pf-zoom-verified-check"><svg class="pf-check-icon" width="9" height="9" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Verified</span>' + (caption ? '<p class="pf-zoom-caption">' + caption + '</p>' : '') + '</div>'
+      ? '<div class="pf-zoom-verified"><span class="pf-zoom-verified-check">Proof</span>' + (caption ? '<p class="pf-zoom-caption">' + caption + '</p>' : '') + '</div>'
       : '';
     content.innerHTML = '<div class="verify-modal-body pf-zoom-modal-body"><img src="' + src + '" class="pf-zoom-img" alt=""/>' + footer + '</div>';
     if (box) box.className = 'modal-box modal-box--zoom';
-    overlay.classList.remove('hidden');
-    return;
-  }
-  var btn = e.target.closest('[data-verify-type]');
-  if (btn) {
-    var type = btn.getAttribute('data-verify-type');
-    if (type === 'link') {
-      var link = btn.getAttribute('data-verify-link');
-      if (link) window.open(link, '_blank', 'noopener,noreferrer');
-      return;
-    }
-    var overlay = document.getElementById('modalOverlay');
-    var content = document.getElementById('modalContent');
-    var box = document.getElementById('modalBox');
-    var label = btn.getAttribute('data-verify-label') || '';
-    var html = '';
-    if (type === 'photo') {
-      var photo = btn.getAttribute('data-verify-photo');
-      html = '<h3 class="modal-title-proof">Proof</h3><div class="verify-modal-body"><img src="' + photo + '" class="verify-modal-img" alt="Verification proof"/>' + (label ? '<p class="verify-modal-caption">' + label + '</p>' : '') + '</div>';
-    }
-    content.innerHTML = html;
-    if (box) box.className = 'modal-box';
     overlay.classList.remove('hidden');
     return;
   }
@@ -2186,18 +2189,18 @@ function renderStaticPortfolioBlockInner(block) {
       const itemsHTML = block.data.photos.map((p, i) => {
         const pv = p.verify || { type: 'none' };
         // The photo tile always zooms into the usual larger pop-up on
-        // click. Link-type proof instead gets its own clickable
-        // checkmark badge — only clicking that checkmark opens the
-        // verification URL in a new tab; the rest of the tile still
-        // zooms. Photo-type proof keeps a plain, non-interactive
-        // checkmark, and its caption (if any) shows under a
-        // "✓ Verified" line inside the zoom pop-up.
+        // click. Both link-type and photo-type proof get their own
+        // clickable checkmark badge — only clicking that checkmark
+        // opens the verification URL (link-type) or the proof photo
+        // itself (photo-type, via the same data-verify-type handler
+        // used for experience/skills badges); the rest of the tile
+        // still zooms as normal.
         let badge = '';
         if (pv.type === 'link' && pv.link) {
           const safeHref = /^https?:\/\//i.test(pv.link) ? pv.link : `https://${pv.link}`;
           badge = `<button class="pf-photo-verify-badge is-link" data-action="open-verify-link" data-href="${esc(safeHref)}" type="button" title="Open verification link">${VERIFIED_SEAL_ICON}</button>`;
         } else if (pv.type === 'photo' && pv.photo) {
-          badge = `<span class="pf-photo-verify-badge" title="Verified">${VERIFIED_SEAL_ICON}</span>`;
+          badge = `<button class="pf-photo-verify-badge is-link" data-verify-type="photo" data-verify-photo="${esc(pv.photo)}" data-verify-label="${esc(pv.label || '')}" type="button" title="View proof photo">${VERIFIED_SEAL_ICON}</button>`;
         }
         const hasProof = pv.type === 'photo' && !!pv.photo;
         const captionAttr = hasProof && pv.label ? ` data-caption="${esc(pv.label)}"` : '';
