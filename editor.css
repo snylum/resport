@@ -621,31 +621,6 @@ body {
   box-shadow: 0 0 0 2px var(--color-secondary) inset;
 }
 
-/* ── Live template thumbnails ───────────────────────────────
-   Each thumbnail is a real, scaled-down clone of .resume-paper
-   (see renderTemplateThumbnails in editor.js) so the picker is
-   always pixel-true to the actual canvas — it can no longer drift
-   out of sync the way the old hand-drawn tpl-line mockups could. */
-.tpl-live-thumb {
-  height: 60px;
-  background: #fff;
-  border: 1px solid var(--color-border);
-  margin-bottom: 0.5rem;
-  overflow: hidden;
-  position: relative;
-}
-
-.tpl-thumb-paper {
-  position: absolute;
-  top: 0;
-  left: 0;
-  transform-origin: top left;
-  padding: 0.6rem;
-  border: 1px solid var(--color-border);
-  box-shadow: none;
-  pointer-events: none;
-}
-
 /* Heading/body font sample + accent color swatch, shown between the
    live thumbnail and the name/tag text on each résumé template card. */
 .tpl-card-meta {
@@ -1321,7 +1296,7 @@ body {
 .resume-block.block-section,
 .resume-block.block-custom {
   padding-bottom: 0;
-  margin-bottom: calc(var(--rp-block-pad, 0.5rem) * 0.4);
+  margin-bottom: var(--rp-title-gap, 0.2rem);
 }
 
 .resume-block.selected {

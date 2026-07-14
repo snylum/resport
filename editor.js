@@ -2212,86 +2212,20 @@ function templateThumbSampleBlocks() {
 // the old hand-drawn tpl-line mockups, which were a second,
 // independently-maintained approximation.
 function renderTemplateThumbnails() {
-  const sample = templateThumbSampleBlocks();
   document.querySelectorAll('.template-card[data-template]').forEach(card => {
-    const holder = card.querySelector('.tpl-live-thumb');
-    if (!holder) return;
     const tpl = card.dataset.template;
     const tplDef = TEMPLATES.find(t => t.id === tpl);
     const design = tplDef ? tplDef.design : null;
-    const layout = TEMPLATE_TWO_COL.has(tpl) ? '2' : '1';
-    const mainHTML = sample.main.map(b => `<div class="resume-block block-${b.type}">${renderStaticResumeBlock(b)}</div>`).join('');
-    const sideHTML = layout === '2'
-      ? sample.side.map(b => `<div class="resume-block block-${b.type}">${renderStaticResumeBlock(b)}</div>`).join('')
-      : '';
+    if (!design) return;
 
-    const paper = document.createElement('div');
-    paper.className = 'resume-paper tpl-thumb-paper';
-    paper.setAttribute('data-template', tpl);
-    paper.setAttribute('data-layout', layout);
-    paper.setAttribute('data-header-align', (design && design.headerAlign) || 'left');
-    paper.setAttribute('data-date-align', (design && design.dateAlign) || 'right');
-    paper.setAttribute('data-title-style', (design && design.titleStyle) || 'plain');
-    // Apply the same design CSS vars the real canvas uses (accent,
-    // fonts, spacing) so the thumbnail is a true color/type preview
-    // of the template, not just its structural CSS rules.
-    if (design) {
-      paper.style.setProperty('--rp-accent', design.accent);
-      paper.style.setProperty('--rp-heading-font', FONT_STACKS[design.headingFont] || FONT_STACKS.sans);
-      paper.style.setProperty('--rp-body-font', FONT_STACKS[design.bodyFont] || FONT_STACKS.sans);
-      paper.style.setProperty('--rp-font-scale', Number(design.fontSize) / 100 || 1);
-      paper.style.setProperty('--rp-line-height', Number(design.lineHeight) || 1.45);
-      paper.style.setProperty('--rp-section-gap', (Number(design.sectionGap) ?? 1) + 'rem');
-      paper.style.setProperty('--rp-block-pad', (Number(design.blockPad) ?? 0.5) + 'rem');
-      paper.style.setProperty('--rp-col-gap', (Number(design.colGap) ?? 2) + 'rem');
-      paper.style.setProperty('--rp-side-width', (Number(design.colSplit) || 34) + '%');
-      paper.style.setProperty('--rp-col-border-w', design.colBorder === false ? '0px' : '2px');
-    }
-    paper.innerHTML = `
-      <header class="rb-header">
-        <div class="rb-header-text">
-          <h1 class="rb-name">Jamie Rivera</h1>
-          <div class="rb-title">Product Designer</div>
-          <div class="rb-contact-line">jamie@email.com • (555) 010-0101</div>
-        </div>
-      </header>
-      <div class="tracks-layout-${layout}">
-        <div class="col-track main-track">${mainHTML}</div>
-        <div class="col-track side-track">${sideHTML}</div>
-      </div>`;
-
-    holder.innerHTML = '';
-    holder.appendChild(paper);
-
-    // Scale the real, full-size paper down to fit the thumbnail box.
-    // Measured after append (needs real layout), and re-measured on
-    // resize since the card's own width can change with the sidebar.
-    // requestAnimationFrame + a couple of retries covers the case
-    // where this runs right as the Customize panel is switching from
-    // display:none, before the browser has committed a layout pass —
-    // without this the very first open could measure 0 and leave the
-    // thumbnail unscaled (and therefore invisible in its 60px box).
-    let attempts = 0;
-    const fit = () => {
-      const targetWidth = holder.clientWidth;
-      if (!targetWidth) {
-        if (attempts++ < 10) requestAnimationFrame(fit);
-        return;
-      }
-      const naturalWidth = paper.getBoundingClientRect().width / (paper._tplScale || 1);
-      const scale = naturalWidth ? targetWidth / naturalWidth : 1;
-      paper._tplScale = scale;
-      paper.style.transform = `scale(${scale})`;
-    };
-    requestAnimationFrame(fit);
-    if (window.ResizeObserver) {
-      new ResizeObserver(fit).observe(holder);
-    }
-
-    // Heading/body font + accent color preview row, so each card
-    // communicates its typography and color scheme at a glance (not
-    // just structural layout) — mirrors the "Aa" treatment used in
-    // the portfolio template gallery.
+    // Heading/body font + accent color preview row — communicates each
+    // template's typography and color scheme at a glance. (A live
+    // scaled-down clone of the actual .resume-paper was tried here
+    // previously, but it depends on layout timing that isn't reliable
+    // inside a panel that's just switched from display:none, and was
+    // rendering as an empty box more often than not — this reads
+    // straight from the template's own design data instead, so it's
+    // simple and always correct.)
     let meta = card.querySelector('.tpl-card-meta');
     if (!meta) {
       meta = document.createElement('div');
@@ -2300,12 +2234,10 @@ function renderTemplateThumbnails() {
       if (nameEl) card.insertBefore(meta, nameEl);
       else card.appendChild(meta);
     }
-    if (design) {
-      meta.innerHTML = `
-        <span class="tpl-card-font tpl-card-font-heading" style="font-family:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.sans)};" title="Heading font">Aa</span>
-        <span class="tpl-card-font tpl-card-font-body" style="font-family:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};" title="Body font">Aa</span>
-        <span class="tpl-card-swatch" style="background:${esc(design.accent)};" title="Accent color"></span>`;
-    }
+    meta.innerHTML = `
+      <span class="tpl-card-font tpl-card-font-heading" style="font-family:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.sans)};" title="Heading font">Aa</span>
+      <span class="tpl-card-font tpl-card-font-body" style="font-family:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};" title="Body font">Aa</span>
+      <span class="tpl-card-swatch" style="background:${esc(design.accent)};" title="Accent color"></span>`;
   });
 }
 
@@ -3518,13 +3450,14 @@ async function downloadResumeAsPDF() {
     clone.style.setProperty('--rp-heading-font', FONT_STACKS[design.headingFont] || FONT_STACKS.sans);
     clone.style.setProperty('--rp-body-font', FONT_STACKS[design.bodyFont] || FONT_STACKS.sans);
     clone.style.setProperty('--rp-font-scale', Number(design.fontSize || 100) / 100);
-    clone.style.setProperty('--rp-line-height', design.lineHeight === 'compact' ? '1.25' : design.lineHeight === 'relaxed' ? '1.7' : '1.45');
+    clone.style.setProperty('--rp-line-height', Number(design.lineHeight) || 1.45);
     const pdfPage = PAGE_SIZES_MM[design.pageSize] || PAGE_SIZES_MM.letter;
     clone.style.setProperty('--rp-page-w', pdfPage.w + 'mm');
     clone.style.setProperty('--rp-page-min-h', pdfPage.h + 'mm');
     clone.style.setProperty('--rp-margin', (Number(design.pageMargin) || 2.5) + 'rem');
     clone.style.setProperty('--rp-section-gap', (Number(design.sectionGap) ?? 1) + 'rem');
     clone.style.setProperty('--rp-block-pad', (Number(design.blockPad) ?? 0.5) + 'rem');
+    clone.style.setProperty('--rp-title-gap', (Number(design.titleGap) ?? 0.2) + 'rem');
     clone.style.setProperty('--rp-bullet-scale', (Number(design.bulletSize) || 100) / 100);
     clone.style.setProperty('--rp-col-gap', (Number(design.colGap) ?? 2) + 'rem');
     clone.style.setProperty('--rp-side-width', (Number(design.colSplit) || 34) + '%');
@@ -4112,6 +4045,7 @@ function applyResumeDesign(design) {
   el.resumePaper.style.setProperty('--rp-margin', (Number(design.pageMargin) || 2.5) + 'rem');
   el.resumePaper.style.setProperty('--rp-section-gap', (Number(design.sectionGap) ?? 1) + 'rem');
   el.resumePaper.style.setProperty('--rp-block-pad', (Number(design.blockPad) ?? 0.5) + 'rem');
+  el.resumePaper.style.setProperty('--rp-title-gap', (Number(design.titleGap) ?? 0.2) + 'rem');
   el.resumePaper.style.setProperty('--rp-bullet-scale', (Number(design.bulletSize) || 100) / 100);
   el.resumePaper.style.setProperty('--rp-col-gap', (Number(design.colGap) ?? 2) + 'rem');
   el.resumePaper.style.setProperty('--rp-side-width', (Number(design.colSplit) || 34) + '%');
@@ -4139,18 +4073,29 @@ function fitResumeToOnePage() {
   const doc = Store.active();
   const design = doc.design;
   const page = PAGE_SIZES_MM[design.pageSize] || PAGE_SIZES_MM.letter;
-  const targetH = pxFromMm(page.h);
+  // A small safety buffer below the true page height. The live canvas
+  // (this measurement) and the PDF export (html2canvas → jsPDF, a
+  // different rendering/rounding pipeline) can disagree by a few
+  // sub-pixels on the exact height of the same content. Fitting to
+  // 100% of the page here left just enough overflow for the export to
+  // round the wrong way, push the last block onto a new page (its
+  // "avoid split" rule refuses to cut it), and produce a mostly-blank
+  // trailing page. Targeting ~1.5% under the page height leaves
+  // headroom for that rounding without a visible difference on screen.
+  const targetH = pxFromMm(page.h) * 0.985;
   const paper = el.resumePaper;
 
   let margin = Number(design.pageMargin) || 2.5;
   let blockPad = Number(design.blockPad) ?? 0.5;
   let sectionGap = Number(design.sectionGap) ?? 1;
+  let titleGap = Number(design.titleGap) ?? 0.2;
   let lineHeight = Number(design.lineHeight) || 1.45;
   let fontScale = Number(design.fontSize || 100) / 100;
 
   const MIN_MARGIN = 0.4;
   const MIN_PAD = 0.15;
   const MIN_GAP = 0.15;
+  const MIN_TITLE_GAP = 0.05;
   const MIN_LH = 1.05;
   const MIN_FONT = 0.62;
 
@@ -4158,25 +4103,31 @@ function fitResumeToOnePage() {
     paper.style.setProperty('--rp-margin', margin + 'rem');
     paper.style.setProperty('--rp-block-pad', blockPad + 'rem');
     paper.style.setProperty('--rp-section-gap', sectionGap + 'rem');
+    paper.style.setProperty('--rp-title-gap', titleGap + 'rem');
     paper.style.setProperty('--rp-line-height', lineHeight);
     paper.style.setProperty('--rp-font-scale', fontScale);
   };
   const fits = () => {
     apply();
-    return paper.scrollHeight <= targetH + 1;
+    return paper.scrollHeight <= targetH;
   };
 
-  // Work through the levers in the order that costs readability least
-  // first (whitespace) before touching type size at all, looping until
-  // it fits or every lever has bottomed out.
+  // Squeeze whitespace before type: page margins, line spacing, and
+  // the gap between a section title and its own body all get driven
+  // down toward their floor first (each still readable at its floor —
+  // this is layout tightening, not just shrinking text), then section
+  // gap and block padding, and only then font size as a last resort.
+  // Finer steps near the end of each lever's range converge closer to
+  // the target instead of possibly overshooting past it in one jump.
   let guard = 0;
-  while (!fits() && guard < 300) {
+  while (!fits() && guard < 600) {
     guard++;
-    if (margin > MIN_MARGIN) { margin = Math.max(MIN_MARGIN, margin - 0.08); continue; }
-    if (sectionGap > MIN_GAP) { sectionGap = Math.max(MIN_GAP, sectionGap - 0.06); continue; }
-    if (blockPad > MIN_PAD) { blockPad = Math.max(MIN_PAD, blockPad - 0.03); continue; }
-    if (lineHeight > MIN_LH) { lineHeight = Math.max(MIN_LH, lineHeight - 0.02); continue; }
-    if (fontScale > MIN_FONT) { fontScale = Math.max(MIN_FONT, fontScale - 0.015); continue; }
+    if (margin > MIN_MARGIN) { margin = Math.max(MIN_MARGIN, margin - 0.05); continue; }
+    if (lineHeight > MIN_LH) { lineHeight = Math.max(MIN_LH, lineHeight - 0.015); continue; }
+    if (titleGap > MIN_TITLE_GAP) { titleGap = Math.max(MIN_TITLE_GAP, titleGap - 0.015); continue; }
+    if (sectionGap > MIN_GAP) { sectionGap = Math.max(MIN_GAP, sectionGap - 0.04); continue; }
+    if (blockPad > MIN_PAD) { blockPad = Math.max(MIN_PAD, blockPad - 0.02); continue; }
+    if (fontScale > MIN_FONT) { fontScale = Math.max(MIN_FONT, fontScale - 0.01); continue; }
     break;
   }
 
@@ -4185,6 +4136,7 @@ function fitResumeToOnePage() {
   margin = Math.round(margin * 100) / 100;
   blockPad = Math.round(blockPad * 100) / 100;
   sectionGap = Math.round(sectionGap * 100) / 100;
+  titleGap = Math.round(titleGap * 100) / 100;
   lineHeight = Math.round(lineHeight * 100) / 100;
   fontScale = Math.round(fontScale * 1000) / 1000;
 
@@ -4193,6 +4145,7 @@ function fitResumeToOnePage() {
   design.pageMargin = margin;
   design.blockPad = blockPad;
   design.sectionGap = sectionGap;
+  design.titleGap = titleGap;
   design.lineHeight = lineHeight;
   design.fontSize = String(Math.round(fontScale * 100));
   Store.emit('design_changed', design);

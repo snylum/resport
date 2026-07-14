@@ -40,6 +40,7 @@ const BASE_NUMERIC_DEFAULTS = {
   pageSize: 'letter',
   sectionGap: 1,
   blockPad: 0.5,
+  titleGap: 0.2,
   bulletSize: 100,
   pageMargin: 2.5,
   colSplit: 34,
