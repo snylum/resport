@@ -3431,6 +3431,23 @@ async function downloadResumeAsPDF() {
 
   try {
     const html2pdf = await ensureHtml2Pdf();
+
+    // Make sure the résumé is balanced to the page (grown to fill it,
+    // or shrunk to fit it) using the live on-screen element *before* we
+    // read Store.state.resume.design below — otherwise the export could
+    // clone a stale/short design an instant before the auto-balance
+    // debounce fires, producing a downloaded PDF that looks noticeably
+    // more cramped or sparse than what's currently on screen.
+    clearTimeout(autoBalanceTimer);
+    {
+      const doc = Store.active();
+      const page = PAGE_SIZES_MM[doc.design.pageSize] || PAGE_SIZES_MM.letter;
+      const fullH = pxFromMm(page.h);
+      const h = el.resumePaper ? el.resumePaper.scrollHeight : 0;
+      if (h > fullH * 0.995) fitResumeToOnePage();
+      else if (h < fullH * 0.9) growResumeToFillPage();
+    }
+
     const resume = Store.state.resume;
     const design = resume.design || {};
     const blocks = resume.blocks || [];
@@ -3520,12 +3537,35 @@ async function downloadResumeAsPDF() {
 
     const filename = `${fullName.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'resume'}.pdf`;
 
+    // Pin the capture width to the *exact* page width in px (96dpi),
+    // the same math the live canvas itself is drawn at (pxFromMm), so
+    // html2canvas's internal px→pt conversion lines up 1:1 with the
+    // page. Using clone.scrollWidth/scrollHeight here instead (as
+    // before) let sub-pixel layout rounding creep in over a tall
+    // résumé, which html2canvas's scale factor then amplified — the
+    // visible symptom being a downloaded PDF that looked noticeably
+    // more squeezed/stretched than the editor preview of the exact
+    // same résumé.
+    const exactWidthPx = Math.round(pxFromMm(pdfPage.w));
+    // Read the real rendered height off the clone (now settled/painted)
+    // rather than trusting scrollWidth math for height too, since
+    // content height is data-dependent, not a fixed page constant.
+    const exactHeightPx = Math.ceil(clone.getBoundingClientRect().height) || clone.scrollHeight;
+
     await html2pdf()
       .set({
         margin: 0,
         filename,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, windowWidth: clone.scrollWidth, windowHeight: clone.scrollHeight, x: 0, y: 0, scrollX: 0, scrollY: 0 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          width: exactWidthPx,
+          windowWidth: exactWidthPx,
+          height: exactHeightPx,
+          windowHeight: exactHeightPx,
+          x: 0, y: 0, scrollX: 0, scrollY: 0
+        },
         jsPDF: { unit: 'in', format: PAGE_SIZES_IN[design.pageSize] || PAGE_SIZES_IN.letter, orientation: 'portrait' },
         pagebreak: { mode: ['css'], avoid: ['.resume-block', '.rb-entry-row', '.rb-header'] }
       })
@@ -4152,6 +4192,142 @@ function fitResumeToOnePage() {
 
   return { fit: succeeded };
 }
+
+// ── "Fill the Page" ──────────────────────────────────────────────
+// The inverse of fitResumeToOnePage: when a résumé is short, it used to
+// just sit at the top of the page with dead white space below —
+// distracting on screen, and worse, that's exactly the space html2pdf
+// silently drops since it captures only the rendered content height per
+// page. Instead of leaving the layout "compressed" into a small block,
+// grow line-height → title/section gaps → block padding → margin (the
+// same levers fitResumeToOnePage shrinks, in roughly reverse order) up
+// toward generous ceilings until the content comfortably spans the
+// page, without ever spilling onto a second page. Operates on the same
+// live .resume-paper element, so screen and export always agree.
+function growResumeToFillPage() {
+  if (Store.state.viewMode !== 'resume') return { grew: true };
+
+  const doc = Store.active();
+  const design = doc.design;
+  const page = PAGE_SIZES_MM[design.pageSize] || PAGE_SIZES_MM.letter;
+  // Aim just under a full page so growth never tips content onto a
+  // second page — mirrors the safety buffer fitResumeToOnePage uses.
+  const targetH = pxFromMm(page.h) * 0.97;
+  const paper = el.resumePaper;
+
+  let margin = Number(design.pageMargin) || 2.5;
+  let blockPad = Number(design.blockPad) ?? 0.5;
+  let sectionGap = Number(design.sectionGap) ?? 1;
+  let titleGap = Number(design.titleGap) ?? 0.2;
+  let lineHeight = Number(design.lineHeight) || 1.45;
+  let fontScale = Number(design.fontSize || 100) / 100;
+
+  // Ceilings deliberately modest — this should read as "well-balanced
+  // whitespace", never as a résumé stretched thin to fake a full page.
+  const MAX_LH = 1.8;
+  const MAX_TITLE_GAP = 0.6;
+  const MAX_GAP = 2.2;
+  const MAX_PAD = 1.1;
+  const MAX_MARGIN = 4;
+  const MAX_FONT = 1.12;
+
+  const apply = () => {
+    paper.style.setProperty('--rp-margin', margin + 'rem');
+    paper.style.setProperty('--rp-block-pad', blockPad + 'rem');
+    paper.style.setProperty('--rp-section-gap', sectionGap + 'rem');
+    paper.style.setProperty('--rp-title-gap', titleGap + 'rem');
+    paper.style.setProperty('--rp-line-height', lineHeight);
+    paper.style.setProperty('--rp-font-scale', fontScale);
+  };
+  const height = () => { apply(); return paper.scrollHeight; };
+
+  // Nothing to do if it already fills (or overflows) the page.
+  if (height() >= targetH) return { grew: true };
+
+  let guard = 0;
+  while (height() < targetH && guard < 600) {
+    guard++;
+    let movedAnyLever = false;
+    if (lineHeight < MAX_LH) { lineHeight = Math.min(MAX_LH, lineHeight + 0.015); movedAnyLever = true; }
+    if (height() >= targetH) break;
+    if (titleGap < MAX_TITLE_GAP) { titleGap = Math.min(MAX_TITLE_GAP, titleGap + 0.015); movedAnyLever = true; }
+    if (height() >= targetH) break;
+    if (sectionGap < MAX_GAP) { sectionGap = Math.min(MAX_GAP, sectionGap + 0.04); movedAnyLever = true; }
+    if (height() >= targetH) break;
+    if (blockPad < MAX_PAD) { blockPad = Math.min(MAX_PAD, blockPad + 0.02); movedAnyLever = true; }
+    if (height() >= targetH) break;
+    if (margin < MAX_MARGIN) { margin = Math.min(MAX_MARGIN, margin + 0.05); movedAnyLever = true; }
+    if (height() >= targetH) break;
+    // Font size only grows a little, and only once the roomier spacing
+    // above is already maxed out — a slightly larger type size reads
+    // as "well-designed", not "stretched".
+    if (!movedAnyLever || (margin >= MAX_MARGIN && blockPad >= MAX_PAD && sectionGap >= MAX_GAP)) {
+      if (fontScale < MAX_FONT) { fontScale = Math.min(MAX_FONT, fontScale + 0.01); movedAnyLever = true; }
+    }
+    if (!movedAnyLever) break; // every lever maxed out — stop
+  }
+
+  // If the last nudge overshot onto a second page, back off one notch
+  // on whichever lever moved last so we land just under the page, not
+  // just over it.
+  if (height() > targetH) {
+    if (fontScale > (Number(design.fontSize || 100) / 100)) fontScale = Math.max(1, fontScale - 0.01);
+    else if (margin > (Number(design.pageMargin) || 2.5)) margin -= 0.05;
+    else if (blockPad > (Number(design.blockPad) ?? 0.5)) blockPad -= 0.02;
+    else if (sectionGap > (Number(design.sectionGap) ?? 1)) sectionGap -= 0.04;
+    else if (titleGap > (Number(design.titleGap) ?? 0.2)) titleGap -= 0.015;
+    else if (lineHeight > (Number(design.lineHeight) || 1.45)) lineHeight -= 0.015;
+    height();
+  }
+
+  margin = Math.round(margin * 100) / 100;
+  blockPad = Math.round(blockPad * 100) / 100;
+  sectionGap = Math.round(sectionGap * 100) / 100;
+  titleGap = Math.round(titleGap * 100) / 100;
+  lineHeight = Math.round(lineHeight * 100) / 100;
+  fontScale = Math.round(fontScale * 1000) / 1000;
+
+  design.pageMargin = margin;
+  design.blockPad = blockPad;
+  design.sectionGap = sectionGap;
+  design.titleGap = titleGap;
+  design.lineHeight = lineHeight;
+  design.fontSize = String(Math.round(fontScale * 100));
+  Store.emit('design_changed', design);
+
+  return { grew: true };
+}
+
+// ── Auto page balance ────────────────────────────────────────────
+// Runs after every content/design change to a résumé: shrinks (via
+// fitResumeToOnePage's levers) if content overflows the page, grows
+// (via growResumeToFillPage) if it's noticeably short of filling it,
+// and otherwise leaves it alone. This is what keeps the live editor
+// canvas — and, since the PDF export clones the exact same computed
+// design values, the downloaded PDF — always dynamically filling the
+// page instead of drifting apart from each other or sitting compressed
+// with dead space at the bottom.
+let autoBalanceTimer = null;
+function scheduleAutoBalanceResumePage() {
+  if (Store.state.viewMode !== 'resume') return;
+  clearTimeout(autoBalanceTimer);
+  autoBalanceTimer = setTimeout(() => {
+    const paper = el.resumePaper;
+    if (!paper) return;
+    const doc = Store.active();
+    const page = PAGE_SIZES_MM[doc.design.pageSize] || PAGE_SIZES_MM.letter;
+    const fullH = pxFromMm(page.h);
+    const h = paper.scrollHeight;
+    if (h > fullH * 0.995) {
+      fitResumeToOnePage();
+    } else if (h < fullH * 0.9) {
+      growResumeToFillPage();
+    }
+  }, 450);
+}
+Store.on('blocks_changed', scheduleAutoBalanceResumePage);
+Store.on('profile_changed', scheduleAutoBalanceResumePage);
+Store.on('template_changed', scheduleAutoBalanceResumePage);
 
 // Appends "yourname.proves.work" to the résumé's contact line when
 // the checkbox is on — only meaningful once the site is actually
