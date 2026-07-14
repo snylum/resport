@@ -923,6 +923,7 @@ function renderActiveCanvas() {
       const blockEl = createResumeBlock(block);
       (block.col === 'side' ? el.sideTrack : el.mainTrack).appendChild(blockEl);
     });
+    el.resumePaper.classList.toggle('no-side-content', el.sideTrack.children.length === 0);
   } else {
     renderPortfolioCanvasBlocks(blocks, Store.active().design.sectionAnimation || 'none');
     initPortfolioAnimation(Store.active().design.sectionAnimation || 'none');
@@ -3439,14 +3440,7 @@ async function downloadResumeAsPDF() {
     // debounce fires, producing a downloaded PDF that looks noticeably
     // more cramped or sparse than what's currently on screen.
     clearTimeout(autoBalanceTimer);
-    {
-      const doc = Store.active();
-      const page = PAGE_SIZES_MM[doc.design.pageSize] || PAGE_SIZES_MM.letter;
-      const fullH = pxFromMm(page.h);
-      const h = el.resumePaper ? el.resumePaper.scrollHeight : 0;
-      if (h > fullH * 0.995) fitResumeToOnePage();
-      else if (h < fullH * 0.9) growResumeToFillPage();
-    }
+    runResumePageBalance();
 
     const resume = Store.state.resume;
     const design = resume.design || {};
@@ -3458,6 +3452,7 @@ async function downloadResumeAsPDF() {
 
     const clone = document.createElement('div');
     clone.className = 'resume-paper is-pdf-export';
+    if (!blocks.some(b => b.col === 'side')) clone.classList.add('no-side-content');
     clone.setAttribute('data-template', resume.template || 'ats');
     clone.setAttribute('data-layout', design.layout || '1');
     clone.setAttribute('data-header-align', design.headerAlign || 'left');
@@ -3472,6 +3467,8 @@ async function downloadResumeAsPDF() {
     clone.style.setProperty('--rp-page-w', pdfPage.w + 'mm');
     clone.style.setProperty('--rp-page-min-h', pdfPage.h + 'mm');
     clone.style.setProperty('--rp-margin', (Number(design.pageMargin) || 2.5) + 'rem');
+    clone.style.setProperty('--rp-margin-y', (Number(design.pageMarginY ?? design.pageMargin) || 2.5) + 'rem');
+    clone.style.setProperty('--rp-margin-x', (Number(design.pageMarginX ?? design.pageMargin) || 2.5) + 'rem');
     clone.style.setProperty('--rp-section-gap', (Number(design.sectionGap) ?? 1) + 'rem');
     clone.style.setProperty('--rp-block-pad', (Number(design.blockPad) ?? 0.5) + 'rem');
     clone.style.setProperty('--rp-title-gap', (Number(design.titleGap) ?? 0.2) + 'rem');
@@ -4083,6 +4080,8 @@ function applyResumeDesign(design) {
   el.resumePaper.style.setProperty('--rp-page-w', page.w + 'mm');
   el.resumePaper.style.setProperty('--rp-page-min-h', page.h + 'mm');
   el.resumePaper.style.setProperty('--rp-margin', (Number(design.pageMargin) || 2.5) + 'rem');
+  el.resumePaper.style.setProperty('--rp-margin-y', (Number(design.pageMarginY ?? design.pageMargin) || 2.5) + 'rem');
+  el.resumePaper.style.setProperty('--rp-margin-x', (Number(design.pageMarginX ?? design.pageMargin) || 2.5) + 'rem');
   el.resumePaper.style.setProperty('--rp-section-gap', (Number(design.sectionGap) ?? 1) + 'rem');
   el.resumePaper.style.setProperty('--rp-block-pad', (Number(design.blockPad) ?? 0.5) + 'rem');
   el.resumePaper.style.setProperty('--rp-title-gap', (Number(design.titleGap) ?? 0.2) + 'rem');
@@ -4125,7 +4124,7 @@ function fitResumeToOnePage() {
   const targetH = pxFromMm(page.h) * 0.985;
   const paper = el.resumePaper;
 
-  let margin = Number(design.pageMargin) || 2.5;
+  let margin = Number(design.pageMarginY ?? design.pageMargin) || 2.5;
   let blockPad = Number(design.blockPad) ?? 0.5;
   let sectionGap = Number(design.sectionGap) ?? 1;
   let titleGap = Number(design.titleGap) ?? 0.2;
@@ -4140,7 +4139,7 @@ function fitResumeToOnePage() {
   const MIN_FONT = 0.62;
 
   const apply = () => {
-    paper.style.setProperty('--rp-margin', margin + 'rem');
+    paper.style.setProperty('--rp-margin-y', margin + 'rem');
     paper.style.setProperty('--rp-block-pad', blockPad + 'rem');
     paper.style.setProperty('--rp-section-gap', sectionGap + 'rem');
     paper.style.setProperty('--rp-title-gap', titleGap + 'rem');
@@ -4182,7 +4181,7 @@ function fitResumeToOnePage() {
 
   // Persist — this also re-triggers applyResumeDesign via design_changed,
   // which re-applies the exact same numbers, so nothing visually jumps.
-  design.pageMargin = margin;
+  design.pageMarginY = margin;
   design.blockPad = blockPad;
   design.sectionGap = sectionGap;
   design.titleGap = titleGap;
@@ -4215,7 +4214,7 @@ function growResumeToFillPage() {
   const targetH = pxFromMm(page.h) * 0.97;
   const paper = el.resumePaper;
 
-  let margin = Number(design.pageMargin) || 2.5;
+  let margin = Number(design.pageMarginY ?? design.pageMargin) || 2.5;
   let blockPad = Number(design.blockPad) ?? 0.5;
   let sectionGap = Number(design.sectionGap) ?? 1;
   let titleGap = Number(design.titleGap) ?? 0.2;
@@ -4232,7 +4231,7 @@ function growResumeToFillPage() {
   const MAX_FONT = 1.12;
 
   const apply = () => {
-    paper.style.setProperty('--rp-margin', margin + 'rem');
+    paper.style.setProperty('--rp-margin-y', margin + 'rem');
     paper.style.setProperty('--rp-block-pad', blockPad + 'rem');
     paper.style.setProperty('--rp-section-gap', sectionGap + 'rem');
     paper.style.setProperty('--rp-title-gap', titleGap + 'rem');
@@ -4272,7 +4271,7 @@ function growResumeToFillPage() {
   // just over it.
   if (height() > targetH) {
     if (fontScale > (Number(design.fontSize || 100) / 100)) fontScale = Math.max(1, fontScale - 0.01);
-    else if (margin > (Number(design.pageMargin) || 2.5)) margin -= 0.05;
+    else if (margin > (Number(design.pageMarginY ?? design.pageMargin) || 2.5)) margin -= 0.05;
     else if (blockPad > (Number(design.blockPad) ?? 0.5)) blockPad -= 0.02;
     else if (sectionGap > (Number(design.sectionGap) ?? 1)) sectionGap -= 0.04;
     else if (titleGap > (Number(design.titleGap) ?? 0.2)) titleGap -= 0.015;
@@ -4287,7 +4286,7 @@ function growResumeToFillPage() {
   lineHeight = Math.round(lineHeight * 100) / 100;
   fontScale = Math.round(fontScale * 1000) / 1000;
 
-  design.pageMargin = margin;
+  design.pageMarginY = margin;
   design.blockPad = blockPad;
   design.sectionGap = sectionGap;
   design.titleGap = titleGap;
@@ -4298,32 +4297,61 @@ function growResumeToFillPage() {
   return { grew: true };
 }
 
+// ── Width compression ────────────────────────────────────────────
+// Tightens *horizontal* margin only (--rp-margin-x), independent of
+// the vertical margin the fit/grow functions above control, down to a
+// sensible floor — this is the "fill the width" half of page balance.
+// It deliberately never touches anything vertical itself; whichever
+// caller runs this is responsible for re-running the length step
+// afterward, since giving lines more width to work with can reflow
+// text into fewer (or, rarely, more) lines and change content height.
+const MIN_MARGIN_X = 1;
+function compressResumeWidth() {
+  if (Store.state.viewMode !== 'resume') return;
+  const doc = Store.active();
+  const design = doc.design;
+  const paper = el.resumePaper;
+  if (!paper) return;
+
+  const currentX = Number(design.pageMarginX ?? design.pageMargin) || 2.5;
+  if (currentX <= MIN_MARGIN_X + 0.01) return; // already tight
+
+  design.pageMarginX = MIN_MARGIN_X;
+  paper.style.setProperty('--rp-margin-x', MIN_MARGIN_X + 'rem');
+  Store.emit('design_changed', design);
+}
+
 // ── Auto page balance ────────────────────────────────────────────
-// Runs after every content/design change to a résumé: shrinks (via
-// fitResumeToOnePage's levers) if content overflows the page, grows
-// (via growResumeToFillPage) if it's noticeably short of filling it,
-// and otherwise leaves it alone. This is what keeps the live editor
-// canvas — and, since the PDF export clones the exact same computed
-// design values, the downloaded PDF — always dynamically filling the
-// page instead of drifting apart from each other or sitting compressed
-// with dead space at the bottom.
+// Runs after every content/design change to a résumé:
+//  1. Compress unused width (tight horizontal margin; an empty side
+//     column collapses to 0 via the .no-side-content CSS rule/class
+//     toggled in renderActiveCanvas above) — this is what previously
+//     showed up as a big dead strip down the right of the page.
+//  2. Re-measure and shrink (fitResumeToOnePage) if content now
+//     overflows the page, or grow (growResumeToFillPage) if it's
+//     noticeably short of filling it — restoring/maintaining a full
+//     one-page length regardless of what step 1 did to line wrapping.
+// Screen and PDF export always agree since the export re-runs this
+// same balance against the live element right before cloning it.
 let autoBalanceTimer = null;
 function scheduleAutoBalanceResumePage() {
   if (Store.state.viewMode !== 'resume') return;
   clearTimeout(autoBalanceTimer);
-  autoBalanceTimer = setTimeout(() => {
-    const paper = el.resumePaper;
-    if (!paper) return;
-    const doc = Store.active();
-    const page = PAGE_SIZES_MM[doc.design.pageSize] || PAGE_SIZES_MM.letter;
-    const fullH = pxFromMm(page.h);
-    const h = paper.scrollHeight;
-    if (h > fullH * 0.995) {
-      fitResumeToOnePage();
-    } else if (h < fullH * 0.9) {
-      growResumeToFillPage();
-    }
-  }, 450);
+  autoBalanceTimer = setTimeout(runResumePageBalance, 450);
+}
+function runResumePageBalance() {
+  const paper = el.resumePaper;
+  if (!paper) return;
+  compressResumeWidth();
+  const doc = Store.active();
+  const page = PAGE_SIZES_MM[doc.design.pageSize] || PAGE_SIZES_MM.letter;
+  const fullH = pxFromMm(page.h);
+  const h = paper.scrollHeight;
+  if (h > fullH * 0.995) {
+    fitResumeToOnePage();
+  } else if (h < fullH * 0.9) {
+    growResumeToFillPage();
+  }
 }
 Store.on('blocks_changed', scheduleAutoBalanceResumePage);
 Store.on('profile_changed', scheduleAutoBalanceResumePage);

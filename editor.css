@@ -1030,7 +1030,7 @@ body {
   box-sizing: border-box;
   width: var(--rp-page-w, 210mm);
   min-height: var(--rp-page-min-h, 297mm);
-  padding: var(--rp-margin, 2.5rem);
+  padding: var(--rp-margin-y, var(--rp-margin, 2.5rem)) var(--rp-margin-x, var(--rp-margin, 2.5rem));
   box-shadow: 0 10px 30px rgba(0,0,0,0.08);
   border: 3px solid var(--color-border);
   flex-shrink: 0;
@@ -1195,6 +1195,17 @@ body {
   flex: 0 0 var(--rp-side-width, 34%);
   border-left: var(--rp-col-border-w, 2px) solid var(--color-border);
   padding-left: 1.5rem;
+}
+
+/* An empty side column (no blocks assigned to it) previously still
+   reserved its full flex-basis width, leaving a large dead strip down
+   the right side of the page. Toggled by JS whenever sideTrack has no
+   children. */
+.resume-paper[data-layout="2"].no-side-content .side-track {
+  display: none;
+}
+.resume-paper[data-layout="2"].no-side-content .main-track {
+  flex: 1 1 100%;
 }
 
 .rb-section-title,
