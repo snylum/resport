@@ -1062,6 +1062,7 @@
   position: absolute;
   inset: 0;
   background: rgba(0,0,0,0.12);
+  pointer-events: none;
 }
 .pf-gallery-item[href] {
   cursor: pointer;

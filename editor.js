@@ -1702,6 +1702,90 @@ function slugifyUsername(str) {
     .slice(0, 30);
 }
 
+// Horizontal/vertical-slide mode: dot nav, arrow keys, and
+// wheel-to-slide. Shared verbatim between the hosted PUBLISHED_PAGE_SCRIPT
+// and the offline ZIP_PAGE_SCRIPT below since it has no dependency on
+// proof, the lock, or any backend.
+const HORIZONTAL_SLIDE_SCRIPT = `
+(function () {
+  var root = document.getElementById('portfolioSite');
+  var anim = root && root.getAttribute('data-section-anim');
+  if (!root || (anim !== 'horizontal' && anim !== 'vertical')) return;
+
+  var hero = root.querySelector('.pf-hero');
+  function syncHeaderHeight() {
+    if (!hero) return;
+    root.style.setProperty('--pf-header-real-h', hero.getBoundingClientRect().height + 'px');
+  }
+  syncHeaderHeight();
+  if (hero && 'ResizeObserver' in window) {
+    new ResizeObserver(syncHeaderHeight).observe(hero);
+  } else {
+    window.addEventListener('resize', syncHeaderHeight);
+  }
+
+  var axis = anim === 'vertical' ? 'y' : 'x';
+  var track = root.querySelector('.pf-sections');
+  var slides = root.querySelectorAll('.pf-slide');
+  var dots = root.querySelectorAll('.pf-dot');
+  if (!track || !slides.length) return;
+  var current = 0;
+  var isProgrammatic = false;
+
+  function goTo(i) {
+    if (i < 0 || i >= slides.length) return;
+    current = i;
+    isProgrammatic = true;
+    slides[i].scrollIntoView({ behavior: 'smooth', block: axis === 'y' ? 'start' : 'nearest', inline: axis === 'x' ? 'start' : 'nearest' });
+    setDots(i);
+    setTimeout(function () { isProgrammatic = false; }, 500);
+  }
+  var dotsStyle = root.getAttribute('data-dots-style') || 'dot';
+  var headerStyle = root.getAttribute('data-header-style');
+  function setDots(i) {
+    dots.forEach(function (d, di) {
+      d.classList.toggle('active', di === i);
+      d.classList.toggle('passed', dotsStyle === 'progress' && di <= i);
+    });
+    root.classList.toggle('pf-header-collapsed', headerStyle === 'pinned' && i > 0);
+  }
+  dots.forEach(function (d) {
+    d.addEventListener('click', function () { goTo(parseInt(d.getAttribute('data-pf-slide'), 10)); });
+  });
+  track.addEventListener('scroll', function () {
+    if (isProgrammatic) return;
+    var closest = 0, closestDist = Infinity;
+    var trackRect = track.getBoundingClientRect();
+    slides.forEach(function (s, i) {
+      var r = s.getBoundingClientRect();
+      var dist = axis === 'y' ? Math.abs(r.top - trackRect.top) : Math.abs(r.left - trackRect.left);
+      if (dist < closestDist) { closestDist = dist; closest = i; }
+    });
+    if (closest !== current) { current = closest; setDots(current); }
+  }, { passive: true });
+  track.addEventListener('keydown', function (e) {
+    if (axis === 'x') {
+      if (e.key === 'ArrowRight') goTo(current + 1);
+      else if (e.key === 'ArrowLeft') goTo(current - 1);
+    } else {
+      if (e.key === 'ArrowDown') goTo(current + 1);
+      else if (e.key === 'ArrowUp') goTo(current - 1);
+    }
+  });
+  var wheelCooldown = false;
+  track.addEventListener('wheel', function (e) {
+    if (window.innerWidth <= 768) return;
+    var delta = axis === 'y' ? e.deltaY : (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY);
+    if (Math.abs(delta) < 10) return;
+    e.preventDefault();
+    if (wheelCooldown) return;
+    wheelCooldown = true;
+    goTo(current + (delta > 0 ? 1 : -1));
+    setTimeout(function () { wheelCooldown = false; }, 700);
+  }, { passive: false });
+})();
+`;
+
 // A tiny, self-contained script embedded in every published page so
 // verification badges stay clickable there too — without shipping the
 // whole editor. No dependency on Store/editor.js.
@@ -1938,100 +2022,87 @@ document.addEventListener('keydown', function (e) {
     openModal();
   }
 })();
-// Horizontal-slide mode: dot nav, arrow keys, and wheel-to-slide —
-// scoped to .pf-sections only (the fixed hero above it is untouched),
-// the same interaction model as the homepage's own slide deck.
+${HORIZONTAL_SLIDE_SCRIPT}`;
+
+// ── Static, offline ZIP export script ────────────────────────────
+// Used only by the "Download ZIP" feature (see buildPortfolioZipHTML /
+// downloadPortfolioZip). Deliberately excludes everything tied to the
+// hosted backend: no fetch calls, no window.__PW_LOCK_ACTIVE__/
+// __PW_PROOF__, and no Recruiter Password Lock at all — proof content
+// is baked directly into data-verify-photo/data-verify-link/
+// data-verify-label/data-caption attributes on each badge (see
+// INLINE_PROOF_MODE in renderStaticPortfolioBlockInner), so the
+// exported site is fully functional just by opening index.html
+// locally, with nothing to fetch and no key to unlock.
+const ZIP_PAGE_SCRIPT = `
+document.addEventListener('click', function (e) {
+  var linkBadge = e.target.closest('[data-action="open-verify-link"]');
+  if (linkBadge) {
+    var link = linkBadge.getAttribute('data-verify-link');
+    if (link) window.open(link, '_blank', 'noopener,noreferrer');
+    return;
+  }
+  var verifyBtn = e.target.closest('[data-verify-type]');
+  if (verifyBtn) {
+    var type = verifyBtn.getAttribute('data-verify-type');
+    if (type === 'link') {
+      var link2 = verifyBtn.getAttribute('data-verify-link');
+      if (link2) window.open(link2, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    var overlay = document.getElementById('modalOverlay');
+    var content = document.getElementById('modalContent');
+    var box = document.getElementById('modalBox');
+    var photo = verifyBtn.getAttribute('data-verify-photo');
+    if (type === 'photo' && photo) {
+      var label = verifyBtn.getAttribute('data-verify-label') || '';
+      content.innerHTML = '<h3 class="modal-title-proof">Proof</h3><div class="verify-modal-body"><img src="' + photo + '" class="verify-modal-img" alt="Verification proof"/>' + (label ? '<p class="verify-modal-caption">' + label + '</p>' : '') + '</div>';
+      if (box) box.className = 'modal-box';
+      overlay.classList.remove('hidden');
+    }
+    return;
+  }
+  var zoomEl = e.target.closest('[data-action="zoom-photo"]');
+  if (zoomEl) {
+    var overlay = document.getElementById('modalOverlay');
+    var content = document.getElementById('modalContent');
+    var box = document.getElementById('modalBox');
+    var src = zoomEl.getAttribute('data-src');
+    var verified = zoomEl.getAttribute('data-verified') === '1';
+    var caption = zoomEl.getAttribute('data-caption') || '';
+    var footer = verified
+      ? '<div class="pf-zoom-verified"><span class="pf-zoom-verified-check">Proof</span>' + (caption ? '<p class="pf-zoom-caption">' + caption + '</p>' : '') + '</div>'
+      : '';
+    content.innerHTML = '<div class="verify-modal-body pf-zoom-modal-body"><img src="' + src + '" class="pf-zoom-img" alt=""/>' + footer + '</div>';
+    if (box) box.className = 'modal-box modal-box--zoom';
+    overlay.classList.remove('hidden');
+    return;
+  }
+  if (e.target.id === 'modalCloseBtn' || e.target.id === 'modalOverlay') {
+    document.getElementById('modalOverlay').classList.add('hidden');
+    var box2 = document.getElementById('modalBox');
+    if (box2) box2.className = 'modal-box';
+  }
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') document.getElementById('modalOverlay').classList.add('hidden');
+});
 (function () {
   var root = document.getElementById('portfolioSite');
-  var anim = root && root.getAttribute('data-section-anim');
-  if (!root || (anim !== 'horizontal' && anim !== 'vertical')) return;
-
-  // The hero band's CSS min-height is a TARGET (--pf-header-pct), not a
-  // cap — long names/taglines/contact lines can wrap and push the
-  // header taller than that target so nothing gets clipped (see
-  // .pf-hero in portfolio.css). The dot rail's centering math used to
-  // assume the header was always exactly the target height, so on a
-  // header that grew past its target the rail ended up positioned too
-  // high — overlapping the now-taller header instead of sitting
-  // cleanly in the section area below it. Measuring the hero's real
-  // rendered height and feeding it back in as --pf-header-real-h fixes
-  // that regardless of how much the header grows.
-  var hero = root.querySelector('.pf-hero');
-  function syncHeaderHeight() {
-    if (!hero) return;
-    root.style.setProperty('--pf-header-real-h', hero.getBoundingClientRect().height + 'px');
+  if (!root || root.getAttribute('data-section-anim') !== 'fade-up') return;
+  var items = root.querySelectorAll('.pf-sections > *');
+  if (!('IntersectionObserver' in window)) {
+    items.forEach(function (n) { n.classList.add('pf-revealed'); });
+    return;
   }
-  syncHeaderHeight();
-  if (hero && 'ResizeObserver' in window) {
-    new ResizeObserver(syncHeaderHeight).observe(hero);
-  } else {
-    window.addEventListener('resize', syncHeaderHeight);
-  }
-
-  var axis = anim === 'vertical' ? 'y' : 'x';
-  var track = root.querySelector('.pf-sections');
-  var slides = root.querySelectorAll('.pf-slide');
-  var dots = root.querySelectorAll('.pf-dot');
-  if (!track || !slides.length) return;
-  var current = 0;
-  var isProgrammatic = false;
-
-  function goTo(i) {
-    if (i < 0 || i >= slides.length) return;
-    current = i;
-    isProgrammatic = true;
-    slides[i].scrollIntoView({ behavior: 'smooth', block: axis === 'y' ? 'start' : 'nearest', inline: axis === 'x' ? 'start' : 'nearest' });
-    setDots(i);
-    setTimeout(function () { isProgrammatic = false; }, 500);
-  }
-  var dotsStyle = root.getAttribute('data-dots-style') || 'dot';
-  var headerStyle = root.getAttribute('data-header-style');
-  function setDots(i) {
-    dots.forEach(function (d, di) {
-      d.classList.toggle('active', di === i);
-      d.classList.toggle('passed', dotsStyle === 'progress' && di <= i);
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting) entry.target.classList.add('pf-revealed');
     });
-    // Pinned header: visible on slide 0, collapsed away (see
-    // .pf-header-collapsed in portfolio.css) on every slide after
-    // that, so those slides expand up to where the header used to be.
-    root.classList.toggle('pf-header-collapsed', headerStyle === 'pinned' && i > 0);
-  }
-  dots.forEach(function (d) {
-    d.addEventListener('click', function () { goTo(parseInt(d.getAttribute('data-pf-slide'), 10)); });
-  });
-  track.addEventListener('scroll', function () {
-    if (isProgrammatic) return;
-    var closest = 0, closestDist = Infinity;
-    var trackRect = track.getBoundingClientRect();
-    slides.forEach(function (s, i) {
-      var r = s.getBoundingClientRect();
-      var dist = axis === 'y' ? Math.abs(r.top - trackRect.top) : Math.abs(r.left - trackRect.left);
-      if (dist < closestDist) { closestDist = dist; closest = i; }
-    });
-    if (closest !== current) { current = closest; setDots(current); }
-  }, { passive: true });
-  track.addEventListener('keydown', function (e) {
-    if (axis === 'x') {
-      if (e.key === 'ArrowRight') goTo(current + 1);
-      else if (e.key === 'ArrowLeft') goTo(current - 1);
-    } else {
-      if (e.key === 'ArrowDown') goTo(current + 1);
-      else if (e.key === 'ArrowUp') goTo(current - 1);
-    }
-  });
-  var wheelCooldown = false;
-  track.addEventListener('wheel', function (e) {
-    if (window.innerWidth <= 768) return;
-    var delta = axis === 'y' ? e.deltaY : (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY);
-    if (Math.abs(delta) < 10) return;
-    e.preventDefault();
-    if (wheelCooldown) return;
-    wheelCooldown = true;
-    goTo(current + (delta > 0 ? 1 : -1));
-    setTimeout(function () { wheelCooldown = false; }, 700);
-  }, { passive: false });
+  }, { threshold: 0.15 });
+  items.forEach(function (n) { io.observe(n); });
 })();
-`;
+${HORIZONTAL_SLIDE_SCRIPT}`;
 
 // Plain-HTML (no contenteditable, no editor chrome) render of a single
 // portfolio block, for the published static snapshot.
@@ -2261,6 +2332,15 @@ function renderTemplateThumbnails() {
 // correct guess via /api/lock/verify if one is.
 let CURRENT_PROOF_COLLECTOR = null;
 let CURRENT_PROOF_SEQ = 0;
+// When true, staticVerifyBadge/the gallery renderer below skip the
+// collectProof id-indirection entirely and bake proof content
+// straight into data-verify-photo/data-verify-link/data-verify-label
+// attributes instead. Only ever turned on for buildPortfolioZipHTML —
+// a self-contained offline export has no backend to fetch proof from
+// (and, being a private file the person downloaded themselves, no
+// view-source privacy concern that the hosted flow's indirection
+// exists to solve).
+let INLINE_PROOF_MODE = false;
 
 function collectProof(entry) {
   if (!CURRENT_PROOF_COLLECTOR) return null; // collector not active (e.g. live-canvas preview, not a static export)
@@ -2303,11 +2383,17 @@ function renderStaticPortfolioBlockInner(block) {
     const cls = small ? 'pf-verify-badge pf-verify-badge-sm' : 'pf-verify-badge';
     const text = small ? VERIFIED_SEAL_ICON : `<span class="pf-verify-check">${VERIFIED_SEAL_ICON}</span>Verified${labelHTML}`;
     if (v.type === 'photo' && v.photo) {
+      if (INLINE_PROOF_MODE) {
+        return `<button class="${cls}" data-verify-type="photo" data-verify-photo="${esc(v.photo)}" data-verify-label="${esc(v.label || '')}" type="button" title="View proof">${text}</button>`;
+      }
       const id = collectProof({ type: 'photo', photo: v.photo, label: v.label || '' });
       return `<button class="${cls}" data-verify-type="photo" data-verify-id="${esc(id)}" type="button" title="View proof">${text}</button>`;
     }
     if (v.type === 'link' && v.link) {
       const safeHref = /^https?:\/\//i.test(v.link) ? v.link : `https://${v.link}`;
+      if (INLINE_PROOF_MODE) {
+        return `<button class="${cls}" data-verify-type="link" data-verify-link="${esc(safeHref)}" type="button" title="View proof">${text}</button>`;
+      }
       const id = collectProof({ type: 'link', link: safeHref, label: v.label || '' });
       return `<button class="${cls}" data-verify-type="link" data-verify-id="${esc(id)}" type="button" title="View proof">${text}</button>`;
     }
@@ -2380,18 +2466,30 @@ function renderStaticPortfolioBlockInner(block) {
         let photoProofId = null;
         if (pv.type === 'link' && pv.link) {
           const safeHref = /^https?:\/\//i.test(pv.link) ? pv.link : `https://${pv.link}`;
-          const id = collectProof({ type: 'link', link: safeHref, label: pv.label || '' });
-          badge = `<button class="pf-photo-verify-badge is-link" data-action="open-verify-link" data-verify-id="${esc(id)}" type="button" title="Open verification link">${VERIFIED_SEAL_ICON}</button>`;
+          if (INLINE_PROOF_MODE) {
+            badge = `<button class="pf-photo-verify-badge is-link" data-action="open-verify-link" data-verify-link="${esc(safeHref)}" type="button" title="Open verification link">${VERIFIED_SEAL_ICON}</button>`;
+          } else {
+            const id = collectProof({ type: 'link', link: safeHref, label: pv.label || '' });
+            badge = `<button class="pf-photo-verify-badge is-link" data-action="open-verify-link" data-verify-id="${esc(id)}" type="button" title="Open verification link">${VERIFIED_SEAL_ICON}</button>`;
+          }
         } else if (pv.type === 'photo' && pv.photo) {
-          photoProofId = collectProof({ type: 'photo', photo: pv.photo, label: pv.label || '' });
-          badge = `<button class="pf-photo-verify-badge is-link" data-verify-type="photo" data-verify-id="${esc(photoProofId)}" type="button" title="View proof photo">${VERIFIED_SEAL_ICON}</button>`;
+          if (INLINE_PROOF_MODE) {
+            badge = `<button class="pf-photo-verify-badge is-link" data-verify-type="photo" data-verify-photo="${esc(pv.photo)}" data-verify-label="${esc(pv.label || '')}" type="button" title="View proof photo">${VERIFIED_SEAL_ICON}</button>`;
+          } else {
+            photoProofId = collectProof({ type: 'photo', photo: pv.photo, label: pv.label || '' });
+            badge = `<button class="pf-photo-verify-badge is-link" data-verify-type="photo" data-verify-id="${esc(photoProofId)}" type="button" title="View proof photo">${VERIFIED_SEAL_ICON}</button>`;
+          }
         }
         const hasProof = pv.type === 'photo' && !!pv.photo;
-        // The caption is drawn from the same proof entry (looked up
-        // by id at unlock/hydrate time) rather than embedded here, so
-        // a recruiter's private note doesn't leak via view-source
-        // either.
-        const captionAttr = hasProof && pv.label ? ` data-caption-id="${esc(photoProofId)}"` : '';
+        // Hosted flow: caption is drawn from the same proof entry
+        // (looked up by id at unlock/hydrate time) rather than
+        // embedded here, so a recruiter's private note doesn't leak
+        // via view-source. Zip flow: no view-source concern for a
+        // file the person downloaded themselves, so bake it straight
+        // in as data-caption.
+        const captionAttr = hasProof && pv.label
+          ? (INLINE_PROOF_MODE ? ` data-caption="${esc(pv.label)}"` : ` data-caption-id="${esc(photoProofId)}"`)
+          : '';
         return `<div class="pf-gallery-item" data-action="zoom-photo" data-src="${esc(p.src)}" data-verified="${hasProof ? '1' : '0'}"${captionAttr}>${badge}<img src="${esc(p.src)}" alt="" /></div>`;
       }).join('');
       return `<div class="pf-card pf-gallery-card"><div class="pf-gallery-grid">${itemsHTML}</div></div>`;
@@ -2557,6 +2655,208 @@ ${siteUrl ? `<meta property="og:url" content="${esc(siteUrl)}" />` : ''}
 </html>`;
 }
 
+// Self-contained, offline HTML for the "Download ZIP" feature — the
+// portfolio only (not the résumé), with no hosting, no account, and
+// no Recruiter Password Lock involved at all. Proof content is baked
+// straight into the markup (see INLINE_PROOF_MODE) instead of being
+// drained out for a separate lock-gated fetch, dazed.css/portfolio.css
+// are referenced as plain relative files (bundled alongside index.html
+// in the zip, see downloadPortfolioZip), and the embedded script is
+// the trimmed ZIP_PAGE_SCRIPT rather than PUBLISHED_PAGE_SCRIPT.
+function buildPortfolioZipHTML() {
+  const p = Store.state.portfolio.profile;
+  const design = Store.state.portfolio.design;
+  const blocks = filterVisibleBlocksHidingOrphanSections(Store.state.portfolio.blocks);
+  const fullName = `${p.firstName} ${p.lastName}`.trim() || 'Untitled Portfolio';
+  const contactLine = [p.email, p.phone, p.address].filter(Boolean).join('   •   ');
+  const isHorizontal = (design.sectionAnimation || 'none') === 'horizontal';
+  const isVertical = (design.sectionAnimation || 'none') === 'vertical';
+
+  INLINE_PROOF_MODE = true;
+  CURRENT_PROOF_COLLECTOR = null; // not used in this mode — proof is inlined directly
+  let sectionsHTML;
+  try {
+    sectionsHTML = (isHorizontal || isVertical)
+      ? buildHorizontalSectionsHTML(blocks, design.dotsStyle || 'dot')
+      : `<div class="pf-sections">${blocks.map(renderStaticPortfolioBlock).join('\n')}</div>`;
+  } finally {
+    INLINE_PROOF_MODE = false;
+  }
+
+  const pageTitle = `${esc(fullName)}${p.jobTitle ? ' — ' + esc(p.jobTitle) : ''}`;
+  const pageDescription = esc(p.tagline || (fullName + ' — portfolio'));
+  const iconHref = p.photo || '';
+
+  return `<!DOCTYPE html>
+<html lang="en" data-theme="dazed">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>${pageTitle}</title>
+<meta name="description" content="${pageDescription}" />
+${iconHref ? `<link rel="icon" href="${esc(iconHref)}" />` : ''}
+<link rel="stylesheet" href="dazed.css" />
+<link rel="stylesheet" href="portfolio.css" />
+<style>
+  body { margin: 0; background: var(--color-background, #FDF7FA); }
+  .portfolio-site { width: 100%; max-width: 100%; border: none; box-shadow: none; }
+</style>
+</head>
+<body data-viewmode="portfolio">
+  <div class="portfolio-site" id="portfolioSite" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-dots-pos="${esc(design.dotsPosition || 'right')}" data-dots-center="${esc(design.dotsCentering || 'slide')}" data-dots-style="${esc(design.dotsStyle || 'dot')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" data-hero-photo-shape="${esc(design.heroPhotoShape || 'circle')}" data-hero-photo-border="${design.heroPhotoBorder === false ? '0' : '1'}" data-hero-photo-size="${esc(design.heroPhotoSize || 'md')}" data-hero-size="${esc(design.heroSize || 'normal')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};--pf-header-pct:${esc(design.headerHeightPct || 30)};--pf-text-pad:${esc((Number(design.textPaddingRem) || 0) + 'rem')};--pf-line-height:${esc(LINE_SPACING_PRESETS[design.lineSpacing] || LINE_SPACING_PRESETS.normal)};--pf-section-gap:${esc(SECTION_SPACING_PRESETS[design.sectionSpacing] || SECTION_SPACING_PRESETS.normal)};--pf-card-pad:${esc(CARD_PADDING_PRESETS[design.cardPadding] || CARD_PADDING_PRESETS.normal)};">
+    <header class="pf-hero">
+      ${p.photo ? `<div class="pf-hero-photo-wrap"><img src="${esc(p.photo)}" alt="${esc(fullName)}" /></div>` : ''}
+      <div class="pf-hero-text">
+        <h1 class="pf-name">${esc(fullName)}</h1>
+        ${p.jobTitle ? `<div class="pf-jobtitle">${esc(p.jobTitle)}</div>` : ''}
+        ${p.tagline ? `<p class="pf-tagline">${esc(p.tagline)}</p>` : ''}
+        ${contactLine ? `<div class="pf-contact-line">${esc(contactLine)}</div>` : ''}
+      </div>
+    </header>
+    ${sectionsHTML}
+  </div>
+
+  <div class="modal-overlay hidden" id="modalOverlay">
+    <div class="modal-box" id="modalBox" role="dialog" aria-modal="true">
+      <button class="modal-close" id="modalCloseBtn" type="button" aria-label="Close">✕</button>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+  <script>${ZIP_PAGE_SCRIPT}</script>
+</body>
+</html>`;
+}
+
+// A person's name/job title, cleaned up into a readable, GitHub-safe
+// repo name — used both for the zip's own filename and suggested repo
+// names in the bundled README (buildPortfolioZipReadme below).
+function portfolioZipBaseName() {
+  const p = Store.state.portfolio.profile;
+  return slugifyUsername(`${p.firstName || ''}-${p.lastName || ''}-portfolio`) || 'portfolio';
+}
+
+// Plain-language instructions for hosting the exported folder for
+// free, bundled into every zip alongside index.html. Covers the three
+// most common free static-hosting options — deliberately kept
+// beginner-friendly (drag-and-drop first) since this replaces the old
+// one-click "Publish to username.proves.work" flow.
+function buildPortfolioZipReadme() {
+  const repoName = portfolioZipBaseName();
+  return `# Your portfolio — how to host it for free
+
+This folder is a complete, self-contained website:
+
+  index.html
+  dazed.css
+  portfolio.css
+
+Open \`index.html\` directly in a browser and it already works —
+double-click it, no server required. To share it at a public URL,
+pick any one of the free options below. You only need one.
+
+---
+
+## Option 1: GitHub Pages
+
+1. Create a new repository on https://github.com/new (e.g. \`${repoName}\`).
+   Public repos work with GitHub Pages on the free plan.
+2. Upload all 3 files from this folder into the repo — on the repo
+   page, use "Add file" → "Upload files", drag them in, then commit.
+3. Go to the repo's **Settings** → **Pages**.
+4. Under "Build and deployment", set **Source** to "Deploy from a
+   branch", pick the **main** branch and the **/ (root)** folder,
+   then click **Save**.
+5. GitHub will give you a URL that looks like:
+   \`https://your-username.github.io/${repoName}/\`
+   It usually goes live within a minute or two.
+
+---
+
+## Option 2: Vercel
+
+1. Go to https://vercel.com and sign up (free) — GitHub sign-in is
+   the fastest option.
+2. Click **Add New… → Project**.
+3. Easiest path: drag this whole folder onto the Vercel dashboard's
+   upload area (no GitHub repo needed). Alternatively, push it to a
+   GitHub repo first (see Option 1, steps 1–2) and "Import" that repo
+   instead.
+4. Leave the framework preset as **Other** — there's nothing to build,
+   these are already plain HTML/CSS files.
+5. Click **Deploy**. Vercel gives you a URL like:
+   \`https://${repoName}.vercel.app\`
+
+---
+
+## Option 3: Cloudflare Pages
+
+1. Go to https://dash.cloudflare.com → **Workers & Pages** → **Create**
+   → **Pages**.
+2. Choose **Upload assets** (no GitHub account needed) and drag this
+   folder in — or **Connect to Git** if you've pushed it to GitHub
+   (see Option 1, steps 1–2) and want automatic redeploys on future
+   edits.
+3. Leave the build command blank and the output directory as \`/\`
+   (there's no build step — it's already static HTML/CSS).
+4. Click **Save and Deploy**. Cloudflare gives you a URL like:
+   \`https://${repoName}.pages.dev\`
+
+---
+
+## A couple of notes
+
+- All three options are free for a personal portfolio like this one,
+  with no time limit and no card required for GitHub Pages or
+  Cloudflare Pages (Vercel's free "Hobby" plan is also card-free).
+- If you edit your portfolio again later and re-download the zip,
+  just re-upload the new files (GitHub Pages) or re-deploy the new
+  folder (Vercel/Cloudflare) to update the live site — your URL stays
+  the same.
+- This export doesn't include a Recruiter Password Lock, even if you
+  have one set up elsewhere — it's meant to be a simple, fully public
+  copy of your portfolio.
+`;
+}
+
+// Fetches dazed.css/portfolio.css (served alongside editor.js on this
+// same origin) and bundles them — plus a bundled README.md with free
+// hosting instructions (GitHub Pages, Vercel, Cloudflare Pages) — into
+// a downloadable .zip. A fully self-contained copy of just the
+// portfolio (not the résumé), with no account, no hosting, and no
+// Recruiter Password Lock, available regardless of whether you're on
+// the free tier or have an active Support/paid period. Works fully
+// offline once downloaded: open index.html directly, no server needed.
+async function downloadPortfolioZip(triggerBtn) {
+  const original = triggerBtn ? triggerBtn.textContent : '';
+  if (triggerBtn) { triggerBtn.disabled = true; triggerBtn.textContent = 'Zipping…'; }
+  try {
+    const [dazedCss, portfolioCss] = await Promise.all([
+      fetch('dazed.css').then(r => r.text()),
+      fetch('portfolio.css').then(r => r.text())
+    ]);
+    const zip = new JSZip();
+    zip.file('index.html', buildPortfolioZipHTML());
+    zip.file('dazed.css', dazedCss);
+    zip.file('portfolio.css', portfolioCss);
+    zip.file('README.md', buildPortfolioZipReadme());
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const name = portfolioZipBaseName();
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${name}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    if (triggerBtn) { triggerBtn.textContent = '✓ Downloaded'; setTimeout(() => { triggerBtn.textContent = original; triggerBtn.disabled = false; }, 1600); }
+  } catch (err) {
+    if (triggerBtn) { triggerBtn.textContent = 'Download failed'; setTimeout(() => { triggerBtn.textContent = original; triggerBtn.disabled = false; }, 1800); }
+  }
+}
+
+
 // The toolbar button is permanently labelled "Publish" — it no longer
 // flips to "Sign in to Google" when signed out. Clicking it while
 // signed out still opens the sign-in flow first (see the click
@@ -2564,7 +2864,7 @@ ${siteUrl ? `<meta property="og:url" content="${esc(siteUrl)}" />` : ''}
 function refreshPublishToolbarButton() {
   const btn = document.getElementById('btnPublishShowcase');
   if (!btn) return;
-  btn.textContent = '✦ Publish';
+  btn.textContent = '⬇ Download ZIP';
   btn.classList.add('btn-secondary');
   btn.classList.remove('btn-ghost');
 }
@@ -3894,6 +4194,16 @@ function initToolbar() {
       // long résumés potentially chunky) fit loop runs.
       requestAnimationFrame(() => {
         setTimeout(() => {
+          // Priority: fit lengthwise (page height) first — this is
+          // what actually gets a résumé onto one page. Only once
+          // that's settled do we compress horizontal whitespace
+          // (tighten side margins) to make better use of the width.
+          // Compressing width can reflow lines (usually fewer per
+          // line becoming more per line, i.e. shorter — occasionally
+          // the reverse), which changes content height, so the length
+          // fit is re-run afterward to account for that.
+          fitResumeToOnePage();
+          compressResumeWidth();
           const result = fitResumeToOnePage();
           btnFitOnePage.disabled = false;
           btnFitOnePage.textContent = originalLabel;
@@ -3914,21 +4224,11 @@ function initToolbar() {
     });
   }
 
-  document.getElementById('btnPublishShowcase').addEventListener('click', async () => {
-    // The button always reads "Publish" now, but signed-out visitors
-    // still need an account to own the address against — so it opens
-    // the sign-in flow first, then hands off to the Publish modal.
-    if (!getSavedGoogleAccount()) {
-      openSignInModal();
-      return;
-    }
-    // Refresh site status right before opening the Publish modal so
-    // "already paid & live" is judged against the current truth, not
-    // whatever was cached at page load — an admin could have approved
-    // or marked the site paid at any point since then. This is what
-    // makes the fee-skip check further down actually trustworthy.
-    await refreshSiteStatusBadge();
-    openPublishModal();
+  document.getElementById('btnPublishShowcase').addEventListener('click', (e) => {
+    // The free-subdomain hosting flow (username.proves.work) has been
+    // retired — this button now exports a fully-functioning, offline
+    // .zip of the portfolio instead. No account or backend needed.
+    downloadPortfolioZip(e.currentTarget);
   });
   refreshPublishToolbarButton();
   refreshSaveOrPreviewButton();
@@ -4323,14 +4623,18 @@ function compressResumeWidth() {
 
 // ── Auto page balance ────────────────────────────────────────────
 // Runs after every content/design change to a résumé:
-//  1. Compress unused width (tight horizontal margin; an empty side
-//     column collapses to 0 via the .no-side-content CSS rule/class
-//     toggled in renderActiveCanvas above) — this is what previously
-//     showed up as a big dead strip down the right of the page.
-//  2. Re-measure and shrink (fitResumeToOnePage) if content now
-//     overflows the page, or grow (growResumeToFillPage) if it's
-//     noticeably short of filling it — restoring/maintaining a full
-//     one-page length regardless of what step 1 did to line wrapping.
+//  1. Re-measure and shrink (fitResumeToOnePage) if content overflows
+//     the page, or grow (growResumeToFillPage) if it's noticeably
+//     short of filling it — length takes priority, since that's what
+//     actually keeps the résumé on one page.
+//  2. Only then compress unused width (tight horizontal margin; an
+//     empty side column collapses to 0 via the .no-side-content CSS
+//     rule/class toggled in renderActiveCanvas above) — this is what
+//     previously showed up as a big dead strip down the right of the
+//     page.
+//  3. Re-measure once more: narrowing the margins in step 2 can
+//     reflow lines and change content height, so the length step runs
+//     again afterward to account for that.
 // Screen and PDF export always agree since the export re-runs this
 // same balance against the live element right before cloning it.
 let autoBalanceTimer = null;
@@ -4342,16 +4646,20 @@ function scheduleAutoBalanceResumePage() {
 function runResumePageBalance() {
   const paper = el.resumePaper;
   if (!paper) return;
-  compressResumeWidth();
   const doc = Store.active();
   const page = PAGE_SIZES_MM[doc.design.pageSize] || PAGE_SIZES_MM.letter;
   const fullH = pxFromMm(page.h);
-  const h = paper.scrollHeight;
-  if (h > fullH * 0.995) {
-    fitResumeToOnePage();
-  } else if (h < fullH * 0.9) {
-    growResumeToFillPage();
-  }
+  const lengthPass = () => {
+    const h = paper.scrollHeight;
+    if (h > fullH * 0.995) {
+      fitResumeToOnePage();
+    } else if (h < fullH * 0.9) {
+      growResumeToFillPage();
+    }
+  };
+  lengthPass();
+  compressResumeWidth();
+  lengthPass();
 }
 Store.on('blocks_changed', scheduleAutoBalanceResumePage);
 Store.on('profile_changed', scheduleAutoBalanceResumePage);
