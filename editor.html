@@ -211,6 +211,29 @@
         display: none;
       }
     }
+
+    /* The PDF download button reused .btn-ghost's 2px border like every
+       other toolbar button, which read as an odd little "page" outline
+       sitting right next to the icon — remove just the border/shadow
+       here rather than touching .btn-ghost globally. */
+    #btnDownloadPDF {
+      border: none;
+      box-shadow: none;
+    }
+    #btnDownloadPDF:hover {
+      box-shadow: none;
+      background: var(--color-surface-alt);
+      transform: none;
+    }
+    #btnDownloadPDF:active {
+      box-shadow: none !important;
+      transform: none !important;
+    }
+
+    .fit-one-page-btn {
+      width: 100%;
+      justify-content: center;
+    }
   </style>
 </head>
 <body data-viewmode="portfolio">
@@ -544,6 +567,11 @@
                 </div>
                 <p class="customize-hint">Sets the exported PDF's page size and the canvas dimensions to match. Each template's layout, fonts, and spacing are fixed to keep it looking its best — pick a template, size, and color, and you're done.</p>
               </div>
+              <div class="customize-group" data-viewmode-only="resume">
+                <p class="customize-label">One-Page Fit</p>
+                <button class="btn btn-secondary btn-sm fit-one-page-btn" id="btnFitOnePage" type="button">⇕ Fit to One Page</button>
+                <p class="customize-hint" id="fitOnePageStatus">Automatically shrinks the margins, spacing, and font size just enough so your résumé fits on exactly one page.</p>
+              </div>
             </div>
           </div>
 
@@ -571,7 +599,7 @@
             </div>
           </div>
 
-          <div class="form-section active" data-viewmode-only="portfolio">
+          <div class="form-section active">
             <button class="form-section-toggle" type="button">
               <span class="fs-title">Font</span>
               <span class="fs-chevron">▼</span>

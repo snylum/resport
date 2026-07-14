@@ -3866,6 +3866,38 @@ function initToolbar() {
     downloadResumeAsPDF();
   });
 
+  const btnFitOnePage = document.getElementById('btnFitOnePage');
+  const fitOnePageStatus = document.getElementById('fitOnePageStatus');
+  if (btnFitOnePage) {
+    btnFitOnePage.addEventListener('click', () => {
+      const originalLabel = btnFitOnePage.textContent;
+      const originalHint = fitOnePageStatus ? fitOnePageStatus.textContent : '';
+      btnFitOnePage.disabled = true;
+      btnFitOnePage.textContent = 'Fitting…';
+      // Let the "Fitting…" label paint before the (synchronous, and on
+      // long résumés potentially chunky) fit loop runs.
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          const result = fitResumeToOnePage();
+          btnFitOnePage.disabled = false;
+          btnFitOnePage.textContent = originalLabel;
+          if (fitOnePageStatus) {
+            fitOnePageStatus.textContent = result.fit
+              ? '✓ Fitted to one page.'
+              : 'Shrunk as far as it can while staying readable — there\'s still a bit too much content for one page. Try trimming a bullet or two.';
+            fitOnePageStatus.style.color = result.fit ? 'var(--color-secondary, #12704A)' : '#9C2A2A';
+            setTimeout(() => {
+              if (fitOnePageStatus) {
+                fitOnePageStatus.textContent = originalHint;
+                fitOnePageStatus.style.color = '';
+              }
+            }, 4000);
+          }
+        }, 10);
+      });
+    });
+  }
+
   document.getElementById('btnPublishShowcase').addEventListener('click', async () => {
     // The button always reads "Publish" now, but signed-out visitors
     // still need an account to own the address against — so it opens
@@ -4032,6 +4064,86 @@ function applyResumeDesign(design) {
   el.resumePaper.style.setProperty('--rp-col-border-w', design.colBorder === false ? '0px' : '2px');
 
   applyPortfolioLinkToResume(design);
+}
+
+// ── "Fit to One Page" ───────────────────────────────────────────
+// Shrinks margin → block padding → section gap → line height → font
+// size (in that order, each down to a sane floor) until the live
+// .resume-paper's rendered content height fits within one page of
+// whichever Document Size is currently selected. Operates directly on
+// the real canvas element (same one applyResumeDesign drives) so the
+// measurement always matches what's actually on screen/exported, then
+// commits the final numbers back into the design so they persist,
+// export to PDF, and survive template/page-size switches.
+function pxFromMm(mm) {
+  return mm * (96 / 25.4);
+}
+
+function fitResumeToOnePage() {
+  if (Store.state.viewMode !== 'resume') return { fit: true };
+
+  const doc = Store.active();
+  const design = doc.design;
+  const page = PAGE_SIZES_MM[design.pageSize] || PAGE_SIZES_MM.letter;
+  const targetH = pxFromMm(page.h);
+  const paper = el.resumePaper;
+
+  let margin = Number(design.pageMargin) || 2.5;
+  let blockPad = Number(design.blockPad) ?? 0.5;
+  let sectionGap = Number(design.sectionGap) ?? 1;
+  let lineHeight = Number(design.lineHeight) || 1.45;
+  let fontScale = Number(design.fontSize || 100) / 100;
+
+  const MIN_MARGIN = 0.4;
+  const MIN_PAD = 0.15;
+  const MIN_GAP = 0.15;
+  const MIN_LH = 1.05;
+  const MIN_FONT = 0.62;
+
+  const apply = () => {
+    paper.style.setProperty('--rp-margin', margin + 'rem');
+    paper.style.setProperty('--rp-block-pad', blockPad + 'rem');
+    paper.style.setProperty('--rp-section-gap', sectionGap + 'rem');
+    paper.style.setProperty('--rp-line-height', lineHeight);
+    paper.style.setProperty('--rp-font-scale', fontScale);
+  };
+  const fits = () => {
+    apply();
+    return paper.scrollHeight <= targetH + 1;
+  };
+
+  // Work through the levers in the order that costs readability least
+  // first (whitespace) before touching type size at all, looping until
+  // it fits or every lever has bottomed out.
+  let guard = 0;
+  while (!fits() && guard < 300) {
+    guard++;
+    if (margin > MIN_MARGIN) { margin = Math.max(MIN_MARGIN, margin - 0.08); continue; }
+    if (sectionGap > MIN_GAP) { sectionGap = Math.max(MIN_GAP, sectionGap - 0.06); continue; }
+    if (blockPad > MIN_PAD) { blockPad = Math.max(MIN_PAD, blockPad - 0.03); continue; }
+    if (lineHeight > MIN_LH) { lineHeight = Math.max(MIN_LH, lineHeight - 0.02); continue; }
+    if (fontScale > MIN_FONT) { fontScale = Math.max(MIN_FONT, fontScale - 0.015); continue; }
+    break;
+  }
+
+  const succeeded = fits();
+
+  margin = Math.round(margin * 100) / 100;
+  blockPad = Math.round(blockPad * 100) / 100;
+  sectionGap = Math.round(sectionGap * 100) / 100;
+  lineHeight = Math.round(lineHeight * 100) / 100;
+  fontScale = Math.round(fontScale * 1000) / 1000;
+
+  // Persist — this also re-triggers applyResumeDesign via design_changed,
+  // which re-applies the exact same numbers, so nothing visually jumps.
+  design.pageMargin = margin;
+  design.blockPad = blockPad;
+  design.sectionGap = sectionGap;
+  design.lineHeight = lineHeight;
+  design.fontSize = String(Math.round(fontScale * 100));
+  Store.emit('design_changed', design);
+
+  return { fit: succeeded };
 }
 
 // Appends "yourname.proves.work" to the résumé's contact line when
