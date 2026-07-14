@@ -2217,6 +2217,8 @@ function renderTemplateThumbnails() {
     const holder = card.querySelector('.tpl-live-thumb');
     if (!holder) return;
     const tpl = card.dataset.template;
+    const tplDef = TEMPLATES.find(t => t.id === tpl);
+    const design = tplDef ? tplDef.design : null;
     const layout = TEMPLATE_TWO_COL.has(tpl) ? '2' : '1';
     const mainHTML = sample.main.map(b => `<div class="resume-block block-${b.type}">${renderStaticResumeBlock(b)}</div>`).join('');
     const sideHTML = layout === '2'
@@ -2227,9 +2229,24 @@ function renderTemplateThumbnails() {
     paper.className = 'resume-paper tpl-thumb-paper';
     paper.setAttribute('data-template', tpl);
     paper.setAttribute('data-layout', layout);
-    paper.setAttribute('data-header-align', 'left');
-    paper.setAttribute('data-date-align', 'right');
-    paper.setAttribute('data-title-style', 'plain');
+    paper.setAttribute('data-header-align', (design && design.headerAlign) || 'left');
+    paper.setAttribute('data-date-align', (design && design.dateAlign) || 'right');
+    paper.setAttribute('data-title-style', (design && design.titleStyle) || 'plain');
+    // Apply the same design CSS vars the real canvas uses (accent,
+    // fonts, spacing) so the thumbnail is a true color/type preview
+    // of the template, not just its structural CSS rules.
+    if (design) {
+      paper.style.setProperty('--rp-accent', design.accent);
+      paper.style.setProperty('--rp-heading-font', FONT_STACKS[design.headingFont] || FONT_STACKS.sans);
+      paper.style.setProperty('--rp-body-font', FONT_STACKS[design.bodyFont] || FONT_STACKS.sans);
+      paper.style.setProperty('--rp-font-scale', Number(design.fontSize) / 100 || 1);
+      paper.style.setProperty('--rp-line-height', Number(design.lineHeight) || 1.45);
+      paper.style.setProperty('--rp-section-gap', (Number(design.sectionGap) ?? 1) + 'rem');
+      paper.style.setProperty('--rp-block-pad', (Number(design.blockPad) ?? 0.5) + 'rem');
+      paper.style.setProperty('--rp-col-gap', (Number(design.colGap) ?? 2) + 'rem');
+      paper.style.setProperty('--rp-side-width', (Number(design.colSplit) || 34) + '%');
+      paper.style.setProperty('--rp-col-border-w', design.colBorder === false ? '0px' : '2px');
+    }
     paper.innerHTML = `
       <header class="rb-header">
         <div class="rb-header-text">
@@ -2249,17 +2266,45 @@ function renderTemplateThumbnails() {
     // Scale the real, full-size paper down to fit the thumbnail box.
     // Measured after append (needs real layout), and re-measured on
     // resize since the card's own width can change with the sidebar.
+    // requestAnimationFrame + a couple of retries covers the case
+    // where this runs right as the Customize panel is switching from
+    // display:none, before the browser has committed a layout pass —
+    // without this the very first open could measure 0 and leave the
+    // thumbnail unscaled (and therefore invisible in its 60px box).
+    let attempts = 0;
     const fit = () => {
       const targetWidth = holder.clientWidth;
-      if (!targetWidth) return; // hidden right now (e.g. panel not open yet) — nothing to scale against
+      if (!targetWidth) {
+        if (attempts++ < 10) requestAnimationFrame(fit);
+        return;
+      }
       const naturalWidth = paper.getBoundingClientRect().width / (paper._tplScale || 1);
       const scale = naturalWidth ? targetWidth / naturalWidth : 1;
       paper._tplScale = scale;
       paper.style.transform = `scale(${scale})`;
     };
-    fit();
+    requestAnimationFrame(fit);
     if (window.ResizeObserver) {
       new ResizeObserver(fit).observe(holder);
+    }
+
+    // Heading/body font + accent color preview row, so each card
+    // communicates its typography and color scheme at a glance (not
+    // just structural layout) — mirrors the "Aa" treatment used in
+    // the portfolio template gallery.
+    let meta = card.querySelector('.tpl-card-meta');
+    if (!meta) {
+      meta = document.createElement('div');
+      meta.className = 'tpl-card-meta';
+      const nameEl = card.querySelector('.tpl-card-name');
+      if (nameEl) card.insertBefore(meta, nameEl);
+      else card.appendChild(meta);
+    }
+    if (design) {
+      meta.innerHTML = `
+        <span class="tpl-card-font tpl-card-font-heading" style="font-family:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.sans)};" title="Heading font">Aa</span>
+        <span class="tpl-card-font tpl-card-font-body" style="font-family:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};" title="Body font">Aa</span>
+        <span class="tpl-card-swatch" style="background:${esc(design.accent)};" title="Accent color"></span>`;
     }
   });
 }
