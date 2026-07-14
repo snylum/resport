@@ -2250,8 +2250,9 @@ function renderTemplateThumbnails() {
     // Measured after append (needs real layout), and re-measured on
     // resize since the card's own width can change with the sidebar.
     const fit = () => {
+      const targetWidth = holder.clientWidth;
+      if (!targetWidth) return; // hidden right now (e.g. panel not open yet) — nothing to scale against
       const naturalWidth = paper.getBoundingClientRect().width / (paper._tplScale || 1);
-      const targetWidth = holder.clientWidth || 1;
       const scale = naturalWidth ? targetWidth / naturalWidth : 1;
       paper._tplScale = scale;
       paper.style.transform = `scale(${scale})`;
@@ -3978,6 +3979,14 @@ Store.on('mode_changed', (mode) => {
   el.tabCustomizeBtn.classList.toggle('active', mode === 'customize');
   el.panelEdit.classList.toggle('active', mode === 'edit');
   el.panelCustomize.classList.toggle('active', mode === 'customize');
+  // Thumbnails are measured/scaled against their holder's rendered
+  // width (see renderTemplateThumbnails), which is 0 while this panel
+  // is hidden — so the very first render (at page load, before the
+  // user has ever opened Customize) always computes scale 0 and every
+  // template card is left permanently blank. Re-running it here, now
+  // that the panel is actually visible and has a real width, fixes
+  // that without touching the render logic itself.
+  if (mode === 'customize') renderTemplateThumbnails();
 });
 
 // ── 7. Collapsible form sections (e.g. "Personal Details") ────

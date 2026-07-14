@@ -394,7 +394,25 @@ export default {
 
     const isApex = host === APP_HOST || host === `www.${APP_HOST}`;
 
-    if (isApex && url.pathname.startsWith('/api/')) {
+    // Route by PATH first, not host. The previous version only ever
+    // called handleApi() when the request's host exactly matched the
+    // hardcoded APP_HOST ('proves.work') — which is only true once you
+    // own that exact domain, attach it as a Cloudflare zone, and wire
+    // the Route patterns in wrangler.jsonc to it. On a free-tier setup
+    // (no custom domain yet — just the default
+    // `<worker-name>.<subdomain>.workers.dev` host, or any other
+    // domain/preview host), `host` never equals APP_HOST, so `isApex`
+    // was always false and every /api/* request — including the
+    // résumé-check and tailor-to-job-posting AI endpoints — silently
+    // fell through to the wildcard-subdomain branch below instead of
+    // reaching handleApi() at all. That branch tried to treat "api" (or
+    // whatever the actual host's first label was) as a *portfolio
+    // username*, found nothing in KV, and returned a "site not found"
+    // page — which is why the AI features looked broken with no useful
+    // error. Checking the path instead of the host means /api/* works
+    // the same way on workers.dev, a custom domain, or the real
+    // proves.work zone, with no other configuration needed.
+    if (url.pathname.startsWith('/api/')) {
       return handleApi(request, env, url);
     }
 
