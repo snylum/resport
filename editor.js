@@ -832,7 +832,7 @@ function pfSetActiveDot(i) {
 // which have nothing to collapse.
 function pfUpdateHeaderCollapse(i) {
   const headerStyle = el.portfolioSite.getAttribute('data-header-style');
-  el.portfolioSite.classList.toggle('pf-header-collapsed', headerStyle === 'pinned' && i > 0);
+  el.portfolioSite.classList.toggle('pf-header-collapsed', headerStyle === 'scroll' && i > 0);
 }
 
 function pfCurrentAxis() {
@@ -1748,7 +1748,7 @@ const HORIZONTAL_SLIDE_SCRIPT = `
       d.classList.toggle('active', di === i);
       d.classList.toggle('passed', dotsStyle === 'progress' && di <= i);
     });
-    root.classList.toggle('pf-header-collapsed', headerStyle === 'pinned' && i > 0);
+    root.classList.toggle('pf-header-collapsed', headerStyle === 'scroll' && i > 0);
   }
   dots.forEach(function (d) {
     d.addEventListener('click', function () { goTo(parseInt(d.getAttribute('data-pf-slide'), 10)); });
@@ -2523,18 +2523,23 @@ function renderStaticPortfolioBlockInner(block) {
   }
 }
 
-// Groups flat blocks into full-panel "slides" for horizontal mode —
-// each 'section' title block starts a new slide, and everything
-// under it (cards, summaries, etc.) rides along inside that same
-// slide, so one slide == one themed section, the same way each
-// panel on the proves.work homepage is one themed section rather
-// than one card. Anything before the first section title becomes
-// its own leading slide instead of being dropped.
+// Groups the flat block list into slides for horizontal/vertical mode.
+// Each block's own `newSlide` flag decides whether it starts a new
+// slide: true always starts one, false never does, and undefined
+// ("auto") falls back to the historical rule — section heading
+// blocks start a slide, everything else doesn't — so portfolios
+// created before this per-block override existed keep their exact
+// original grouping. This lets someone manually keep multiple
+// section headings together on one slide, or split a single
+// section's blocks across two, independent of where headings fall.
 function groupBlocksIntoSlides(blocks) {
   const slides = [];
   let current = null;
   blocks.forEach(block => {
-    if (block.type === 'section' || !current) {
+    const starts = block.newSlide === true ? true
+      : block.newSlide === false ? false
+      : block.type === 'section';
+    if (starts || !current) {
       current = [];
       slides.push(current);
     }
@@ -3443,6 +3448,8 @@ function openSupportPaymentModal(username, months, currency) {
 function renderSidebarList(blocks) {
   el.sidebarSectionsList.innerHTML = '';
   const twoCol = Store.state.viewMode === 'resume' && Store.active().design.layout === '2';
+  const anim = Store.active().design.sectionAnimation;
+  const showSlideControl = Store.state.viewMode === 'portfolio' && (anim === 'horizontal' || anim === 'vertical');
 
   blocks.forEach(block => {
     const item = document.createElement('div');
@@ -3495,6 +3502,18 @@ function renderSidebarList(blocks) {
     const contentAlignBtn = `<button class="sd-icon-btn sd-content-align-btn" data-action="cycle-content-align" data-id="${block.id}" data-content-align="${contentAlign}" title="Text alignment inside this section: ${contentAlignLabel} (click to change)" type="button">${contentAlignIcon}</button>`;
     const hiddenTag = block.hidden ? `<span class="sd-hidden-tag">Hidden</span>` : '';
 
+    let slideBtn = '';
+    if (showSlideControl) {
+      const resolved = block.newSlide === true ? true
+        : block.newSlide === false ? false
+        : block.type === 'section';
+      const state = block.newSlide === true ? 'on' : block.newSlide === false ? 'off' : 'auto';
+      const label = state === 'on' ? 'Always starts a new slide (click to switch to: never)'
+        : state === 'off' ? 'Never starts a new slide — stays on the previous one (click to switch to: auto)'
+        : `Auto — ${resolved ? 'currently starts a new slide because it\u2019s a section heading' : 'currently stays on the previous slide'} (click to switch to: always)`;
+      slideBtn = `<button class="sd-icon-btn sd-slide-btn sd-slide-${state}" data-action="cycle-new-slide" data-id="${block.id}" title="${label}" type="button">${resolved ? '⛶' : '▭'}</button>`;
+    }
+
     item.innerHTML = `
       <div class="sd-item-header">
         <span class="sd-drag-handle">☰</span>
@@ -3503,6 +3522,7 @@ function renderSidebarList(blocks) {
           ${swapBtn}
           ${alignBtn}
           ${contentAlignBtn}
+          ${slideBtn}
           ${shadowBtn}
           ${hideBtn}
           ${styleBtn}
@@ -3587,6 +3607,8 @@ function initSidebarActions() {
         const order = ['left', 'center', 'right'];
         const next = order[(order.indexOf(actionBtn.dataset.contentAlign) + 1) % order.length];
         Store.setBlockContentAlign(actionBtn.dataset.id, next);
+      } else if (action === 'cycle-new-slide') {
+        Store.cycleBlockNewSlide(actionBtn.dataset.id);
       } else if (action === 'toggle-expand') {
         toggleBlockExpand(actionBtn.dataset.block);
       } else if (action === 'toggle-style') {
@@ -5004,6 +5026,7 @@ function initCustomizePanel() {
       const mode = Store.active().design.sectionAnimation || 'none';
       renderPortfolioCanvasBlocks(Store.active().blocks, mode);
       initPortfolioAnimation(mode);
+      renderSidebarList(Store.active().blocks);
     }
   });
 }

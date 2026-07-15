@@ -1401,6 +1401,23 @@ body {
   opacity: 0.6;
 }
 
+/* ── Slide-break toggle (horizontal/vertical mode only) ─────
+   "auto" (default, undefined) looks like every other neutral
+   icon-button. "on" (always starts a new slide) is accented so it
+   reads as an explicit, deliberate override. "off" (never starts a
+   new slide) is dimmed, mirroring the hard-shadow "off" treatment. */
+.sd-slide-btn.sd-slide-on {
+  background: var(--pf-accent, var(--color-primary));
+  color: #fff;
+  border-color: var(--pf-accent, var(--color-primary));
+}
+.sd-slide-btn.sd-slide-off {
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  box-shadow: none;
+  opacity: 0.6;
+}
+
 .sd-hidden-tag {
   font-size: 0.65rem;
   font-weight: 700;

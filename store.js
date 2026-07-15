@@ -1072,6 +1072,25 @@ class EditorStore {
     this.emit('blocks_changed', this.active().blocks);
   }
 
+  // Horizontal/vertical slide mode groups blocks into slides via
+  // groupBlocksIntoSlides() (editor.js), which starts a new slide at
+  // every block where this resolves to true. Undefined means "auto":
+  // fall back to the historical rule of "section" heading blocks
+  // always starting a new slide, everything else never does — so
+  // existing portfolios keep rendering exactly as before. Explicitly
+  // setting true/false lets someone decouple slide breaks from
+  // section headings — e.g. keep two section headings together on
+  // one slide, or split a single section's content across two.
+  // Cycles auto -> on -> off -> auto.
+  cycleBlockNewSlide(id) {
+    const block = this.active().blocks.find(b => b.id === id);
+    if (!block) return;
+    const order = [undefined, true, false];
+    const idx = order.indexOf(block.newSlide);
+    block.newSlide = order[((idx === -1 ? 0 : idx) + 1) % order.length];
+    this.emit('blocks_changed', this.active().blocks);
+  }
+
   // How a section's own text/rows/tags read — independent from
   // setBlockAlign above, which only controls where the card sits on
   // the page. Undefined means "left", matching every block's

@@ -186,17 +186,20 @@
 
 /* Horizontal/vertical slide mode has no page scroll for a sticky
    header to stick to (see the "fixed shell" block below) — so
-   "pinned" means something different there: the header stays fully
+   "scroll" means something different there: the header stays fully
    visible on the first slide, then collapses away (height animates
-   to 0) as soon as the visitor moves past it, so slide 2 onward
-   expands to fill the space all the way up to where the header used
-   to be. That's driven by the .pf-header-collapsed class, toggled on
-   .portfolio-site by the slide-nav script as the active slide
-   changes (see initPortfolioHorizontalNav in the editor, and the
-   equivalent inline script on the published page). --pf-header-real-h
-   is measured/kept in sync by that same script. */
-.portfolio-site[data-section-anim="horizontal"][data-header-style="pinned"] .pf-hero,
-.portfolio-site[data-section-anim="vertical"][data-header-style="pinned"] .pf-hero {
+   to 0) as soon as the visitor moves past it — i.e. it scrolls out
+   of view, same as it would in normal document flow — so slide 2
+   onward expands to fill the space all the way up to where the
+   header used to be. That's driven by the .pf-header-collapsed
+   class, toggled on .portfolio-site by the slide-nav script as the
+   active slide changes (see initPortfolioHorizontalNav in the
+   editor, and the equivalent inline script on the published page).
+   --pf-header-real-h is measured/kept in sync by that same script.
+   "pinned" keeps the header pinned in place across every slide, so
+   it gets no collapse behavior at all here. */
+.portfolio-site[data-section-anim="horizontal"][data-header-style="scroll"] .pf-hero,
+.portfolio-site[data-section-anim="vertical"][data-header-style="scroll"] .pf-hero {
   position: static;
   flex-shrink: 0;
   overflow: hidden;
@@ -205,8 +208,8 @@
   transition: max-height 0.45s ease, opacity 0.3s ease, padding-top 0.45s ease, padding-bottom 0.45s ease, border-width 0.45s ease;
 }
 
-.portfolio-site[data-section-anim="horizontal"][data-header-style="pinned"].pf-header-collapsed .pf-hero,
-.portfolio-site[data-section-anim="vertical"][data-header-style="pinned"].pf-header-collapsed .pf-hero {
+.portfolio-site[data-section-anim="horizontal"][data-header-style="scroll"].pf-header-collapsed .pf-hero,
+.portfolio-site[data-section-anim="vertical"][data-header-style="scroll"].pf-header-collapsed .pf-hero {
   max-height: 0;
   min-height: 0; /* .pf-hero's own min-height (--pf-header-pct, floored
                     at --pf-hero-min) would otherwise win over max-height
@@ -218,9 +221,9 @@
   pointer-events: none;
 }
 
-/* Scroll-mode headers (non-pinned) in slide mode are already plain
-   static flex items with nothing to collapse, so this class has no
-   effect there — it's scoped to [data-header-style="pinned"] above. */
+/* Pinned headers in slide mode are already plain static flex items
+   with nothing to collapse, so this class has no effect there — it's
+   scoped to [data-header-style="scroll"] above. */
 
 /* ── Hero alignment ───────────────────────────────────────────
    Lets the personal-details card sit left (default), centered, or
@@ -527,6 +530,8 @@
 }
 
 .pf-dot {
+  appearance: none;
+  -webkit-appearance: none;
   width: 9px; height: 9px;
   border-radius: 50%;
   border: 2px solid var(--color-border);
