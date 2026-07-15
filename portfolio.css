@@ -203,10 +203,17 @@
   position: static;
   flex-shrink: 0;
   overflow: hidden;
-  max-height: var(--pf-header-real-h, 480px);
+  max-height: var(--pf-header-real-h, calc(var(--pf-header-pct) * 1vh));
   opacity: 1;
   transition: max-height 0.45s ease, opacity 0.3s ease, padding-top 0.45s ease, padding-bottom 0.45s ease, border-width 0.45s ease;
 }
+
+/* Same fallback, scaled for the editor's fixed 640px canvas instead of
+   the real viewport — same 6.4px-per-percent factor the dots-centering
+   fallback below already uses for this exact reason. */
+#canvasZoomTarget .portfolio-site[data-section-anim="horizontal"][data-header-style="scroll"] .pf-hero,
+#canvasZoomTarget .portfolio-site[data-section-anim="vertical"][data-header-style="scroll"] .pf-hero {
+  max-height: var(--pf-header-real-h, calc(var(--pf-header-pct) * 6.4px));
 
 .portfolio-site[data-section-anim="horizontal"][data-header-style="scroll"].pf-header-collapsed .pf-hero,
 .portfolio-site[data-section-anim="vertical"][data-header-style="scroll"].pf-header-collapsed .pf-hero {
@@ -1832,8 +1839,6 @@
 
 .pw-lock-fab {
   position: fixed;
-  right: 1.25rem;
-  bottom: 1.25rem;
   z-index: 150;
   width: 46px;
   height: 46px;
@@ -1848,3 +1853,15 @@
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
 }
 .pw-lock-fab:hover { opacity: 0.9; }
+
+/* Corners */
+.pw-lock-fab--top-left     { top: 1.25rem;    left: 1.25rem; }
+.pw-lock-fab--top-right    { top: 1.25rem;    right: 1.25rem; }
+.pw-lock-fab--bottom-left  { bottom: 1.25rem; left: 1.25rem; }
+.pw-lock-fab--bottom-right { bottom: 1.25rem; right: 1.25rem; }
+
+/* Edges — centered along the side */
+.pw-lock-fab--top    { top: 1.25rem;    left: 50%; transform: translateX(-50%); }
+.pw-lock-fab--bottom { bottom: 1.25rem; left: 50%; transform: translateX(-50%); }
+.pw-lock-fab--left   { left: 1.25rem;   top: 50%;  transform: translateY(-50%); }
+.pw-lock-fab--right  { right: 1.25rem;  top: 50%;  transform: translateY(-50%); }

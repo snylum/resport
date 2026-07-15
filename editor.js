@@ -846,7 +846,22 @@ function pfGoToSlide(i) {
   pfIsProgrammaticScroll = true;
   pfSlideEls[i].scrollIntoView({ behavior: 'smooth', block: axis === 'y' ? 'start' : 'nearest', inline: axis === 'x' ? 'start' : 'nearest' });
   pfSetActiveDot(i);
+  const freshInner = pfSlideEls[i].querySelector('.pf-slide-inner');
+  if (freshInner) freshInner.scrollTop = 0;
   setTimeout(() => { pfIsProgrammaticScroll = false; }, 500);
+}
+
+// Mirrors the same check in the published page's HORIZONTAL_SLIDE_SCRIPT:
+// scroll a too-tall slide's own content before flipping to the next one.
+function pfCurrentInner() {
+  return pfSlideEls[pfCurrentSlide] && pfSlideEls[pfCurrentSlide].querySelector('.pf-slide-inner');
+}
+function pfHasRoomToScroll(dir) {
+  const inner = pfCurrentInner();
+  if (!inner) return false;
+  const max = inner.scrollHeight - inner.clientHeight;
+  if (max <= 1) return false;
+  return dir > 0 ? inner.scrollTop < max - 1 : inner.scrollTop > 1;
 }
 
 let pfIsProgrammaticScroll = false;
@@ -888,13 +903,17 @@ function initPortfolioHorizontalNav() {
   el.pfSections.addEventListener('keydown', (e) => {
     if (!pfSlideEls.length) return;
     const axis = pfCurrentAxis();
-    if (axis === 'x') {
-      if (e.key === 'ArrowRight') { e.preventDefault(); pfGoToSlide(pfCurrentSlide + 1); }
-      else if (e.key === 'ArrowLeft') { e.preventDefault(); pfGoToSlide(pfCurrentSlide - 1); }
-    } else {
-      if (e.key === 'ArrowDown') { e.preventDefault(); pfGoToSlide(pfCurrentSlide + 1); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); pfGoToSlide(pfCurrentSlide - 1); }
+    const isForward = (axis === 'x' && e.key === 'ArrowRight') || (axis === 'y' && e.key === 'ArrowDown');
+    const isBack = (axis === 'x' && e.key === 'ArrowLeft') || (axis === 'y' && e.key === 'ArrowUp');
+    if (!isForward && !isBack) return;
+    const dir = isForward ? 1 : -1;
+    if (pfHasRoomToScroll(dir)) {
+      e.preventDefault();
+      pfCurrentInner().scrollBy({ top: dir * pfCurrentInner().clientHeight * 0.8, behavior: 'smooth' });
+      return;
     }
+    e.preventDefault();
+    pfGoToSlide(pfCurrentSlide + dir);
   });
 
   el.pfSections.addEventListener('wheel', (e) => {
@@ -905,10 +924,19 @@ function initPortfolioHorizontalNav() {
     const axis = anim === 'vertical' ? 'y' : 'x';
     const delta = axis === 'y' ? e.deltaY : (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY);
     if (Math.abs(delta) < 10) return;
+    const dir = delta > 0 ? 1 : -1;
     e.preventDefault();
     if (pfWheelCooldown) return;
+    if (pfHasRoomToScroll(dir)) {
+      pfCurrentInner().scrollBy({ top: dir * Math.abs(delta), behavior: 'auto' });
+      if (!pfHasRoomToScroll(dir)) {
+        pfWheelCooldown = true;
+        setTimeout(() => { pfWheelCooldown = false; }, 550);
+      }
+      return;
+    }
     pfWheelCooldown = true;
-    pfGoToSlide(pfCurrentSlide + (delta > 0 ? 1 : -1));
+    pfGoToSlide(pfCurrentSlide + dir);
     setTimeout(() => { pfWheelCooldown = false; }, 700);
   }, { passive: false });
 }
@@ -1739,7 +1767,28 @@ const HORIZONTAL_SLIDE_SCRIPT = `
     isProgrammatic = true;
     slides[i].scrollIntoView({ behavior: 'smooth', block: axis === 'y' ? 'start' : 'nearest', inline: axis === 'x' ? 'start' : 'nearest' });
     setDots(i);
+    // Always land on a fresh slide scrolled to its top — otherwise a
+    // long slide visited earlier would keep whatever internal scroll
+    // position it was left at, so re-entering it wouldn't start from
+    // its first line.
+    var freshInner = slides[i].querySelector('.pf-slide-inner');
+    if (freshInner) freshInner.scrollTop = 0;
     setTimeout(function () { isProgrammatic = false; }, 500);
+  }
+  // If the current slide's own content is taller than the space it's
+  // given (see .pf-slide-inner), a single wheel notch/arrow press
+  // should scroll through THAT first — only once it's fully read
+  // (scrolled to its end) does the same gesture move to the next
+  // slide. dir is +1 for "forward/down", -1 for "back/up".
+  function currentInner() {
+    return slides[current] && slides[current].querySelector('.pf-slide-inner');
+  }
+  function hasRoomToScroll(dir) {
+    var inner = currentInner();
+    if (!inner) return false;
+    var max = inner.scrollHeight - inner.clientHeight;
+    if (max <= 1) return false;
+    return dir > 0 ? inner.scrollTop < max - 1 : inner.scrollTop > 1;
   }
   var dotsStyle = root.getAttribute('data-dots-style') || 'dot';
   var headerStyle = root.getAttribute('data-header-style');
@@ -1765,23 +1814,39 @@ const HORIZONTAL_SLIDE_SCRIPT = `
     if (closest !== current) { current = closest; setDots(current); }
   }, { passive: true });
   track.addEventListener('keydown', function (e) {
-    if (axis === 'x') {
-      if (e.key === 'ArrowRight') goTo(current + 1);
-      else if (e.key === 'ArrowLeft') goTo(current - 1);
-    } else {
-      if (e.key === 'ArrowDown') goTo(current + 1);
-      else if (e.key === 'ArrowUp') goTo(current - 1);
+    var isForward = (axis === 'x' && e.key === 'ArrowRight') || (axis === 'y' && e.key === 'ArrowDown');
+    var isBack = (axis === 'x' && e.key === 'ArrowLeft') || (axis === 'y' && e.key === 'ArrowUp');
+    if (!isForward && !isBack) return;
+    var dir = isForward ? 1 : -1;
+    if (hasRoomToScroll(dir)) {
+      e.preventDefault();
+      currentInner().scrollBy({ top: dir * currentInner().clientHeight * 0.8, behavior: 'smooth' });
+      return;
     }
+    goTo(current + dir);
   });
   var wheelCooldown = false;
   track.addEventListener('wheel', function (e) {
     if (window.innerWidth <= 768) return;
     var delta = axis === 'y' ? e.deltaY : (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY);
     if (Math.abs(delta) < 10) return;
+    var dir = delta > 0 ? 1 : -1;
     e.preventDefault();
     if (wheelCooldown) return;
+    if (hasRoomToScroll(dir)) {
+      currentInner().scrollBy({ top: dir * Math.abs(delta), behavior: 'auto' });
+      // That scroll just used up the last of the room in this
+      // direction — pause briefly before the next notch is allowed
+      // to flip the slide, so the last line lands on screen instead
+      // of being immediately swept away by the same gesture.
+      if (!hasRoomToScroll(dir)) {
+        wheelCooldown = true;
+        setTimeout(function () { wheelCooldown = false; }, 550);
+      }
+      return;
+    }
     wheelCooldown = true;
-    goTo(current + (delta > 0 ? 1 : -1));
+    goTo(current + dir);
     setTimeout(function () { wheelCooldown = false; }, 700);
   }, { passive: false });
 })();
@@ -1958,7 +2023,7 @@ document.addEventListener('keydown', function (e) {
     // the popup has been dismissed — clicking it reopens the same prompt.
     fab = document.createElement('button');
     fab.type = 'button';
-    fab.className = 'pw-lock-fab';
+    fab.className = 'pw-lock-fab pw-lock-fab--' + (root.getAttribute('data-lock-position') || 'bottom-right');
     fab.setAttribute('aria-label', 'Unlock verified proof');
     fab.innerHTML = '🔒';
     fab.style.display = 'none';
@@ -2636,7 +2701,7 @@ ${siteUrl ? `<meta property="og:url" content="${esc(siteUrl)}" />` : ''}
 </style>
 </head>
 <body data-viewmode="portfolio">
-  <div class="portfolio-site" id="portfolioSite" data-lock-scope="${esc(username || 'preview')}" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-dots-pos="${esc(design.dotsPosition || 'right')}" data-dots-center="${esc(design.dotsCentering || 'slide')}" data-dots-style="${esc(design.dotsStyle || 'dot')}" data-dots-symbol="${esc(design.dotsSymbol || 'circle')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" data-hero-photo-shape="${esc(design.heroPhotoShape || 'circle')}" data-hero-photo-border="${design.heroPhotoBorder === false ? '0' : '1'}" data-hero-photo-size="${esc(design.heroPhotoSize || 'md')}" data-hero-size="${esc(design.heroSize || 'normal')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};--pf-header-pct:${esc(design.headerHeightPct || 30)};--pf-text-pad:${esc((Number(design.textPaddingRem) || 0) + 'rem')};--pf-line-height:${esc(LINE_SPACING_PRESETS[design.lineSpacing] || LINE_SPACING_PRESETS.normal)};--pf-section-gap:${esc(SECTION_SPACING_PRESETS[design.sectionSpacing] || SECTION_SPACING_PRESETS.normal)};--pf-card-pad:${esc(CARD_PADDING_PRESETS[design.cardPadding] || CARD_PADDING_PRESETS.normal)};">
+  <div class="portfolio-site" id="portfolioSite" data-lock-scope="${esc(username || 'preview')}" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-dots-pos="${esc(design.dotsPosition || 'right')}" data-dots-center="${esc(design.dotsCentering || 'slide')}" data-dots-style="${esc(design.dotsStyle || 'dot')}" data-dots-symbol="${esc(design.dotsSymbol || 'circle')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" data-hero-photo-shape="${esc(design.heroPhotoShape || 'circle')}" data-hero-photo-border="${design.heroPhotoBorder === false ? '0' : '1'}" data-hero-photo-size="${esc(design.heroPhotoSize || 'md')}" data-hero-size="${esc(design.heroSize || 'normal')}" data-lock-position="${esc(design.lockPosition || 'bottom-right')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};--pf-header-pct:${esc(design.headerHeightPct || 30)};--pf-text-pad:${esc((Number(design.textPaddingRem) || 0) + 'rem')};--pf-line-height:${esc(LINE_SPACING_PRESETS[design.lineSpacing] || LINE_SPACING_PRESETS.normal)};--pf-section-gap:${esc(SECTION_SPACING_PRESETS[design.sectionSpacing] || SECTION_SPACING_PRESETS.normal)};--pf-card-pad:${esc(CARD_PADDING_PRESETS[design.cardPadding] || CARD_PADDING_PRESETS.normal)};">
     <header class="pf-hero">
       ${p.photo ? `<div class="pf-hero-photo-wrap"><img src="${esc(p.photo)}" alt="${esc(fullName)}" /></div>` : ''}
       <div class="pf-hero-text">
@@ -2709,7 +2774,7 @@ ${iconHref ? `<link rel="icon" href="${esc(iconHref)}" />` : ''}
 </style>
 </head>
 <body data-viewmode="portfolio">
-  <div class="portfolio-site" id="portfolioSite" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-dots-pos="${esc(design.dotsPosition || 'right')}" data-dots-center="${esc(design.dotsCentering || 'slide')}" data-dots-style="${esc(design.dotsStyle || 'dot')}" data-dots-symbol="${esc(design.dotsSymbol || 'circle')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" data-hero-photo-shape="${esc(design.heroPhotoShape || 'circle')}" data-hero-photo-border="${design.heroPhotoBorder === false ? '0' : '1'}" data-hero-photo-size="${esc(design.heroPhotoSize || 'md')}" data-hero-size="${esc(design.heroSize || 'normal')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};--pf-header-pct:${esc(design.headerHeightPct || 30)};--pf-text-pad:${esc((Number(design.textPaddingRem) || 0) + 'rem')};--pf-line-height:${esc(LINE_SPACING_PRESETS[design.lineSpacing] || LINE_SPACING_PRESETS.normal)};--pf-section-gap:${esc(SECTION_SPACING_PRESETS[design.sectionSpacing] || SECTION_SPACING_PRESETS.normal)};--pf-card-pad:${esc(CARD_PADDING_PRESETS[design.cardPadding] || CARD_PADDING_PRESETS.normal)};">
+  <div class="portfolio-site" id="portfolioSite" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-dots-pos="${esc(design.dotsPosition || 'right')}" data-dots-center="${esc(design.dotsCentering || 'slide')}" data-dots-style="${esc(design.dotsStyle || 'dot')}" data-dots-symbol="${esc(design.dotsSymbol || 'circle')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" data-hero-photo-shape="${esc(design.heroPhotoShape || 'circle')}" data-hero-photo-border="${design.heroPhotoBorder === false ? '0' : '1'}" data-hero-photo-size="${esc(design.heroPhotoSize || 'md')}" data-hero-size="${esc(design.heroSize || 'normal')}" data-lock-position="${esc(design.lockPosition || 'bottom-right')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};--pf-header-pct:${esc(design.headerHeightPct || 30)};--pf-text-pad:${esc((Number(design.textPaddingRem) || 0) + 'rem')};--pf-line-height:${esc(LINE_SPACING_PRESETS[design.lineSpacing] || LINE_SPACING_PRESETS.normal)};--pf-section-gap:${esc(SECTION_SPACING_PRESETS[design.sectionSpacing] || SECTION_SPACING_PRESETS.normal)};--pf-card-pad:${esc(CARD_PADDING_PRESETS[design.cardPadding] || CARD_PADDING_PRESETS.normal)};">
     <header class="pf-hero">
       ${p.photo ? `<div class="pf-hero-photo-wrap"><img src="${esc(p.photo)}" alt="${esc(fullName)}" /></div>` : ''}
       <div class="pf-hero-text">
@@ -3357,6 +3422,12 @@ function openSupportModal(username) {
 function openRecruiterLockModal(username) {
   if (!username) { openSignInModal({ message: 'Publish your portfolio first, then come back to set a Recruiter Password Lock.' }); return; }
   const hasExistingLock = !!(Store.state.portfolio.hasPasswordLock || (lastSiteStatusData && lastSiteStatusData.hasPasswordLock));
+  const currentPos = Store.active().design.lockPosition || 'bottom-right';
+  const POSITION_OPTIONS = [
+    ['top-left', 'Top left'], ['top', 'Top'], ['top-right', 'Top right'],
+    ['left', 'Left'], ['right', 'Right'],
+    ['bottom-left', 'Bottom left'], ['bottom', 'Bottom'], ['bottom-right', 'Bottom right'],
+  ];
 
   const html = `
     <h3 class="modal-title" id="modalTitle">Recruiter Password Lock</h3>
@@ -3365,6 +3436,13 @@ function openRecruiterLockModal(username) {
       <span>Access key</span>
       <input type="password" class="field-input" id="recruiterLockInput" placeholder="${hasExistingLock ? 'Key already set — type to change it' : 'Set an access key for recruiters'}" autocomplete="off" />
       <p class="username-status" style="font-size:0.75rem;">Sent over HTTPS and hashed on the server with a per-site salt — never stored or shown as plain text once set. Leave blank to keep your existing key unchanged.</p>
+    </div>
+    <div class="field-box full-width">
+      <span>Lock icon position</span>
+      <select class="field-input" id="recruiterLockPosition">
+        ${POSITION_OPTIONS.map(([val, label]) => `<option value="${val}"${val === currentPos ? ' selected' : ''}>${label}</option>`).join('')}
+      </select>
+      <p class="username-status" style="font-size:0.75rem;">Where the 🔒 icon sticks on your live portfolio, regardless of section/slide.</p>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost btn-sm" id="recruiterLockCancelBtn" type="button">Cancel</button>
@@ -3375,24 +3453,30 @@ function openRecruiterLockModal(username) {
     root.querySelector('#recruiterLockCancelBtn').addEventListener('click', closeModal);
     root.querySelector('#recruiterLockSaveBtn').addEventListener('click', async (e) => {
       const lockPlain = root.querySelector('#recruiterLockInput').value;
-      if (!lockPlain) { closeModal(); return; }
+      const chosenPos = root.querySelector('#recruiterLockPosition').value;
+      const posChanged = chosenPos !== currentPos;
+      Store.active().design.lockPosition = chosenPos;
+      if (!lockPlain && !posChanged) { closeModal(); return; }
       const btn = e.currentTarget;
       const original = btn.textContent;
       btn.disabled = true;
       btn.textContent = 'Saving…';
       try {
-        await fetch('/api/publish', {
+        const payload = {
+          username,
+          googleCredential: getSavedGoogleAccount() ? getSavedGoogleAccount().credential : null,
+          html: buildPublishedSiteHTML(username),
+          proofItems: buildPublishedSiteHTML.lastProofItems || {},
+        };
+        if (lockPlain) payload.passwordLockKey = lockPlain;
+        const res = await fetch('/api/publish', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            username,
-            googleCredential: getSavedGoogleAccount() ? getSavedGoogleAccount().credential : null,
-            html: buildPublishedSiteHTML(username),
-            proofItems: buildPublishedSiteHTML.lastProofItems || {},
-            passwordLockKey: lockPlain
-          })
+          body: JSON.stringify(payload)
         });
-        Store.state.portfolio.hasPasswordLock = true;
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false) throw new Error(data.error || 'save-failed');
+        if (lockPlain) Store.state.portfolio.hasPasswordLock = true;
         closeModal();
       } catch {
         btn.disabled = false;
