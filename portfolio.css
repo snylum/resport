@@ -214,6 +214,7 @@
 #canvasZoomTarget .portfolio-site[data-section-anim="horizontal"][data-header-style="scroll"] .pf-hero,
 #canvasZoomTarget .portfolio-site[data-section-anim="vertical"][data-header-style="scroll"] .pf-hero {
   max-height: var(--pf-header-real-h, calc(var(--pf-header-pct) * 6.4px));
+}
 
 .portfolio-site[data-section-anim="horizontal"][data-header-style="scroll"].pf-header-collapsed .pf-hero,
 .portfolio-site[data-section-anim="vertical"][data-header-style="scroll"].pf-header-collapsed .pf-hero {
