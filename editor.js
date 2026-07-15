@@ -2864,7 +2864,7 @@ async function downloadPortfolioZip(triggerBtn) {
 function refreshPublishToolbarButton() {
   const btn = document.getElementById('btnPublishShowcase');
   if (!btn) return;
-  btn.textContent = '⬇ Download ZIP';
+  btn.textContent = '✦ Publish';
   btn.classList.add('btn-secondary');
   btn.classList.remove('btn-ghost');
 }
@@ -2983,10 +2983,17 @@ function openPublishModal() {
     <div class="modal-actions">
       <button class="btn btn-secondary btn-sm" id="publishConfirmBtn" type="button" disabled>Publish</button>
     </div>
+    <div class="modal-divider-row"><span>or</span></div>
+    <div class="field-box full-width">
+      <span>Prefer to host it yourself?</span>
+      <p class="username-status" style="font-size:0.78rem;">Download a fully-functioning, offline copy of just your portfolio — no account, no waiting on review, and no Recruiter Password Lock baked in. Comes with a README on hosting it free via GitHub Pages, Vercel, or Cloudflare Pages.</p>
+      <button class="btn btn-ghost btn-sm" id="publishDownloadZipBtn" type="button">⬇ Download ZIP instead</button>
+    </div>
   `;
 
   openModal(html, (root) => {
     renderPublishAccountBox();
+    root.querySelector('#publishDownloadZipBtn').addEventListener('click', (e) => downloadPortfolioZip(e.currentTarget));
 
     const input = root.querySelector('#publishUsernameInput');
     const status = root.querySelector('#publishUsernameStatus');
@@ -4224,11 +4231,18 @@ function initToolbar() {
     });
   }
 
-  document.getElementById('btnPublishShowcase').addEventListener('click', (e) => {
-    // The free-subdomain hosting flow (username.proves.work) has been
-    // retired — this button now exports a fully-functioning, offline
-    // .zip of the portfolio instead. No account or backend needed.
-    downloadPortfolioZip(e.currentTarget);
+  document.getElementById('btnPublishShowcase').addEventListener('click', async () => {
+    // Opens straight into the Publish modal — sign-in (needed only for
+    // the hosted address) is handled inline inside it (see
+    // renderPublishAccountBox), so "Download ZIP instead" is reachable
+    // without signing in at all.
+    // Refresh site status right before opening the Publish modal so
+    // "already paid & live" is judged against the current truth, not
+    // whatever was cached at page load — an admin could have approved
+    // or marked the site paid at any point since then. This is what
+    // makes the fee-skip check further down actually trustworthy.
+    if (getSavedGoogleAccount()) await refreshSiteStatusBadge();
+    openPublishModal();
   });
   refreshPublishToolbarButton();
   refreshSaveOrPreviewButton();
