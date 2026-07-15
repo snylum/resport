@@ -398,12 +398,28 @@
      fill the slide and leaving dead space below on tall viewports
      (the editor's own preview canvas is a fixed, short 640px, which
      is why this only shows up on real, taller browser windows). */
-  padding: calc(2.75rem + var(--pf-text-pad)) calc(2.75rem + var(--pf-text-pad)) calc(3.25rem + var(--pf-text-pad));
+  padding: calc(2.75rem + var(--pf-text-pad)) calc(2.75rem + var(--pf-text-pad)) 0;
   display: flex;
   flex-direction: column;
   gap: var(--pf-section-gap);
   line-height: var(--pf-line-height);
   scrollbar-width: thin;
+}
+
+/* Real, box-generating trailing space instead of padding-bottom.
+   Browsers reliably respect the *start*-side padding of an
+   overflow: auto flex container, but are inconsistent about
+   honoring its *end*-side padding once the content actually
+   overflows and needs to scroll — the last section would end up
+   flush against the bottom of the scroll area with none of the
+   breathing room the top gets. A real (empty) flex child, sized to
+   the same amount, is always counted correctly in the scrollable
+   area regardless of that quirk. */
+.pf-slide-inner::after {
+  content: "";
+  display: block;
+  flex-shrink: 0;
+  height: calc(3.25rem + var(--pf-text-pad));
 }
 
 /* Dot rail, positioned like the homepage's .slide-dots but scoped
@@ -648,12 +664,12 @@
   color: var(--color-text-muted);
   transform: none !important;
 }
-.portfolio-site[data-dots-symbol="circle"] .pf-dot::before { content: "●"; }
-.portfolio-site[data-dots-symbol="square"] .pf-dot::before { content: "■"; }
-.portfolio-site[data-dots-symbol="triangle"] .pf-dot::before { content: "▲"; }
-.portfolio-site[data-dots-symbol="heart"] .pf-dot::before { content: "♥"; }
-.portfolio-site[data-dots-symbol="star"] .pf-dot::before { content: "★"; }
-.portfolio-site[data-dots-symbol="badge"] .pf-dot::before { content: "⬥"; }
+.portfolio-site[data-dots-style="symbol"][data-dots-symbol="circle"] .pf-dot::before { content: "●"; }
+.portfolio-site[data-dots-style="symbol"][data-dots-symbol="square"] .pf-dot::before { content: "■"; }
+.portfolio-site[data-dots-style="symbol"][data-dots-symbol="triangle"] .pf-dot::before { content: "▲"; }
+.portfolio-site[data-dots-style="symbol"][data-dots-symbol="heart"] .pf-dot::before { content: "♥"; }
+.portfolio-site[data-dots-style="symbol"][data-dots-symbol="star"] .pf-dot::before { content: "★"; }
+.portfolio-site[data-dots-style="symbol"][data-dots-symbol="badge"] .pf-dot::before { content: "⬥"; }
 .portfolio-site[data-dots-style="symbol"] .pf-dot:hover { border-color: transparent; color: var(--pf-accent, var(--color-primary)); }
 .portfolio-site[data-dots-style="symbol"] .pf-dot.active {
   color: var(--pf-accent, var(--color-primary));
@@ -712,6 +728,7 @@
   }
   .pf-slide { width: 100%; min-height: 0; }
   .pf-slide-inner { max-width: 100%; height: auto; overflow-y: visible; padding: 1.5rem; }
+  .pf-slide-inner::after { content: none; }
   .pf-slide-dots { display: none; }
   .portfolio-site[data-hero-align="center"] .pf-hero,
   .portfolio-site[data-hero-align="right"] .pf-hero {

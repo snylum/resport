@@ -41,6 +41,7 @@ body {
   flex-direction: column;
   height: 100%;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   flex-shrink: 0;
 }
 

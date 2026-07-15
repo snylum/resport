@@ -1716,7 +1716,7 @@ const HORIZONTAL_SLIDE_SCRIPT = `
   var hero = root.querySelector('.pf-hero');
   function syncHeaderHeight() {
     if (!hero) return;
-    root.style.setProperty('--pf-header-real-h', hero.getBoundingClientRect().height + 'px');
+    root.style.setProperty('--pf-header-real-h', hero.offsetHeight + 'px');
   }
   syncHeaderHeight();
   if (hero && 'ResizeObserver' in window) {
@@ -2871,7 +2871,7 @@ async function downloadPortfolioZip(triggerBtn) {
 function refreshPublishToolbarButton() {
   const btn = document.getElementById('btnPublishShowcase');
   if (!btn) return;
-  btn.textContent = '⬆';
+  btn.textContent = '⬆️';
   btn.classList.add('btn-green');
   btn.classList.remove('btn-ghost', 'btn-secondary');
 }
@@ -4811,7 +4811,7 @@ let portfolioHeaderHeightObserver = null;
 function syncPortfolioHeaderHeight() {
   const hero = el.portfolioSite.querySelector('.pf-hero');
   if (!hero) return;
-  const setH = () => el.portfolioSite.style.setProperty('--pf-header-real-h', hero.getBoundingClientRect().height + 'px');
+  const setH = () => el.portfolioSite.style.setProperty('--pf-header-real-h', hero.offsetHeight + 'px');
   setH();
   if ('ResizeObserver' in window) {
     if (portfolioHeaderHeightObserver) portfolioHeaderHeightObserver.disconnect();
