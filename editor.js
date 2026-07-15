@@ -2877,7 +2877,7 @@ function refreshPublishToolbarButton() {
 function refreshSaveOrPreviewButton() {
   const btn = document.getElementById('btnPreviewShowcase');
   if (!btn) return;
-  btn.textContent = '💾 Save';
+  btn.textContent = '💾';
   btn.dataset.mode = 'save';
   btn.title = 'Save your progress to your Google account';
 }
@@ -2896,7 +2896,7 @@ function manualSaveProgress() {
   const btn = document.getElementById('btnPreviewShowcase');
   if (btn) {
     const original = btn.textContent;
-    btn.textContent = '✓ Saved';
+    btn.textContent = '✓';
     setTimeout(() => { if (btn.dataset.mode === 'save') btn.textContent = original; }, 1400);
   }
 }
@@ -2978,17 +2978,12 @@ function openPublishModal() {
       </div>
       <p class="username-status" id="publishUsernameStatus"></p>
     </div>
-    <p class="modal-sub">Publishing is free and manually reviewed before it goes live.</p>
-    ${signedIn && getSavedUsername() ? `<p class="modal-sub" style="font-size:0.78rem;">You can change your username ${MAX_USERNAME_CHANGES} times total. ${usernameChangesRemaining()} change${usernameChangesRemaining() === 1 ? '' : 's'} left.</p>` : ''}
-    <div class="modal-actions">
+    <p class="modal-sub">Free, and manually reviewed before it goes live.${signedIn && getSavedUsername() ? ` You have ${usernameChangesRemaining()} username change${usernameChangesRemaining() === 1 ? '' : 's'} left.` : ''}</p>
+    <div class="modal-actions modal-actions--publish">
+      <button class="btn btn-ghost btn-sm" id="publishDownloadZipBtn" type="button" title="Download a fully-functioning offline copy — no account or review needed">⬇ Download ZIP</button>
       <button class="btn btn-secondary btn-sm" id="publishConfirmBtn" type="button" disabled>Publish</button>
     </div>
-    <div class="modal-divider-row"><span>or</span></div>
-    <div class="field-box full-width">
-      <span>Prefer to host it yourself?</span>
-      <p class="username-status" style="font-size:0.78rem;">Download a fully-functioning, offline copy of just your portfolio — no account, no waiting on review, and no Recruiter Password Lock baked in. Comes with a README on hosting it free via GitHub Pages, Vercel, or Cloudflare Pages.</p>
-      <button class="btn btn-ghost btn-sm" id="publishDownloadZipBtn" type="button">⬇ Download ZIP instead</button>
-    </div>
+    <p class="modal-footnote">Prefer to self-host? The ZIP includes a README for free hosting on GitHub Pages, Vercel, or Cloudflare Pages.</p>
   `;
 
   openModal(html, (root) => {
