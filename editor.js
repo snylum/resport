@@ -69,6 +69,7 @@ const el = {
   inTextPadding: document.getElementById('inTextPadding'),
   textPaddingLabel: document.getElementById('textPaddingLabel'),
   dotsCenteringGroup: document.getElementById('dotsCenteringGroup'),
+  dotsSymbolGroup: document.getElementById('dotsSymbolGroup'),
 
   // Resume: numeric customization sliders
   inFontSize: document.getElementById('inFontSize'),
@@ -2630,7 +2631,7 @@ ${siteUrl ? `<meta property="og:url" content="${esc(siteUrl)}" />` : ''}
 </style>
 </head>
 <body data-viewmode="portfolio">
-  <div class="portfolio-site" id="portfolioSite" data-lock-scope="${esc(username || 'preview')}" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-dots-pos="${esc(design.dotsPosition || 'right')}" data-dots-center="${esc(design.dotsCentering || 'slide')}" data-dots-style="${esc(design.dotsStyle || 'dot')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" data-hero-photo-shape="${esc(design.heroPhotoShape || 'circle')}" data-hero-photo-border="${design.heroPhotoBorder === false ? '0' : '1'}" data-hero-photo-size="${esc(design.heroPhotoSize || 'md')}" data-hero-size="${esc(design.heroSize || 'normal')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};--pf-header-pct:${esc(design.headerHeightPct || 30)};--pf-text-pad:${esc((Number(design.textPaddingRem) || 0) + 'rem')};--pf-line-height:${esc(LINE_SPACING_PRESETS[design.lineSpacing] || LINE_SPACING_PRESETS.normal)};--pf-section-gap:${esc(SECTION_SPACING_PRESETS[design.sectionSpacing] || SECTION_SPACING_PRESETS.normal)};--pf-card-pad:${esc(CARD_PADDING_PRESETS[design.cardPadding] || CARD_PADDING_PRESETS.normal)};">
+  <div class="portfolio-site" id="portfolioSite" data-lock-scope="${esc(username || 'preview')}" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-dots-pos="${esc(design.dotsPosition || 'right')}" data-dots-center="${esc(design.dotsCentering || 'slide')}" data-dots-style="${esc(design.dotsStyle || 'dot')}" data-dots-symbol="${esc(design.dotsSymbol || 'circle')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" data-hero-photo-shape="${esc(design.heroPhotoShape || 'circle')}" data-hero-photo-border="${design.heroPhotoBorder === false ? '0' : '1'}" data-hero-photo-size="${esc(design.heroPhotoSize || 'md')}" data-hero-size="${esc(design.heroSize || 'normal')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};--pf-header-pct:${esc(design.headerHeightPct || 30)};--pf-text-pad:${esc((Number(design.textPaddingRem) || 0) + 'rem')};--pf-line-height:${esc(LINE_SPACING_PRESETS[design.lineSpacing] || LINE_SPACING_PRESETS.normal)};--pf-section-gap:${esc(SECTION_SPACING_PRESETS[design.sectionSpacing] || SECTION_SPACING_PRESETS.normal)};--pf-card-pad:${esc(CARD_PADDING_PRESETS[design.cardPadding] || CARD_PADDING_PRESETS.normal)};">
     <header class="pf-hero">
       ${p.photo ? `<div class="pf-hero-photo-wrap"><img src="${esc(p.photo)}" alt="${esc(fullName)}" /></div>` : ''}
       <div class="pf-hero-text">
@@ -2703,7 +2704,7 @@ ${iconHref ? `<link rel="icon" href="${esc(iconHref)}" />` : ''}
 </style>
 </head>
 <body data-viewmode="portfolio">
-  <div class="portfolio-site" id="portfolioSite" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-dots-pos="${esc(design.dotsPosition || 'right')}" data-dots-center="${esc(design.dotsCentering || 'slide')}" data-dots-style="${esc(design.dotsStyle || 'dot')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" data-hero-photo-shape="${esc(design.heroPhotoShape || 'circle')}" data-hero-photo-border="${design.heroPhotoBorder === false ? '0' : '1'}" data-hero-photo-size="${esc(design.heroPhotoSize || 'md')}" data-hero-size="${esc(design.heroSize || 'normal')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};--pf-header-pct:${esc(design.headerHeightPct || 30)};--pf-text-pad:${esc((Number(design.textPaddingRem) || 0) + 'rem')};--pf-line-height:${esc(LINE_SPACING_PRESETS[design.lineSpacing] || LINE_SPACING_PRESETS.normal)};--pf-section-gap:${esc(SECTION_SPACING_PRESETS[design.sectionSpacing] || SECTION_SPACING_PRESETS.normal)};--pf-card-pad:${esc(CARD_PADDING_PRESETS[design.cardPadding] || CARD_PADDING_PRESETS.normal)};">
+  <div class="portfolio-site" id="portfolioSite" data-header-style="${esc(design.headerStyle || 'scroll')}" data-section-anim="${esc(design.sectionAnimation || 'none')}" data-dots-pos="${esc(design.dotsPosition || 'right')}" data-dots-center="${esc(design.dotsCentering || 'slide')}" data-dots-style="${esc(design.dotsStyle || 'dot')}" data-dots-symbol="${esc(design.dotsSymbol || 'circle')}" data-content-width="${esc(design.contentWidth || 'contained')}" data-hero-align="${esc(design.heroAlign || 'left')}" data-hero-photo-shape="${esc(design.heroPhotoShape || 'circle')}" data-hero-photo-border="${design.heroPhotoBorder === false ? '0' : '1'}" data-hero-photo-size="${esc(design.heroPhotoSize || 'md')}" data-hero-size="${esc(design.heroSize || 'normal')}" style="--pf-accent:${esc(design.accent)};--pf-heading-font:${esc(FONT_STACKS[design.headingFont] || FONT_STACKS.modern)};--pf-body-font:${esc(FONT_STACKS[design.bodyFont] || FONT_STACKS.sans)};--pf-header-pct:${esc(design.headerHeightPct || 30)};--pf-text-pad:${esc((Number(design.textPaddingRem) || 0) + 'rem')};--pf-line-height:${esc(LINE_SPACING_PRESETS[design.lineSpacing] || LINE_SPACING_PRESETS.normal)};--pf-section-gap:${esc(SECTION_SPACING_PRESETS[design.sectionSpacing] || SECTION_SPACING_PRESETS.normal)};--pf-card-pad:${esc(CARD_PADDING_PRESETS[design.cardPadding] || CARD_PADDING_PRESETS.normal)};">
     <header class="pf-hero">
       ${p.photo ? `<div class="pf-hero-photo-wrap"><img src="${esc(p.photo)}" alt="${esc(fullName)}" /></div>` : ''}
       <div class="pf-hero-text">
@@ -2857,16 +2858,17 @@ async function downloadPortfolioZip(triggerBtn) {
 }
 
 
-// The toolbar button is permanently labelled "Publish" — it no longer
-// flips to "Sign in to Google" when signed out. Clicking it while
-// signed out still opens the sign-in flow first (see the click
-// handler in initToolbar), but the label itself never changes.
+// The toolbar button is permanently an icon-only green up-arrow — it
+// no longer flips to "Sign in to Google" when signed out, and no
+// longer shows a text label. Clicking it while signed out still opens
+// the sign-in flow first (see the click handler in initToolbar), but
+// its icon and green styling never change.
 function refreshPublishToolbarButton() {
   const btn = document.getElementById('btnPublishShowcase');
   if (!btn) return;
-  btn.textContent = '✦ Publish';
-  btn.classList.add('btn-secondary');
-  btn.classList.remove('btn-ghost');
+  btn.textContent = '⬆';
+  btn.classList.add('btn-green');
+  btn.classList.remove('btn-ghost', 'btn-secondary');
 }
 
 // Always a consistent, explicit manual "Save" action — saves the
@@ -3288,15 +3290,10 @@ function openSupportModal(username) {
   if (!username) { openSignInModal({ message: 'Publish your portfolio first, then come back to support the project.' }); return; }
   let currency = 'PHP';
   let months = 3;
-  // The plaintext key is never kept in the browser once it's been
-  // sent to publish — only whether one is currently set is tracked
-  // locally, so this modal can show "already set" without ever
-  // holding onto (or being able to leak) the key itself.
-  const hasExistingLock = !!(Store.state.portfolio.hasPasswordLock || (lastSiteStatusData && lastSiteStatusData.hasPasswordLock));
 
   const html = `
     <h3 class="modal-title" id="modalTitle">Support the project</h3>
-    <p class="modal-sub">A one-off donation to help cover the real cost of running this — not a subscription, and not payment for support or new features. This is a solo, AI-assisted project offered as-is on Cloudflare's free tier; your portfolio stays live and free either way. In return, this grants the ★ Active Job Hunter badge and (if you set one) the Recruiter Password Lock for the months you pick.</p>
+    <p class="modal-sub">A one-off donation to help cover the real cost of running this — not a subscription, and not payment for support or new features. This is a solo, AI-assisted project offered as-is on Cloudflare's free tier; your portfolio stays live and free either way. In return, this grants the ★ Active Job Hunter badge for the months you pick.</p>
     <div class="field-box full-width">
       <span>Currency</span>
       <div class="modal-actions" style="justify-content:flex-start;gap:0.5rem;margin:0.35rem 0 0.75rem;">
@@ -3312,11 +3309,7 @@ function openSupportModal(username) {
         <span id="supportAmountLabel">${formatSupportPrice(months, currency)} one-time</span>
       </div>
     </div>
-    <div class="field-box full-width">
-      <span>Recruiter Password Lock (optional)</span>
-      <input type="password" class="field-input" id="supportLockInput" placeholder="${hasExistingLock ? 'Key already set — type to change it' : 'Set an access key for recruiters'}" autocomplete="off" />
-      <p class="username-status" style="font-size:0.75rem;">Sent over HTTPS and hashed on the server with a per-site salt — never stored or shown as plain text once set. Leave blank to keep it off (or leave your existing key unchanged). This only actually locks anything while your Support period is active.</p>
-    </div>
+    <p class="modal-footnote">Want the Recruiter Password Lock too? Set or change it separately from the 🔑 button in the toolbar — it only actually locks anything while your Support period is active.</p>
     <div class="modal-actions">
       <button class="btn btn-ghost btn-sm" id="supportBackBtn" type="button">Cancel</button>
       <button class="btn btn-secondary btn-sm" id="supportContinueBtn" type="button">Continue to pay</button>
@@ -3343,27 +3336,65 @@ function openSupportModal(username) {
 
     root.querySelector('#supportBackBtn').addEventListener('click', closeModal);
     root.querySelector('#supportContinueBtn').addEventListener('click', async () => {
-      const lockPlain = root.querySelector('#supportLockInput').value;
-      if (lockPlain) {
-        // Only ever sent when actually changing the key — the server
-        // salts and hashes it (PBKDF2) and never stores or returns
-        // the plaintext. Not kept locally beyond this request.
-        Store.state.portfolio.hasPasswordLock = true;
-        try {
-          await fetch('/api/publish', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({
-              username,
-              googleCredential: getSavedGoogleAccount() ? getSavedGoogleAccount().credential : null,
-              html: buildPublishedSiteHTML(username),
-              proofItems: buildPublishedSiteHTML.lastProofItems || {},
-              passwordLockKey: lockPlain
-            })
-          });
-        } catch { /* offline — try again from this modal once back online */ }
-      }
       openSupportPaymentModal(username, months, currency);
+    });
+  });
+}
+
+// Standalone Recruiter Password Lock management, split out from the
+// Support flow — setting/changing the key is its own action and
+// doesn't require a donation to do. (Whether it's actually enforced
+// on the published page still depends on an active Support period —
+// see the note in this modal and openSupportModal above.) The
+// plaintext key is never kept in the browser once sent; only whether
+// one is currently set is tracked locally (hasPasswordLock), so this
+// modal can show "already set" without ever holding onto the key.
+function openRecruiterLockModal(username) {
+  if (!username) { openSignInModal({ message: 'Publish your portfolio first, then come back to set a Recruiter Password Lock.' }); return; }
+  const hasExistingLock = !!(Store.state.portfolio.hasPasswordLock || (lastSiteStatusData && lastSiteStatusData.hasPasswordLock));
+
+  const html = `
+    <h3 class="modal-title" id="modalTitle">Recruiter Password Lock</h3>
+    <p class="modal-sub">Set an access key recruiters must enter to view your Verifiable Proof badges. This only actually locks anything while you have an active Support (♥) period — the key itself can be set anytime.</p>
+    <div class="field-box full-width">
+      <span>Access key</span>
+      <input type="password" class="field-input" id="recruiterLockInput" placeholder="${hasExistingLock ? 'Key already set — type to change it' : 'Set an access key for recruiters'}" autocomplete="off" />
+      <p class="username-status" style="font-size:0.75rem;">Sent over HTTPS and hashed on the server with a per-site salt — never stored or shown as plain text once set. Leave blank to keep your existing key unchanged.</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="recruiterLockCancelBtn" type="button">Cancel</button>
+      <button class="btn btn-secondary btn-sm" id="recruiterLockSaveBtn" type="button">Save key</button>
+    </div>
+  `;
+  openModal(html, (root) => {
+    root.querySelector('#recruiterLockCancelBtn').addEventListener('click', closeModal);
+    root.querySelector('#recruiterLockSaveBtn').addEventListener('click', async (e) => {
+      const lockPlain = root.querySelector('#recruiterLockInput').value;
+      if (!lockPlain) { closeModal(); return; }
+      const btn = e.currentTarget;
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+      try {
+        await fetch('/api/publish', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            username,
+            googleCredential: getSavedGoogleAccount() ? getSavedGoogleAccount().credential : null,
+            html: buildPublishedSiteHTML(username),
+            proofItems: buildPublishedSiteHTML.lastProofItems || {},
+            passwordLockKey: lockPlain
+          })
+        });
+        Store.state.portfolio.hasPasswordLock = true;
+        closeModal();
+      } catch {
+        btn.disabled = false;
+        btn.textContent = original;
+        const status = root.querySelector('.username-status');
+        if (status) { status.textContent = 'Couldn\u2019t save — check your connection and try again.'; status.classList.add('warn'); }
+      }
     });
   });
 }
@@ -4246,6 +4277,10 @@ function initToolbar() {
     if (!getSavedGoogleAccount()) { openSignInModal(); return; }
     openSupportModal(getSavedUsername());
   });
+  document.getElementById('btnRecruiterLock').addEventListener('click', () => {
+    if (!getSavedGoogleAccount()) { openSignInModal(); return; }
+    openRecruiterLockModal(getSavedUsername());
+  });
   document.getElementById('btnPreviewShowcase').addEventListener('click', (e) => {
     if (e.currentTarget.dataset.mode === 'save') {
       manualSaveProgress();
@@ -4725,6 +4760,7 @@ function applyPortfolioDesign(design) {
   el.portfolioSite.setAttribute('data-dots-pos', design.dotsPosition || 'right');
   el.portfolioSite.setAttribute('data-dots-center', design.dotsCentering || 'slide');
   el.portfolioSite.setAttribute('data-dots-style', design.dotsStyle || 'dot');
+  el.portfolioSite.setAttribute('data-dots-symbol', design.dotsSymbol || 'circle');
   el.portfolioSite.setAttribute('data-content-width', design.contentWidth || 'contained');
   el.portfolioSite.setAttribute('data-hero-align', design.heroAlign || 'left');
   el.portfolioSite.setAttribute('data-hero-photo-shape', design.heroPhotoShape || 'circle');
@@ -4789,6 +4825,10 @@ function syncCustomizeControls(design) {
   if (el.dotsCenteringGroup) {
     const pos = design.dotsPosition || 'right';
     el.dotsCenteringGroup.classList.toggle('hidden', pos !== 'left' && pos !== 'right');
+  }
+
+  if (el.dotsSymbolGroup) {
+    el.dotsSymbolGroup.classList.toggle('hidden', (design.dotsStyle || 'dot') !== 'symbol');
   }
 
   if (el.inTextPadding) {

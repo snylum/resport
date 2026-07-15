@@ -140,6 +140,14 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
 }
 .btn-danger:hover { background: #B3261E; color: #fff; box-shadow: var(--shadow-lg); transform: translate(-2px,-2px); }
 
+.btn-green {
+  background: #16A34A;
+  color: #fff;
+  border-color: #15803D;
+  box-shadow: var(--shadow);
+}
+.btn-green:hover { background: #15803D; box-shadow: var(--shadow-lg); transform: translate(-2px,-2px); }
+
 .btn-sm { font-size: 0.75rem; padding: 0.4rem 0.875rem; }
 
 .btn-gradient {

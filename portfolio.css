@@ -562,52 +562,73 @@
   width: 6px; height: 18px;
 }
 
-/* Progress bar: a row of thin segments, filled up to (and including)
-   the current slide rather than only the exact current one — .passed
-   is set by the nav script alongside .active (see the slide-deck
-   script and pfSetActiveDot). Segments have no border/scale-up so the
-   filled run reads as one continuous bar. */
-.portfolio-site[data-dots-style="progress"] .pf-slide-dots {
-  gap: 3px;
-}
+/* Progress bar: a single continuous pill-shaped track rather than a
+   row of separate dots. It's still built from the same per-slide
+   .pf-dot buttons as every other style (so each segment keeps its
+   click-to-jump behavior and accessible label) — but the gaps and
+   per-segment rounding are stripped out and moved onto the shared
+   rail instead, so the filled run reads as one smooth bar. The rail
+   itself gets the light track background + border + pill radius;
+   overflow:hidden clips the segments to that shape so only the true
+   start/end of the whole bar look rounded. Selector combos mirror
+   the position rules above so specificity wins regardless of source
+   order. */
 .portfolio-site[data-dots-style="progress"] .pf-dot {
-  width: 16px; height: 5px;
-  border-radius: 2.5px;
+  width: auto;
+  height: 100%;
+  flex: 1 1 0;
+  min-width: 0;
   border: none;
-  background: var(--color-border);
-  opacity: 0.4;
-  transition: opacity 0.2s ease, background 0.2s ease;
-}
-.portfolio-site[data-dots-pos="left"][data-dots-style="progress"] .pf-dot,
-.portfolio-site[data-dots-pos="right"][data-dots-style="progress"] .pf-dot {
-  width: 5px; height: 16px;
-}
-.portfolio-site[data-dots-style="progress"] .pf-dot.passed {
+  border-radius: 0;
+  background: transparent;
   opacity: 1;
-  background: var(--pf-accent, var(--color-primary));
-  transform: none;
+  box-shadow: none;
+  transform: none !important;
+  transition: background 0.2s ease;
 }
-/* The *current* segment stays visually distinct from ones already
-   passed — brighter/larger, not just "filled" like the rest of the
-   completed run — so a progress bar still answers "which slide am I
-   on", not only "how far have I gotten". */
+.portfolio-site[data-dots-style="progress"] .pf-dot.passed,
 .portfolio-site[data-dots-style="progress"] .pf-dot.active {
-  opacity: 1;
   background: var(--pf-accent, var(--color-primary));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--pf-accent, var(--color-primary)) 35%, transparent);
-  transform: none;
+  box-shadow: none;
 }
-.portfolio-site[data-dots-pos="left"][data-dots-style="progress"] .pf-dot.active,
-.portfolio-site[data-dots-pos="right"][data-dots-style="progress"] .pf-dot.active {
-  width: 8px;
+.portfolio-site[data-section-anim="horizontal"][data-dots-style="progress"][data-dots-pos="top"] .pf-slide-dots,
+.portfolio-site[data-section-anim="vertical"][data-dots-style="progress"][data-dots-pos="top"] .pf-slide-dots,
+.portfolio-site[data-section-anim="horizontal"][data-dots-style="progress"][data-dots-pos="bottom"] .pf-slide-dots,
+.portfolio-site[data-section-anim="vertical"][data-dots-style="progress"][data-dots-pos="bottom"] .pf-slide-dots {
+  flex-direction: row;
+  gap: 0;
+  width: 200px;
+  height: 12px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface-alt);
+  box-shadow: none;
+  overflow: hidden;
 }
-.portfolio-site:not([data-dots-pos="left"]):not([data-dots-pos="right"])[data-dots-style="progress"] .pf-dot.active {
-  height: 8px;
+.portfolio-site[data-section-anim="horizontal"][data-dots-style="progress"][data-dots-pos="left"] .pf-slide-dots,
+.portfolio-site[data-section-anim="vertical"][data-dots-style="progress"][data-dots-pos="left"] .pf-slide-dots,
+.portfolio-site[data-section-anim="horizontal"][data-dots-style="progress"][data-dots-pos="right"] .pf-slide-dots,
+.portfolio-site[data-section-anim="vertical"][data-dots-style="progress"][data-dots-pos="right"] .pf-slide-dots {
+  flex-direction: column;
+  gap: 0;
+  width: 12px;
+  height: 200px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface-alt);
+  box-shadow: none;
+  overflow: hidden;
 }
 
-/* Symbols: a small rotating set of glyphs instead of plain dots —
-   purely a ::before content swap per position (nth-child), so it
-   needs no JS beyond what already builds/marks the dots. */
+/* Symbols: one glyph, picked by the person via the "Symbol Shape"
+   customize control (data-dots-symbol on .portfolio-site), used for
+   every slide indicator — the active/current one is just brighter
+   and larger, same active treatment as every other dots style. This
+   replaced an earlier version that auto-rotated through 4 fixed
+   glyphs; a single chosen shape reads as an intentional design pick
+   rather than a decorative pattern. */
 .portfolio-site[data-dots-style="symbol"] .pf-dot {
   width: auto; height: auto;
   min-width: 16px; min-height: 16px;
@@ -622,10 +643,12 @@
   color: var(--color-text-muted);
   transform: none !important;
 }
-.portfolio-site[data-dots-style="symbol"] .pf-dot::before { content: "●"; }
-.portfolio-site[data-dots-style="symbol"] .pf-dot:nth-child(4n+2)::before { content: "■"; }
-.portfolio-site[data-dots-style="symbol"] .pf-dot:nth-child(4n+3)::before { content: "▲"; }
-.portfolio-site[data-dots-style="symbol"] .pf-dot:nth-child(4n)::before { content: "◆"; }
+.portfolio-site[data-dots-symbol="circle"] .pf-dot::before { content: "●"; }
+.portfolio-site[data-dots-symbol="square"] .pf-dot::before { content: "■"; }
+.portfolio-site[data-dots-symbol="triangle"] .pf-dot::before { content: "▲"; }
+.portfolio-site[data-dots-symbol="heart"] .pf-dot::before { content: "♥"; }
+.portfolio-site[data-dots-symbol="star"] .pf-dot::before { content: "★"; }
+.portfolio-site[data-dots-symbol="badge"] .pf-dot::before { content: "⬥"; }
 .portfolio-site[data-dots-style="symbol"] .pf-dot:hover { border-color: transparent; color: var(--pf-accent, var(--color-primary)); }
 .portfolio-site[data-dots-style="symbol"] .pf-dot.active {
   color: var(--pf-accent, var(--color-primary));
