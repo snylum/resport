@@ -31,6 +31,7 @@ const RESERVED = new Set([
 
 // 3–30 chars, lowercase letters/digits/hyphens, no leading/trailing hyphen.
 const USERNAME_RE = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])?$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const CORS_HEADERS = {
   'access-control-allow-origin': '*', // tighten to `https://${APP_HOST}` once live
@@ -220,13 +221,15 @@ async function handleApi(request, env, url) {
       const repo = String(body.repo || '').trim();
       const target = String(body.target || '').trim();
       if (!repo || !target) return json({ ok: false, error: 'Repo URL and deployed site URL are both required.' }, 400);
+      const email = String(body.email || '').trim();
+      if (!EMAIL_RE.test(email)) return json({ ok: false, error: 'A valid email is required.' }, 400);
       const check = await verifyPublicRepo(repo);
       if (!check.ok) return json({ ok: false, error: check.error }, 400);
       try { new URL(target); } catch { return json({ ok: false, error: 'Deployed site URL is not valid.' }, 400); }
       record = {
         username, mode: 'coder', target,
         repo: check.htmlUrl, repoName: check.fullName,
-        email: String(body.email || '').trim() || null,
+        email,
         status: 'pending', showcase: false, createdAt: new Date().toISOString()
       };
     } else {
@@ -234,9 +237,10 @@ async function handleApi(request, env, url) {
       const email = String(body.email || '').trim();
       if (!target) return json({ ok: false, error: 'A URL to point this domain at is required.' }, 400);
       try { new URL(target); } catch { return json({ ok: false, error: 'That URL is not valid.' }, 400); }
+      if (!EMAIL_RE.test(email)) return json({ ok: false, error: 'A valid email is required.' }, 400);
       record = {
         username, mode: 'nocode', target,
-        email: email || null,
+        email,
         status: 'pending', showcase: false, createdAt: new Date().toISOString()
       };
     }
@@ -275,13 +279,15 @@ async function handleApi(request, env, url) {
       const referenceNumber = String(body.referenceNumber || '').trim();
       const username = String(body.username || '').toLowerCase().trim();
       const amount = Number(body.amount) || null;
+      const donationEmail = String(body.email || '').trim();
       if (!tier) return json({ ok: false, error: 'Pick a donation tier.' }, 400);
       if (!referenceNumber) return json({ ok: false, error: 'Reference number is required.' }, 400);
       if (!username) return json({ ok: false, error: 'Tell us which subdomain to boost.' }, 400);
+      if (!EMAIL_RE.test(donationEmail)) return json({ ok: false, error: 'A valid email is required.' }, 400);
 
       const record = {
         id: crypto.randomUUID(), type: 'donation', tier, amount, referenceNumber, username,
-        email: String(body.email || '').trim() || null,
+        email: donationEmail,
         note: String(body.message || '').slice(0, 2000),
         confirmed: false, createdAt: now.toISOString()
       };

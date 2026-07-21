@@ -33,6 +33,20 @@
     </ul>
   </nav>
 
+  <!-- Pixel-art heart, reused via <use> and recolored per tier with CSS `color`. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="pixel-heart" viewBox="0 0 8 7">
+      <!-- 8x7 grid, one <rect> per filled pixel, Undertale-style blocky heart -->
+      <rect x="1" y="0" width="2" height="1" fill="currentColor"/>
+      <rect x="5" y="0" width="2" height="1" fill="currentColor"/>
+      <rect x="0" y="1" width="8" height="2" fill="currentColor"/>
+      <rect x="0" y="3" width="8" height="1" fill="currentColor"/>
+      <rect x="1" y="4" width="6" height="1" fill="currentColor"/>
+      <rect x="2" y="5" width="4" height="1" fill="currentColor"/>
+      <rect x="3" y="6" width="2" height="1" fill="currentColor"/>
+    </symbol>
+  </svg>
+
   <main id="top">
 
     <!-- ── HERO ─────────────────────────────────────────── -->
@@ -105,8 +119,8 @@
             <input type="url" id="claimTargetNocode" placeholder="https://linktr.ee/yourname" />
           </label>
           <label class="field">
-            <span>Your email (optional, so we can reach you about your claim)</span>
-            <input type="email" id="claimEmailNocode" placeholder="you@example.com" />
+            <span>Your email</span>
+            <input type="email" id="claimEmailNocode" placeholder="you@example.com" required />
           </label>
         </div>
 
@@ -120,8 +134,8 @@
             <input type="url" id="claimTargetCoder" placeholder="https://you.github.io/your-site" />
           </label>
           <label class="field">
-            <span>Your email (optional)</span>
-            <input type="email" id="claimEmailCoder" placeholder="you@example.com" />
+            <span>Your email</span>
+            <input type="email" id="claimEmailCoder" placeholder="you@example.com" required />
           </label>
           <p class="field-hint">
             Like <a href="https://www.is-a.dev" target="_blank" rel="noopener">is-a.dev</a>, but simpler —
@@ -149,23 +163,23 @@
 
         <div class="tier-list">
           <div class="tier-card" data-tier="normal">
-            <span class="tier-icon">🤍</span>
+            <svg class="pixel-heart pixel-heart--normal" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
             <div><strong>Normal Heart</strong><span>₱50 / $1</span></div>
           </div>
           <div class="tier-card" data-tier="gold">
-            <span class="tier-icon">💛</span>
+            <svg class="pixel-heart pixel-heart--gold" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
             <div><strong>Gold Heart</strong><span>₱250 / $10</span></div>
           </div>
           <div class="tier-card" data-tier="diamond">
-            <span class="tier-icon">💎</span>
+            <svg class="pixel-heart pixel-heart--diamond" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
             <div><strong>Diamond Heart</strong><span>₱1,000 / $50</span></div>
           </div>
           <div class="tier-card" data-tier="real">
-            <span class="tier-icon">❤️</span>
+            <svg class="pixel-heart pixel-heart--real" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
             <div><strong>Real Heart</strong><span>Any amount above ₱1,000 / $50</span></div>
           </div>
           <div class="tier-card" data-tier="ghost">
-            <span class="tier-icon">👻</span>
+            <svg class="pixel-heart pixel-heart--ghost" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
             <div><strong>Ghost Heart</strong><span>Any odd amount below ₱1,000 / $50</span></div>
           </div>
         </div>
@@ -176,11 +190,11 @@
           <span>Tier</span>
           <select id="donateTier" required>
             <option value="" disabled selected>Choose a tier…</option>
-            <option value="normal">🤍 Normal Heart — ₱50 / $1</option>
-            <option value="gold">💛 Gold Heart — ₱250 / $10</option>
-            <option value="diamond">💎 Diamond Heart — ₱1,000 / $50</option>
-            <option value="real">❤️ Real Heart — above ₱1,000 / $50</option>
-            <option value="ghost">👻 Ghost Heart — odd amount below ₱1,000 / $50</option>
+            <option value="normal">Normal Heart — ₱50 / $1</option>
+            <option value="gold">Gold Heart — ₱250 / $10</option>
+            <option value="diamond">Diamond Heart — ₱1,000 / $50</option>
+            <option value="real">Real Heart — above ₱1,000 / $50</option>
+            <option value="ghost">Ghost Heart — odd amount below ₱1,000 / $50</option>
           </select>
         </label>
         <label class="field">
@@ -199,8 +213,8 @@
           </div>
         </label>
         <label class="field">
-          <span>Email (optional)</span>
-          <input type="email" id="donateEmail" placeholder="you@example.com" />
+          <span>Email</span>
+          <input type="email" id="donateEmail" placeholder="you@example.com" required />
         </label>
         <button type="submit" class="btn btn-primary btn-block">Submit donation</button>
         <p class="username-status" id="donateStatus"></p>

@@ -5,14 +5,28 @@
 body.is-loading { opacity: 0; }
 body { opacity: 1; transition: opacity .3s ease; }
 
+/* ── Vertical slides: each section fills the viewport (minus the
+   sticky nav) and snaps into place on scroll, one at a time. ────── */
+html { scroll-behavior: smooth; }
+main {
+  scroll-snap-type: y mandatory;
+}
 .section {
   max-width: 980px;
   margin: 0 auto;
-  padding: 5rem 1.5rem;
+  padding: 2.5rem 1.5rem;
+  min-height: calc(100vh - 56px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  box-sizing: border-box;
 }
+.site-footer { scroll-snap-align: start; }
 
 /* ── Hero ─────────────────────────────────────────────── */
-.hero-section { padding-top: 4.5rem; text-align: center; }
+.hero-section { text-align: center; }
 .hero-inner { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 1.25rem; }
 .eyebrow { font-size: .7rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--color-primary); }
 .hero-section h1 { font-size: clamp(2.2rem, 5vw, 3.4rem); line-height: 1.1; }
@@ -57,9 +71,22 @@ body { opacity: 1; transition: opacity .3s ease; }
 .donate-qr { width: 220px; height: 220px; object-fit: contain; border: 2px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow); background: #fff; }
 .tier-list { display: flex; flex-direction: column; gap: .6rem; min-width: 280px; }
 .tier-card { display: flex; align-items: center; gap: .75rem; padding: .8rem 1rem; border: 2px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
-.tier-card .tier-icon { font-size: 1.4rem; }
 .tier-card strong { display: block; font-size: .95rem; }
 .tier-card span { color: var(--color-text-muted); font-size: .82rem; }
+
+/* ── Pixel-art hearts (Undertale-style), one color per tier ─────── */
+.pixel-heart {
+  width: 1.6rem;
+  height: 1.6rem;
+  flex-shrink: 0;
+  shape-rendering: crispEdges;
+  image-rendering: pixelated;
+}
+.pixel-heart--normal  { color: #FFFFFF; filter: drop-shadow(1px 0 0 var(--color-border)) drop-shadow(-1px 0 0 var(--color-border)) drop-shadow(0 1px 0 var(--color-border)) drop-shadow(0 -1px 0 var(--color-border)); }
+.pixel-heart--gold    { color: #FFD400; }
+.pixel-heart--diamond { color: #00E5F0; }
+.pixel-heart--real    { color: #FF3366; }
+.pixel-heart--ghost   { color: #B9A7FF; opacity: .75; }
 
 /* ── Footer ───────────────────────────────────────────── */
 .site-footer { text-align: center; padding: 3rem 1.5rem; color: var(--color-text-muted); font-size: .85rem; }
