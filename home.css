@@ -8,22 +8,62 @@ body { opacity: 1; transition: opacity .3s ease; }
 /* ── Vertical slides: each section fills the viewport (minus the
    sticky nav) and snaps into place on scroll, one at a time. ────── */
 html { scroll-behavior: smooth; }
-main {
-  scroll-snap-type: y mandatory;
+
+body {
+  height: 100vh;
+  overflow: hidden;
 }
+
+main {
+  height: calc(100vh - 56px);
+  overflow-y: scroll;
+  overflow-x: hidden;
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Each slide is exactly one viewport tall (minus the pinned nav) and
+   snaps fully into place — no partial-slide peeking, no free scroll. */
 .section {
   max-width: 980px;
   margin: 0 auto;
   padding: 2.5rem 1.5rem;
-  min-height: calc(100vh - 56px);
+  height: calc(100vh - 56px);
+  max-height: calc(100vh - 56px);
   display: flex;
   flex-direction: column;
   justify-content: center;
   scroll-snap-align: start;
   scroll-snap-stop: always;
   box-sizing: border-box;
+  overflow-y: auto;
 }
-.site-footer { scroll-snap-align: start; }
+
+/* Fade + rise each slide in as it becomes the active one, for a
+   smoother feel than a hard snap-cut. */
+.section,
+.site-footer {
+  opacity: 0.35;
+  transform: translateY(24px);
+  transition: opacity .5s ease, transform .5s ease;
+}
+.section.in-view,
+.site-footer.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.site-footer {
+  scroll-snap-align: start;
+  min-height: auto;
+  height: auto;
+  max-height: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section, .site-footer { opacity: 1; transform: none; transition: none; }
+}
 
 /* ── Hero ─────────────────────────────────────────────── */
 .hero-section { text-align: center; }
@@ -87,6 +127,71 @@ main {
 .pixel-heart--diamond { color: #00E5F0; }
 .pixel-heart--real    { color: #FF3366; }
 .pixel-heart--ghost   { color: #B9A7FF; opacity: .75; }
+
+/* ── Heart nav (navigation IS the hearts) ────────────────── */
+.nav-hearts { gap: .5rem; }
+
+.heart-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius);
+  text-decoration: none;
+  transition: transform .15s ease, background .15s ease;
+}
+.heart-link:hover { background: var(--color-surface-alt); transform: translateY(-2px); }
+
+.heart-link .pixel-heart {
+  width: 1.35rem;
+  height: 1.35rem;
+  opacity: .5;
+  transform: scale(.85);
+  transition: opacity .2s ease, transform .2s ease;
+}
+.heart-link:hover .pixel-heart { opacity: .85; }
+
+.heart-link.active .pixel-heart {
+  opacity: 1;
+  transform: scale(1.15);
+  filter: drop-shadow(0 2px 3px rgba(26,26,26,0.25));
+}
+.heart-link.active { background: var(--color-surface-alt); }
+
+/* Tooltip label under each heart, shown on hover/focus/active */
+.heart-tip {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  font-size: .68rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background: var(--color-text);
+  color: var(--color-text-inverse);
+  padding: .25rem .5rem;
+  border-radius: var(--radius);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease, transform .15s ease;
+}
+.heart-link:hover .heart-tip,
+.heart-link:focus-visible .heart-tip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.nav-cta { margin-left: .25rem; }
+
+@media (max-width: 640px) {
+  .heart-tip { display: none; }
+  .heart-link { width: 28px; height: 28px; }
+  .heart-link .pixel-heart { width: 1.1rem; height: 1.1rem; }
+  .nav-hearts { gap: .15rem; }
+  .nav-cta { padding: .4rem .7rem; font-size: .75rem; }
+}
 
 /* ── Footer ───────────────────────────────────────────── */
 .site-footer { text-align: center; padding: 3rem 1.5rem; color: var(--color-text-muted); font-size: .85rem; }

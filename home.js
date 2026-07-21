@@ -104,6 +104,32 @@ donateForm.addEventListener('submit', async (e) => {
   }
 });
 
+/* ── Slide tracking: highlight the active heart, fade slides in ── */
+(function initSlideNav() {
+  const main = document.querySelector('main');
+  const slides = Array.from(document.querySelectorAll('main .section, .site-footer'));
+  const heartLinks = Array.from(document.querySelectorAll('.heart-link'));
+  if (!main || !slides.length) return;
+
+  const linkFor = (id) => heartLinks.find(a => a.dataset.target === id);
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      entry.target.classList.toggle('in-view', entry.isIntersecting);
+      if (entry.isIntersecting && entry.target.id) {
+        const link = linkFor(entry.target.id);
+        if (link) {
+          heartLinks.forEach(a => { a.classList.remove('active'); a.removeAttribute('aria-current'); });
+          link.classList.add('active');
+          link.setAttribute('aria-current', 'true');
+        }
+      }
+    });
+  }, { root: main, threshold: 0.6 });
+
+  slides.forEach(s => observer.observe(s));
+})();
+
 /* ── Infinite showcase ───────────────────────────────────── */
 const showcaseGrid = document.getElementById('showcaseGrid');
 const showcaseStatus = document.getElementById('showcaseStatus');
@@ -151,7 +177,7 @@ async function loadShowcasePage() {
 
 const showcaseObserver = new IntersectionObserver(entries => {
   if (entries.some(e => e.isIntersecting)) loadShowcasePage();
-}, { rootMargin: '300px' });
+}, { root: document.querySelector('main'), rootMargin: '300px' });
 
 showcaseObserver.observe(document.getElementById('showcase'));
 loadShowcasePage();

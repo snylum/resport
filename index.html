@@ -24,12 +24,38 @@
 
   <nav class="site-nav">
     <a class="nav-logo" href="#top"><img class="logo-dot" src="favicon.png" alt="" /> proves.work</a>
-    <ul class="nav-links">
-      <li><a href="#claim">Claim a name</a></li>
-      <li><a href="#coders">For coders</a></li>
-      <li><a href="#donate">Donate</a></li>
-      <li><a href="#showcase">Showcase</a></li>
-      <li><a href="admin.html">Admin</a></li>
+    <ul class="nav-links nav-hearts" id="navHearts">
+      <li>
+        <a href="#top" class="heart-link active" data-target="top-slide" aria-label="Home" aria-current="true">
+          <svg class="pixel-heart pixel-heart--normal" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+          <span class="heart-tip">Home</span>
+        </a>
+      </li>
+      <li>
+        <a href="#how" class="heart-link" data-target="how" aria-label="How it works">
+          <svg class="pixel-heart pixel-heart--gold" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+          <span class="heart-tip">How it works</span>
+        </a>
+      </li>
+      <li>
+        <a href="#claim" class="heart-link" data-target="claim" aria-label="Claim a name">
+          <svg class="pixel-heart pixel-heart--diamond" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+          <span class="heart-tip">Claim a name</span>
+        </a>
+      </li>
+      <li>
+        <a href="#donate" class="heart-link" data-target="donate" aria-label="Donate">
+          <svg class="pixel-heart pixel-heart--real" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+          <span class="heart-tip">Donate</span>
+        </a>
+      </li>
+      <li>
+        <a href="#showcase" class="heart-link" data-target="showcase" aria-label="Showcase">
+          <svg class="pixel-heart pixel-heart--ghost" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+          <span class="heart-tip">Showcase</span>
+        </a>
+      </li>
+      <li><a href="#claim" class="btn btn-primary btn-sm nav-cta">Claim →</a></li>
     </ul>
   </nav>
 
@@ -50,7 +76,7 @@
   <main id="top">
 
     <!-- ── HERO ─────────────────────────────────────────── -->
-    <section class="section hero-section">
+    <section class="section hero-section" id="top-slide">
       <div class="hero-inner">
         <span class="eyebrow">100% free · open source</span>
         <h1>Your name. A free subdomain. No sign-up.</h1>
@@ -68,7 +94,7 @@
     </section>
 
     <!-- ── HOW IT WORKS ─────────────────────────────────── -->
-    <section class="section how-section">
+    <section class="section how-section" id="how">
       <h2>How it works</h2>
       <div class="how-grid">
         <div class="how-card">
@@ -236,7 +262,7 @@
     </section>
 
     <footer class="site-footer">
-      <p>proves.work is open source. Fork it, self-host it, improve it.</p>
+      <p>proves.work is open source. Fork it, self-host it, improve it. · <a href="admin.html">Admin</a></p>
     </footer>
 
   </main>
