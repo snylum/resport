@@ -27,36 +27,36 @@
     <a class="nav-logo" href="#top"><img class="logo-dot" src="favicon.png" alt="" /> proves.work</a>
     <ul class="nav-links nav-hearts" id="navHearts">
       <li>
-        <button type="button" class="heart-link" data-tier="normal" data-amount="50" aria-label="Donate a Normal Heart, ₱50">
+        <button type="button" class="heart-link" data-tier="normal" data-amount="50" aria-label="Job Hunter tag, ₱50">
           <svg class="pixel-heart pixel-heart--normal" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-          <span class="heart-tip">Normal · ₱50</span>
+          <span class="heart-tip">Job Hunter · ₱50</span>
         </button>
       </li>
       <li>
-        <button type="button" class="heart-link" data-tier="gold" data-amount="250" aria-label="Donate a Gold Heart, ₱250">
+        <button type="button" class="heart-link" data-tier="gold" data-amount="250" aria-label="Career Booster tag, ₱250">
           <svg class="pixel-heart pixel-heart--gold" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-          <span class="heart-tip">Gold · ₱250</span>
+          <span class="heart-tip">Career Booster · ₱250</span>
         </button>
       </li>
       <li>
-        <button type="button" class="heart-link" data-tier="diamond" data-amount="1000" aria-label="Donate a Diamond Heart, ₱1,000">
+        <button type="button" class="heart-link" data-tier="diamond" data-amount="1000" aria-label="Portfolio Pro tag, ₱1,000">
           <svg class="pixel-heart pixel-heart--diamond" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-          <span class="heart-tip">Diamond · ₱1,000</span>
+          <span class="heart-tip">Portfolio Pro · ₱1,000</span>
         </button>
       </li>
       <li>
-        <button type="button" class="heart-link" data-tier="real" data-amount="1500" aria-label="Donate a Real Heart, ₱1,500">
+        <button type="button" class="heart-link" data-tier="real" data-amount="1500" aria-label="Your own title, ₱1,500+">
           <svg class="pixel-heart pixel-heart--real" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-          <span class="heart-tip">Real · ₱1,500</span>
+          <span class="heart-tip">Your own title</span>
         </button>
       </li>
       <li>
-        <button type="button" class="heart-link" data-tier="ghost" data-amount="25" aria-label="Donate a Ghost Heart, ₱25">
+        <button type="button" class="heart-link" data-tier="ghost" data-amount="25" aria-label="Wildcard Backer tag, ₱25">
           <svg class="pixel-heart pixel-heart--ghost" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-          <span class="heart-tip">Ghost · ₱25</span>
+          <span class="heart-tip">Wildcard Backer · ₱25</span>
         </button>
       </li>
-      <li><a href="#claim" class="btn btn-primary btn-sm nav-cta">Claim →</a></li>
+      <li><a href="#claim" class="btn btn-primary btn-sm nav-cta">Prove your work</a></li>
     </ul>
   </nav>
 
@@ -65,9 +65,9 @@
     <div class="tier-popup-card">
       <button type="button" class="tier-popup-close" id="tierPopupClose" aria-label="Close">✕</button>
       <svg id="tierPopupHeart" class="pixel-heart tier-popup-heart" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-      <h3 id="tierPopupTitle">Normal Heart</h3>
+      <h3 id="tierPopupTitle">Job Hunter</h3>
       <p class="tier-popup-amount">₱<span id="tierPopupAmount">50</span></p>
-      <p class="tier-popup-copy">Scan the QR code, send this exact amount, then continue to fill in your reference number.</p>
+      <p class="tier-popup-copy" id="tierPopupCopy">Scan the QR code, send this exact amount, then continue to fill in your reference number.</p>
       <img src="payment-qr.png" alt="Donation QR code" class="tier-popup-qr" />
       <button type="button" class="btn btn-primary btn-block" id="tierPopupContinue">I've paid — continue →</button>
     </div>
@@ -136,57 +136,66 @@
 
     <!-- ── CLAIM FORM ───────────────────────────────────── -->
     <section class="section claim-section" id="claim">
-      <h2>Claim your subdomain</h2>
-      <p class="section-sub">Free for everyone. No account needed.</p>
+      <div class="claim-columns">
+        <div class="claim-intro">
+          <h2>Claim your subdomain</h2>
+          <p class="section-sub">Free for everyone. No account needed.</p>
 
-      <div class="claim-tabs">
-        <button class="claim-tab active" data-mode="nocode" type="button">No-code</button>
-        <button class="claim-tab" data-mode="coder" type="button" id="coders">Coder / repo</button>
-      </div>
-
-      <form id="claimForm" class="claim-form">
-        <label class="field">
-          <span>Subdomain</span>
-          <div class="domain-input">
-            <input type="text" id="claimUsername" placeholder="yourname" required autocomplete="off" spellcheck="false" />
-            <span class="domain-suffix">.proves.work</span>
+          <div class="claim-tabs">
+            <button class="claim-tab active" data-mode="nocode" type="button">No-code</button>
+            <button class="claim-tab" data-mode="coder" type="button" id="coders">Coder / repo</button>
           </div>
-        </label>
 
-        <div id="nocodeFields">
-          <label class="field">
-            <span>Where should it point?</span>
-            <input type="url" id="claimTargetNocode" placeholder="https://linktr.ee/yourname" />
-          </label>
-          <label class="field">
-            <span>Your email</span>
-            <input type="email" id="claimEmailNocode" placeholder="you@example.com" required />
-          </label>
-        </div>
-
-        <div id="coderFields" class="hidden">
-          <label class="field">
-            <span>Public GitHub repo (must be open source)</span>
-            <input type="url" id="claimRepo" placeholder="https://github.com/you/your-site" />
-          </label>
-          <label class="field">
-            <span>Deployed site URL</span>
-            <input type="url" id="claimTargetCoder" placeholder="https://you.github.io/your-site" />
-          </label>
-          <label class="field">
-            <span>Your email</span>
-            <input type="email" id="claimEmailCoder" placeholder="you@example.com" required />
-          </label>
-          <p class="field-hint">
+          <p class="claim-intro-copy" id="claimIntroNocode">
+            Point <strong>yourname.proves.work</strong> at any URL — a link-in-bio page, a résumé,
+            a portfolio, anything. A human reviews every claim, usually within a day.
+          </p>
+          <p class="claim-intro-copy hidden" id="claimIntroCoder">
             Like <a href="https://www.is-a.dev" target="_blank" rel="noopener">is-a.dev</a>, but simpler —
             no PR/YAML file to write. We verify your repo is public via the GitHub API, then a human
             approves the claim. Once live, your showcase card links straight back to the repo.
           </p>
         </div>
 
-        <button type="submit" class="btn btn-primary btn-block">Submit claim</button>
-        <p class="username-status" id="claimStatus"></p>
-      </form>
+        <form id="claimForm" class="claim-form">
+          <label class="field">
+            <span>Subdomain</span>
+            <div class="domain-input">
+              <input type="text" id="claimUsername" placeholder="yourname" required autocomplete="off" spellcheck="false" />
+              <span class="domain-suffix">.proves.work</span>
+            </div>
+          </label>
+
+          <div id="nocodeFields">
+            <label class="field">
+              <span>Where should it point?</span>
+              <input type="url" id="claimTargetNocode" placeholder="https://linktr.ee/yourname" />
+            </label>
+            <label class="field">
+              <span>Your email</span>
+              <input type="email" id="claimEmailNocode" placeholder="you@example.com" required />
+            </label>
+          </div>
+
+          <div id="coderFields" class="hidden">
+            <label class="field">
+              <span>Public GitHub repo (must be open source)</span>
+              <input type="url" id="claimRepo" placeholder="https://github.com/you/your-site" />
+            </label>
+            <label class="field">
+              <span>Deployed site URL</span>
+              <input type="url" id="claimTargetCoder" placeholder="https://you.github.io/your-site" />
+            </label>
+            <label class="field">
+              <span>Your email</span>
+              <input type="email" id="claimEmailCoder" placeholder="you@example.com" required />
+            </label>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block">Submit claim</button>
+          <p class="username-status" id="claimStatus"></p>
+        </form>
+      </div>
     </section>
 
     <!-- ── DONATE ───────────────────────────────────────── -->
@@ -205,23 +214,23 @@
           <div class="tier-list">
             <div class="tier-card" data-tier="normal">
               <svg class="pixel-heart pixel-heart--normal" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-              <div><strong>Normal Heart</strong><span>₱50 / $1</span></div>
+              <div><strong>Job Hunter</strong><span>₱50 / $1</span></div>
             </div>
             <div class="tier-card" data-tier="gold">
               <svg class="pixel-heart pixel-heart--gold" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-              <div><strong>Gold Heart</strong><span>₱250 / $10</span></div>
+              <div><strong>Career Booster</strong><span>₱250 / $10</span></div>
             </div>
             <div class="tier-card" data-tier="diamond">
               <svg class="pixel-heart pixel-heart--diamond" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-              <div><strong>Diamond Heart</strong><span>₱1,000 / $50</span></div>
+              <div><strong>Portfolio Pro</strong><span>₱1,000 / $50</span></div>
             </div>
             <div class="tier-card" data-tier="real">
               <svg class="pixel-heart pixel-heart--real" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-              <div><strong>Real Heart</strong><span>Any amount above ₱1,000 / $50</span></div>
+              <div><strong>Your own title</strong><span>Any amount above ₱1,000 / $50 · pick your own tag</span></div>
             </div>
             <div class="tier-card" data-tier="ghost">
               <svg class="pixel-heart pixel-heart--ghost" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-              <div><strong>Ghost Heart</strong><span>Any odd amount below ₱1,000 / $50</span></div>
+              <div><strong>Wildcard Backer</strong><span>Any odd amount below ₱1,000 / $50</span></div>
             </div>
           </div>
         </div>
@@ -231,12 +240,16 @@
             <span>Tier</span>
             <select id="donateTier" required>
               <option value="" disabled selected>Choose a tier…</option>
-              <option value="normal">Normal Heart — ₱50 / $1</option>
-              <option value="gold">Gold Heart — ₱250 / $10</option>
-              <option value="diamond">Diamond Heart — ₱1,000 / $50</option>
-              <option value="real">Real Heart — above ₱1,000 / $50</option>
-              <option value="ghost">Ghost Heart — odd amount below ₱1,000 / $50</option>
+              <option value="normal">Job Hunter — ₱50 / $1</option>
+              <option value="gold">Career Booster — ₱250 / $10</option>
+              <option value="diamond">Portfolio Pro — ₱1,000 / $50</option>
+              <option value="real">Your own title — above ₱1,000 / $50</option>
+              <option value="ghost">Wildcard Backer — odd amount below ₱1,000 / $50</option>
             </select>
+          </label>
+          <label class="field hidden" id="donateCustomTagField">
+            <span>Your custom tag</span>
+            <input type="text" id="donateCustomTag" placeholder="e.g. Future Senior Dev" maxlength="28" />
           </label>
           <label class="field">
             <span>Amount you sent</span>
@@ -277,8 +290,54 @@
       <p class="username-status" id="showcaseStatus"></p>
     </section>
 
-    <footer class="site-footer">
-      <p>proves.work is open source. Fork it, self-host it, improve it. · <a href="admin.html">Admin</a></p>
+    <!-- ── CONTACT ──────────────────────────────────────── -->
+    <section class="section contact-section" id="contact">
+      <h2>Get in touch</h2>
+      <p class="section-sub">Questions, bug reports, partnership ideas — send a note and we'll reply by email.</p>
+
+      <form id="contactForm" class="claim-form">
+        <label class="field">
+          <span>Name</span>
+          <input type="text" id="contactName" placeholder="Your name" required />
+        </label>
+        <label class="field">
+          <span>Email</span>
+          <input type="email" id="contactEmail" placeholder="you@example.com" required />
+        </label>
+        <label class="field">
+          <span>Message</span>
+          <textarea id="contactMessage" rows="3" placeholder="What's up?" required></textarea>
+        </label>
+        <button type="submit" class="btn btn-primary btn-block">Send message</button>
+        <p class="username-status" id="contactStatus"></p>
+      </form>
+
+      <p class="contact-admin-note">Part of the team? <a href="admin.html">Go to Admin →</a></p>
+    </section>
+
+    <footer class="site-footer" id="siteFooter">
+      <div class="footer-card">
+        <div class="footer-top">
+          <div class="footer-wordmark">PROVES.WORK</div>
+          <button type="button" class="footer-scrolltop" id="scrollTopBtn">Scroll to top ↑</button>
+        </div>
+        <nav class="footer-links">
+          <a href="#top">Home</a>
+          <a href="#claim">Claim</a>
+          <a href="#donate">Donate</a>
+          <a href="#showcase">Showcase</a>
+          <a href="#contact">Contact</a>
+          <a href="admin.html">Admin</a>
+        </nav>
+        <div class="footer-meta">
+          <span>© 2026 proves.work — open source. Fork it, self-host it, improve it.</span>
+          <span class="footer-heart">
+            Built with
+            <svg class="pixel-heart pixel-heart--real footer-heart-icon" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+            love
+          </span>
+        </div>
+      </div>
     </footer>
 
   </main>

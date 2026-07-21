@@ -23,6 +23,8 @@ window.addEventListener('load', () => {
 const claimTabs = document.querySelectorAll('.claim-tab');
 const nocodeFields = document.getElementById('nocodeFields');
 const coderFields = document.getElementById('coderFields');
+const claimIntroNocode = document.getElementById('claimIntroNocode');
+const claimIntroCoder = document.getElementById('claimIntroCoder');
 let claimMode = 'nocode';
 
 claimTabs.forEach(tab => {
@@ -32,6 +34,8 @@ claimTabs.forEach(tab => {
     claimMode = tab.dataset.mode;
     nocodeFields.classList.toggle('hidden', claimMode !== 'nocode');
     coderFields.classList.toggle('hidden', claimMode !== 'coder');
+    claimIntroNocode?.classList.toggle('hidden', claimMode !== 'nocode');
+    claimIntroCoder?.classList.toggle('hidden', claimMode !== 'coder');
   });
 });
 
@@ -74,6 +78,17 @@ claimForm.addEventListener('submit', async (e) => {
 /* ── Donation form submit ────────────────────────────────── */
 const donateForm = document.getElementById('donateForm');
 const donateStatus = document.getElementById('donateStatus');
+const donateTierSelect = document.getElementById('donateTier');
+const donateCustomTagField = document.getElementById('donateCustomTagField');
+const donateCustomTagInput = document.getElementById('donateCustomTag');
+
+function syncCustomTagField() {
+  const isCustom = donateTierSelect.value === 'real';
+  donateCustomTagField.classList.toggle('hidden', !isCustom);
+  donateCustomTagInput.required = isCustom;
+}
+donateTierSelect.addEventListener('change', syncCustomTagField);
+syncCustomTagField();
 
 donateForm.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -88,6 +103,9 @@ donateForm.addEventListener('submit', async (e) => {
     username: document.getElementById('donateUsername').value.trim().toLowerCase(),
     email: document.getElementById('donateEmail').value.trim()
   };
+  if (body.tier === 'real') {
+    body.customTag = donateCustomTagInput.value.trim();
+  }
 
   try {
     const res = await fetch('/api/contact', {
@@ -98,6 +116,7 @@ donateForm.addEventListener('submit', async (e) => {
     donateStatus.textContent = 'Thank you! We\'ll confirm your reference number shortly.';
     donateStatus.classList.add('ok');
     donateForm.reset();
+    syncCustomTagField();
   } catch (err) {
     donateStatus.textContent = err.message;
     donateStatus.classList.add('error');
@@ -111,11 +130,14 @@ donateForm.addEventListener('submit', async (e) => {
   const continueBtn = document.getElementById('tierPopupContinue');
   const titleEl = document.getElementById('tierPopupTitle');
   const amountEl = document.getElementById('tierPopupAmount');
+  const copyEl = document.getElementById('tierPopupCopy');
   const heartEl = document.getElementById('tierPopupHeart');
   const heartButtons = document.querySelectorAll('.heart-link[data-tier]');
   if (!popup) return;
 
-  const tierNames = { normal: 'Normal Heart', gold: 'Gold Heart', diamond: 'Diamond Heart', real: 'Real Heart', ghost: 'Ghost Heart' };
+  const tierNames = { normal: 'Job Hunter', gold: 'Career Booster', diamond: 'Portfolio Pro', real: 'Your own title', ghost: 'Wildcard Backer' };
+  const defaultCopy = 'Scan the QR code, send this exact amount, then continue to fill in your reference number.';
+  const realCopy = 'Scan the QR code, send any amount above ₱1,000 / $50, then continue to name your own tag and fill in your reference number.';
   let activeTier = null;
   let activeAmount = null;
 
@@ -124,6 +146,7 @@ donateForm.addEventListener('submit', async (e) => {
     activeAmount = amount;
     titleEl.textContent = tierNames[tier] || 'Donate';
     amountEl.textContent = amount;
+    copyEl.textContent = tier === 'real' ? realCopy : defaultCopy;
     heartEl.className = `pixel-heart tier-popup-heart pixel-heart--${tier}`;
     popup.classList.remove('hidden');
   }
@@ -145,9 +168,10 @@ donateForm.addEventListener('submit', async (e) => {
     const amountInput = document.getElementById('donateAmount');
     if (tierSelect) tierSelect.value = activeTier;
     if (amountInput) amountInput.value = activeAmount;
+    tierSelect?.dispatchEvent(new Event('change'));
     closePopup();
     document.getElementById('donate')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    document.getElementById('donateRef')?.focus({ preventScroll: true });
+    (activeTier === 'real' ? document.getElementById('donateCustomTag') : document.getElementById('donateRef'))?.focus({ preventScroll: true });
   });
 })();
 
@@ -164,6 +188,42 @@ donateForm.addEventListener('submit', async (e) => {
 
   slides.forEach(s => observer.observe(s));
 })();
+
+/* ── Contact form submit ──────────────────────────────────── */
+const contactForm = document.getElementById('contactForm');
+const contactStatus = document.getElementById('contactStatus');
+
+contactForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  contactStatus.textContent = 'Sending…';
+  contactStatus.className = 'username-status';
+
+  const body = {
+    type: 'contact',
+    name: document.getElementById('contactName').value.trim(),
+    email: document.getElementById('contactEmail').value.trim(),
+    message: document.getElementById('contactMessage').value.trim()
+  };
+
+  try {
+    const res = await fetch('/api/contact', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Something went wrong.');
+    contactStatus.textContent = 'Thanks! We\'ll get back to you by email.';
+    contactStatus.classList.add('ok');
+    contactForm.reset();
+  } catch (err) {
+    contactStatus.textContent = err.message;
+    contactStatus.classList.add('error');
+  }
+});
+
+/* ── Footer: scroll back to the top slide ────────────────── */
+document.getElementById('scrollTopBtn')?.addEventListener('click', () => {
+  document.getElementById('top')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
 
 /* ── Infinite showcase ───────────────────────────────────── */
 const showcaseGrid = document.getElementById('showcaseGrid');

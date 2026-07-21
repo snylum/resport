@@ -93,15 +93,18 @@
 
 :root[data-theme="dazed-dark"] .field input,
 :root[data-theme="dazed-dark"] .field select,
+:root[data-theme="dazed-dark"] .field textarea,
 :root[data-theme="dazed-dark"] .domain-input {
   background: rgba(255,255,255,0.04);
   color: var(--color-text);
 }
-:root[data-theme="dazed-dark"] .field input::placeholder {
+:root[data-theme="dazed-dark"] .field input::placeholder,
+:root[data-theme="dazed-dark"] .field textarea::placeholder {
   color: rgba(169,155,201,0.6);
 }
 :root[data-theme="dazed-dark"] .field input:focus,
-:root[data-theme="dazed-dark"] .field select:focus {
+:root[data-theme="dazed-dark"] .field select:focus,
+:root[data-theme="dazed-dark"] .field textarea:focus {
   outline: none;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(255,46,159,0.25);
