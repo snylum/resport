@@ -175,6 +175,86 @@ donateForm.addEventListener('submit', async (e) => {
   });
 })();
 
+/* ── Paginated slide scrolling: one slide per gesture, with a
+   deliberate pause before the next scroll is accepted, so it feels
+   like a controlled slide-to-slide transition instead of jittery
+   momentum scroll-snap. ─────────────────────────────────────── */
+(function initPaginatedScroll() {
+  const slides = Array.from(document.querySelectorAll('main .section, .site-footer'));
+  if (!slides.length) return;
+
+  const NAV_HEIGHT = 56;
+  const COOLDOWN_MS = 900;       // pause after a slide transition before accepting new input
+  const WHEEL_THRESHOLD = 12;    // ignore tiny trackpad jitter
+
+  let locked = false;
+  let wheelAccum = 0;
+  let wheelResetTimer = null;
+
+  function currentIndex() {
+    const y = window.scrollY + NAV_HEIGHT + 4;
+    let idx = 0;
+    slides.forEach((s, i) => { if (s.offsetTop <= y) idx = i; });
+    return idx;
+  }
+
+  function goTo(index) {
+    if (index < 0 || index >= slides.length) return;
+    locked = true;
+    slides[index].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.clearTimeout(goTo._t);
+    goTo._t = window.setTimeout(() => { locked = false; }, COOLDOWN_MS);
+  }
+
+  window.addEventListener('wheel', (e) => {
+    // Let pinch-zoom / modifier scrolling through untouched.
+    if (e.ctrlKey) return;
+
+    e.preventDefault();
+    if (locked) return;
+
+    wheelAccum += e.deltaY;
+    window.clearTimeout(wheelResetTimer);
+    wheelResetTimer = window.setTimeout(() => { wheelAccum = 0; }, 150);
+
+    if (Math.abs(wheelAccum) < WHEEL_THRESHOLD) return;
+
+    const dir = wheelAccum > 0 ? 1 : -1;
+    wheelAccum = 0;
+    goTo(currentIndex() + dir);
+  }, { passive: false });
+
+  window.addEventListener('keydown', (e) => {
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
+    if (locked) return;
+
+    if (e.key === 'PageDown' || e.key === 'ArrowDown') { e.preventDefault(); goTo(currentIndex() + 1); }
+    else if (e.key === 'PageUp' || e.key === 'ArrowUp') { e.preventDefault(); goTo(currentIndex() - 1); }
+  });
+
+  let touchStartY = null;
+  window.addEventListener('touchstart', (e) => { touchStartY = e.touches[0].clientY; }, { passive: true });
+  window.addEventListener('touchend', (e) => {
+    if (touchStartY === null || locked) return;
+    const dy = touchStartY - e.changedTouches[0].clientY;
+    touchStartY = null;
+    if (Math.abs(dy) < 40) return;
+    goTo(currentIndex() + (dy > 0 ? 1 : -1));
+  }, { passive: true });
+
+  // In-app anchor links (nav, footer, hero CTA) should still land cleanly
+  // on a slide and re-arm the cooldown so wheel input right after a click
+  // doesn't fight the animation.
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', () => {
+      locked = true;
+      window.clearTimeout(goTo._t);
+      goTo._t = window.setTimeout(() => { locked = false; }, COOLDOWN_MS);
+    });
+  });
+})();
+
 /* ── Slide tracking: fade each slide in as it becomes active ────── */
 (function initSlideFade() {
   const slides = Array.from(document.querySelectorAll('main .section, .site-footer'));
