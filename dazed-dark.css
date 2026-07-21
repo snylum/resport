@@ -22,8 +22,8 @@
   --color-danger: #FF4D6D;
   --radius: 0rem;
   --radius-lg: 0.25rem;
-  --shadow: 5px 5px 0 0 #FF2E9F, 0 0 22px 0 rgba(255,46,159,0.35);
-  --shadow-lg: 10px 10px 0 0 #FF2E9F, 0 0 34px 4px rgba(255,46,159,0.45);
+  --shadow: 0 0 0 1.5px #FF2E9F, 0 0 16px 0 rgba(255,46,159,0.35);
+  --shadow-lg: 0 0 0 2px #FF2E9F, 0 0 26px 2px rgba(255,46,159,0.5);
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk", "Inter", sans-serif;
   --font-mono: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -34,6 +34,11 @@
     radial-gradient(circle at 50% 90%, rgba(0,245,196,0.10), transparent 50%);
 }
 
+:root[data-theme="dazed-dark"],
+.theme-dazed-dark {
+  color-scheme: dark;
+}
+
 :root[data-theme="dazed-dark"] body,
 .theme-dazed-dark body {
   background: var(--color-background);
@@ -41,6 +46,21 @@
   background-attachment: fixed;
   color: var(--color-text);
   font-family: var(--font-sans);
+}
+
+:root[data-theme="dazed-dark"] .field select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23FF2E9F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.8rem center;
+  background-size: 0.7rem;
+  padding-right: 2.2rem;
+}
+:root[data-theme="dazed-dark"] .field select option {
+  background: var(--color-surface);
+  color: var(--color-text);
 }
 
 /* Borders read as thin neon hairlines instead of solid black on dark. */
@@ -116,11 +136,7 @@
 }
 
 :root[data-theme="dazed-dark"] .pixel-heart--normal {
-  color: #F3EEFB;
-  filter:
-    drop-shadow(1px 0 0 #FF2E9F) drop-shadow(-1px 0 0 #FF2E9F)
-    drop-shadow(0 1px 0 #FF2E9F) drop-shadow(0 -1px 0 #FF2E9F)
-    drop-shadow(0 0 6px rgba(255,46,159,0.6));
+  color: #FFFFFF;
 }
 :root[data-theme="dazed-dark"] .pixel-heart--gold    { filter: drop-shadow(0 0 6px rgba(255,201,60,0.65)); }
 :root[data-theme="dazed-dark"] .pixel-heart--diamond { filter: drop-shadow(0 0 7px rgba(0,229,240,0.7)); }

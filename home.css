@@ -24,7 +24,9 @@ main { display: block; }
   width: 100%;
   max-width: 1240px;
   margin: 0 auto;
+  margin-bottom: -1px;
   padding: clamp(1rem, 3vh, 2.5rem) clamp(1rem, 4vw, 2.5rem);
+  padding-bottom: calc(clamp(1rem, 3vh, 2.5rem) + 1px);
   height: 100dvh;
   height: calc(100vh - 56px);
   height: calc(100dvh - 56px);
@@ -32,10 +34,14 @@ main { display: block; }
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  gap: clamp(.4rem, 1.5vh, 1rem);
   scroll-snap-align: start;
   scroll-snap-stop: always;
   box-sizing: border-box;
   overflow: hidden;
+  background: var(--color-background);
+  position: relative;
+  z-index: 1;
 }
 
 .site-footer {
@@ -130,15 +136,15 @@ main { display: block; }
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: clamp(.5rem, 1.6vh, 1rem);
+  gap: clamp(.35rem, 1.2vh, .85rem);
   background: var(--color-surface);
   border: 2px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
-  padding: clamp(1.1rem, 3vh, 2rem);
+  padding: clamp(.85rem, 2.4vh, 1.5rem);
 }
-.field { display: flex; flex-direction: column; gap: .3rem; font-size: clamp(.78rem, 1.6vh, .85rem); font-weight: 600; }
-.field input, .field select, .field textarea { font: inherit; padding: clamp(.5rem, 1.4vh, .65rem) .8rem; border-radius: var(--radius); border: 2px solid var(--color-border); background: var(--color-background); resize: none; }
+.field { display: flex; flex-direction: column; gap: .22rem; font-size: clamp(.74rem, 1.4vh, .85rem); font-weight: 600; }
+.field input, .field select, .field textarea { font: inherit; padding: clamp(.4rem, 1.1vh, .6rem) .8rem; border-radius: var(--radius); border: 2px solid var(--color-border); background: var(--color-background); resize: none; }
 .domain-input { display: flex; align-items: center; border: 2px solid var(--color-border); border-radius: var(--radius); overflow: hidden; background: var(--color-background); }
 .domain-input input { border: none; flex: 1; background: transparent; }
 .domain-suffix { padding: 0 .8rem; color: var(--color-text-muted); font-size: .85rem; white-space: nowrap; }
@@ -164,13 +170,13 @@ main { display: block; }
   width: 100%;
   align-items: center;
 }
-.donate-grid { display: flex; gap: clamp(1rem, 3vw, 2.5rem); align-items: flex-start; justify-content: center; flex-wrap: wrap; }
-.donate-qr { width: clamp(120px, 16vh, 200px); height: clamp(120px, 16vh, 200px); object-fit: contain; border: 2px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow); background: #fff; }
-.tier-list { display: flex; flex-direction: column; gap: clamp(.35rem, 1vh, .6rem); min-width: 260px; }
-.tier-card { display: flex; align-items: center; gap: .75rem; padding: clamp(.5rem, 1.4vh, .8rem) 1rem; border: 2px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
-.tier-card strong { display: block; font-size: clamp(.85rem, 1.8vh, .95rem); }
-.tier-card span { color: var(--color-text-muted); font-size: clamp(.75rem, 1.5vh, .82rem); }
-.donate-section .claim-form { max-width: 420px; }
+.donate-grid { display: flex; gap: clamp(.75rem, 2.5vw, 2rem); align-items: flex-start; justify-content: center; flex-wrap: wrap; }
+.donate-qr { width: clamp(90px, 11vh, 150px); height: clamp(90px, 11vh, 150px); object-fit: contain; border: 2px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow); background: #fff; }
+.tier-list { display: flex; flex-direction: column; gap: clamp(.25rem, .8vh, .45rem); min-width: 240px; }
+.tier-card { display: flex; align-items: center; gap: .6rem; padding: clamp(.3rem, 1vh, .55rem) .8rem; border: 2px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
+.tier-card strong { display: block; font-size: clamp(.78rem, 1.5vh, .9rem); }
+.tier-card span { color: var(--color-text-muted); font-size: clamp(.68rem, 1.3vh, .78rem); }
+.donate-section .claim-form { max-width: 400px; }
 
 /* Wide screens: QR/tiers on the left, donation form on the right, so
    the whole thing sits in one row instead of stacking three sections
@@ -189,7 +195,7 @@ main { display: block; }
   shape-rendering: crispEdges;
   image-rendering: pixelated;
 }
-.pixel-heart--normal  { color: #FFFFFF; filter: drop-shadow(1px 0 0 var(--color-border)) drop-shadow(-1px 0 0 var(--color-border)) drop-shadow(0 1px 0 var(--color-border)) drop-shadow(0 -1px 0 var(--color-border)); }
+.pixel-heart--normal  { color: #FFFFFF; }
 .pixel-heart--gold    { color: #FFD400; }
 .pixel-heart--diamond { color: #00E5F0; }
 .pixel-heart--real    { color: #FF3366; }
@@ -304,6 +310,7 @@ main { display: block; }
   height: 28px;
   border: 2px solid var(--color-border);
   background: var(--color-surface);
+  color: var(--color-primary);
   border-radius: var(--radius);
   cursor: pointer;
   font-size: .8rem;
@@ -317,18 +324,21 @@ main { display: block; }
 .tier-popup-copy { color: var(--color-text-muted); font-size: .85rem; }
 .tier-popup-qr { width: 150px; height: 150px; object-fit: contain; border: 2px solid var(--color-border); border-radius: var(--radius-lg); background: #fff; margin: .25rem 0 .5rem; }
 
-.showcase-section {
+.showcase-section,
+.donate-section,
+.contact-section {
   justify-content: flex-start;
-  align-items: stretch;
 }
+.showcase-section { align-items: stretch; }
 .showcase-hero { flex: 0 0 auto; }
 #showcaseGrid { flex: 1 1 auto; min-height: 0; }
 #showcaseStatus { flex: 0 0 auto; }
 
 /* ── Contact ──────────────────────────────────────────── */
-.contact-section h2 { text-align: center; margin-bottom: .5rem; font-size: clamp(1.3rem, 3.5vh, 2.2rem); }
+.contact-section h2 { text-align: center; margin-bottom: .5rem; font-size: clamp(1.2rem, 3.2vh, 2.2rem); }
 .contact-section .claim-form { max-width: 480px; }
-.contact-admin-note { text-align: center; color: var(--color-text-muted); font-size: .85rem; margin-top: clamp(.75rem, 2vh, 1.25rem); }
+.contact-section textarea#contactMessage { min-height: 3.2rem; }
+.contact-admin-note { text-align: center; color: var(--color-text-muted); font-size: .8rem; margin-top: clamp(.5rem, 1.2vh, 1rem); }
 .contact-admin-note a { color: var(--color-primary); font-weight: 600; text-decoration: none; }
 .contact-admin-note a:hover { text-decoration: underline; }
 

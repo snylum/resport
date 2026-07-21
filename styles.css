@@ -61,12 +61,8 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
   list-style: none;
 }
 
-.nav-links .btn-primary.btn-sm {
-  transform: translate(0px, -3px);
-}
-
 .nav-links .btn-primary.btn-sm:hover {
-  transform: translate(-6px, -6px);  /* only X changes, matches shadow's 6px growth */
+  transform: translate(-2px, -2px);
 }
 
 .nav-links .btn-primary.btn-sm:active {
