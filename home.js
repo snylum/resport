@@ -123,55 +123,141 @@ donateForm.addEventListener('submit', async (e) => {
   }
 });
 
-/* ── Heart tier popup ─────────────────────────────────────── */
+/* ── Heart tier popup: a self-contained donation form. Submits
+   directly to the API — no redirect back to the page's donate form.
+   The amount field is locked (or bounded) per tier so what's actually
+   paid always matches what that heart tag offers. ───────────────── */
 (function initTierPopup() {
   const popup = document.getElementById('tierPopup');
   const closeBtn = document.getElementById('tierPopupClose');
-  const continueBtn = document.getElementById('tierPopupContinue');
+  const form = document.getElementById('tierPopupForm');
   const titleEl = document.getElementById('tierPopupTitle');
   const amountEl = document.getElementById('tierPopupAmount');
+  const amountLabelEl = document.getElementById('tierPopupAmountLabel');
   const copyEl = document.getElementById('tierPopupCopy');
   const heartEl = document.getElementById('tierPopupHeart');
+  const statusEl = document.getElementById('tierPopupStatus');
+  const submitBtn = document.getElementById('tierPopupSubmit');
+  const customTagField = document.getElementById('tierPopupCustomTagField');
+  const customTagInput = document.getElementById('tierPopupCustomTag');
+  const refInput = document.getElementById('tierPopupRef');
+  const usernameInput = document.getElementById('tierPopupUsername');
+  const emailInput = document.getElementById('tierPopupEmail');
   const heartButtons = document.querySelectorAll('.heart-link[data-tier]');
-  if (!popup) return;
+  if (!popup || !form) return;
 
-  const tierNames = { normal: 'Pulse', gold: 'Beat', diamond: 'Blood', real: 'Soul', ghost: 'Breath' };
-  const defaultCopy = 'Scan the QR code, send this exact amount, then continue to fill in your reference number.';
-  const realCopy = 'Scan the QR code, send any amount above ₱1,000 / $50, then continue to name your own tag and fill in your reference number.';
+  // Exactly what each heart tag offers — enforced against whatever the
+  // person actually types into the amount field before it's submitted.
+  const TIER_RULES = {
+    normal:  { label: 'Pulse',  fixed: 50,   copy: 'Scan the QR code, send exactly ₱50 / $1, then fill in the details below.' },
+    gold:    { label: 'Beat',   fixed: 250,  copy: 'Scan the QR code, send exactly ₱250 / $10, then fill in the details below.' },
+    diamond: { label: 'Blood',  fixed: 1000, copy: 'Scan the QR code, send exactly ₱1,000 / $50, then fill in the details below.' },
+    real:    { label: 'Soul',   min: 1000,   customTag: true, copy: 'Scan the QR code, send any amount above ₱1,000 / $50, then name your own tag below.' },
+    ghost:   { label: 'Breath', max: 1000, odd: true, copy: 'Scan the QR code, send an odd amount below ₱1,000 / $50 (e.g. ₱37), then fill in the details below.' }
+  };
+
   let activeTier = null;
-  let activeAmount = null;
 
-  function openPopup(tier, amount) {
+  function openPopup(tier) {
+    const rule = TIER_RULES[tier];
+    if (!rule) return;
     activeTier = tier;
-    activeAmount = amount;
-    titleEl.textContent = tierNames[tier] || 'Donate';
-    amountEl.textContent = amount;
-    copyEl.textContent = tier === 'real' ? realCopy : defaultCopy;
+
+    titleEl.textContent = rule.label;
+    copyEl.textContent = rule.copy;
     heartEl.className = `pixel-heart tier-popup-heart pixel-heart--${tier}`;
+
+    if (rule.fixed) {
+      amountEl.value = rule.fixed;
+      amountEl.readOnly = true;
+      amountLabelEl.textContent = `Amount (fixed at ₱${rule.fixed})`;
+    } else {
+      amountEl.value = '';
+      amountEl.readOnly = false;
+      amountLabelEl.textContent = rule.customTag ? 'Amount you sent (above ₱1,000)' : 'Amount you sent (odd, below ₱1,000)';
+    }
+
+    customTagField.classList.toggle('hidden', !rule.customTag);
+    customTagInput.required = !!rule.customTag;
+
+    statusEl.textContent = '';
+    statusEl.className = 'username-status';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit donation';
+
     popup.classList.remove('hidden');
   }
 
   function closePopup() { popup.classList.add('hidden'); }
 
   heartButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      openPopup(btn.dataset.tier, btn.dataset.amount);
-    });
+    btn.addEventListener('click', () => openPopup(btn.dataset.tier));
   });
 
   closeBtn.addEventListener('click', closePopup);
   popup.addEventListener('click', (e) => { if (e.target === popup) closePopup(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePopup(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !popup.classList.contains('hidden')) closePopup(); });
 
-  continueBtn.addEventListener('click', () => {
-    const tierSelect = document.getElementById('donateTier');
-    const amountInput = document.getElementById('donateAmount');
-    if (tierSelect) tierSelect.value = activeTier;
-    if (amountInput) amountInput.value = activeAmount;
-    tierSelect?.dispatchEvent(new Event('change'));
-    closePopup();
-    document.getElementById('donate')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    (activeTier === 'real' ? document.getElementById('donateCustomTag') : document.getElementById('donateRef'))?.focus({ preventScroll: true });
+  function validateAmount(rule, amount) {
+    if (!Number.isFinite(amount) || amount <= 0) return 'Enter a valid amount.';
+    if (rule.fixed) {
+      if (Math.round(amount * 100) !== Math.round(rule.fixed * 100)) {
+        return `${rule.label} is exactly ₱${rule.fixed} / $${rule.fixed === 50 ? 1 : rule.fixed === 250 ? 10 : 50} — adjust the amount to match what you sent.`;
+      }
+    } else if (rule.min) {
+      if (amount <= rule.min) return `Soul needs any amount above ₱${rule.min} / $50.`;
+    } else if (rule.max) {
+      if (amount >= rule.max) return `Breath needs an amount below ₱${rule.max} / $50.`;
+      if (!Number.isInteger(amount) || amount % 2 === 0) return 'Breath needs an odd whole-number amount (e.g. ₱37).';
+    }
+    return null;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const rule = TIER_RULES[activeTier];
+    if (!rule) return;
+
+    const amount = parseFloat(amountEl.value);
+    const amountError = validateAmount(rule, amount);
+    if (amountError) {
+      statusEl.textContent = amountError;
+      statusEl.className = 'username-status error';
+      return;
+    }
+
+    statusEl.textContent = 'Submitting…';
+    statusEl.className = 'username-status';
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting…';
+
+    const body = {
+      type: 'donation',
+      tier: activeTier,
+      amount,
+      referenceNumber: refInput.value.trim(),
+      username: usernameInput.value.trim().toLowerCase(),
+      email: emailInput.value.trim()
+    };
+    if (rule.customTag) body.customTag = customTagInput.value.trim();
+
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Something went wrong.');
+      statusEl.textContent = 'Thank you! We\'ll confirm your reference number shortly.';
+      statusEl.classList.add('ok');
+      submitBtn.textContent = 'Submitted ✓';
+      form.reset();
+      setTimeout(closePopup, 2200);
+    } catch (err) {
+      statusEl.textContent = err.message;
+      statusEl.classList.add('error');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit donation';
+    }
   });
 })();
 

@@ -284,9 +284,26 @@ async function handleApi(request, env, url) {
       const amount = Number(body.amount) || null;
       const donationEmail = String(body.email || '').trim();
       if (!tier) return json({ ok: false, error: 'Pick a donation tier.' }, 400);
+      if (!amount || amount <= 0) return json({ ok: false, error: 'Enter a valid amount.' }, 400);
       if (!referenceNumber) return json({ ok: false, error: 'Reference number is required.' }, 400);
       if (!username) return json({ ok: false, error: 'Tell us which subdomain to boost.' }, 400);
       if (!EMAIL_RE.test(donationEmail)) return json({ ok: false, error: 'A valid email is required.' }, 400);
+
+      // Make sure what's actually submitted matches what that tier tag
+      // offers — fixed tiers must match exactly, Soul must exceed the
+      // Blood threshold, Breath must stay under it with an odd amount.
+      const diamondAmount = TIERS.diamond.php;
+      if (['normal', 'gold', 'diamond'].includes(tier)) {
+        const expected = TIERS[tier].php;
+        if (Math.round(amount * 100) !== Math.round(expected * 100)) {
+          return json({ ok: false, error: `${TIERS[tier].label} is a fixed amount of ₱${expected}.` }, 400);
+        }
+      } else if (tier === 'real') {
+        if (amount <= diamondAmount) return json({ ok: false, error: `Soul needs an amount above ₱${diamondAmount}.` }, 400);
+      } else if (tier === 'ghost') {
+        if (amount >= diamondAmount) return json({ ok: false, error: `Breath needs an amount below ₱${diamondAmount}.` }, 400);
+        if (!Number.isInteger(amount) || amount % 2 === 0) return json({ ok: false, error: 'Breath needs an odd whole-number amount.' }, 400);
+      }
 
       const customTag = tier === 'real' ? String(body.customTag || '').trim().slice(0, 28) : null;
 

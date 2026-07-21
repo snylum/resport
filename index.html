@@ -57,23 +57,50 @@
         </button>
       </li>
       <li>
-        <a href="#claim" class="nav-sunflower" aria-label="Claim your subdomain">
-          <svg class="pixel-sunflower" viewBox="0 0 9 9" aria-hidden="true"><use href="#pixel-sunflower"/></svg>
+        <a href="#claim" class="nav-brand-heart" aria-label="Claim your subdomain">
+          <svg class="pixel-heart pixel-heart--brand" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
         </a>
       </li>
     </ul>
   </nav>
 
-  <!-- ── Tier popup: shown when a nav heart is clicked ─────────── -->
+  <!-- ── Tier popup: shown when a nav heart is clicked. Submits the
+       donation directly — no redirect back to the page's donate form. ── -->
   <div id="tierPopup" class="tier-popup hidden" role="dialog" aria-modal="true" aria-labelledby="tierPopupTitle">
     <div class="tier-popup-card">
       <button type="button" class="tier-popup-close" id="tierPopupClose" aria-label="Close">✕</button>
       <svg id="tierPopupHeart" class="pixel-heart tier-popup-heart" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
       <h3 id="tierPopupTitle">Pulse</h3>
-      <p class="tier-popup-amount">₱<span id="tierPopupAmount">50</span></p>
-      <p class="tier-popup-copy" id="tierPopupCopy">Scan the QR code, send this exact amount, then continue to fill in your reference number.</p>
+      <p class="tier-popup-copy" id="tierPopupCopy">Scan the QR code, send exactly this amount, then fill in the details below.</p>
       <img src="payment-qr.png" alt="Donation QR code" class="tier-popup-qr" />
-      <button type="button" class="btn btn-primary btn-block" id="tierPopupContinue">I've paid — continue →</button>
+
+      <form id="tierPopupForm" class="claim-form tier-popup-form">
+        <label class="field">
+          <span id="tierPopupAmountLabel">Amount you sent (₱)</span>
+          <input type="number" id="tierPopupAmount" step="0.01" min="0" required />
+        </label>
+        <label class="field hidden" id="tierPopupCustomTagField">
+          <span>Your custom tag</span>
+          <input type="text" id="tierPopupCustomTag" placeholder="e.g. Future Senior Dev" maxlength="28" />
+        </label>
+        <label class="field">
+          <span>Reference number</span>
+          <input type="text" id="tierPopupRef" placeholder="From your payment app" required />
+        </label>
+        <label class="field">
+          <span>Subdomain to boost</span>
+          <div class="domain-input">
+            <input type="text" id="tierPopupUsername" placeholder="yourname" required autocomplete="off" spellcheck="false" />
+            <span class="domain-suffix">.proves.work</span>
+          </div>
+        </label>
+        <label class="field">
+          <span>Email</span>
+          <input type="email" id="tierPopupEmail" placeholder="you@example.com" required />
+        </label>
+        <button type="submit" class="btn btn-primary btn-block" id="tierPopupSubmit">Submit donation</button>
+        <p class="username-status" id="tierPopupStatus"></p>
+      </form>
     </div>
   </div>
 
@@ -88,22 +115,6 @@
       <rect x="1" y="4" width="6" height="1" fill="currentColor"/>
       <rect x="2" y="5" width="4" height="1" fill="currentColor"/>
       <rect x="3" y="6" width="2" height="1" fill="currentColor"/>
-    </symbol>
-  </svg>
-
-  <!-- Pixel-art sunflower: 9x9 grid, petals in currentColor, center + stem fixed. -->
-  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-    <symbol id="pixel-sunflower" viewBox="0 0 9 9">
-      <rect x="3" y="0" width="3" height="1" fill="currentColor"/>
-      <rect x="1" y="1" width="1" height="1" fill="currentColor"/>
-      <rect x="7" y="1" width="1" height="1" fill="currentColor"/>
-      <rect x="0" y="3" width="1" height="3" fill="currentColor"/>
-      <rect x="8" y="3" width="1" height="3" fill="currentColor"/>
-      <rect x="1" y="7" width="1" height="1" fill="currentColor"/>
-      <rect x="7" y="7" width="1" height="1" fill="currentColor"/>
-      <rect x="3" y="8" width="3" height="1" fill="currentColor"/>
-      <rect x="3" y="3" width="3" height="3" fill="#5A3A1B"/>
-      <rect x="4" y="7" width="1" height="2" fill="#4C8C3A"/>
     </symbol>
   </svg>
 
