@@ -83,11 +83,11 @@ async function checkAndBumpRateLimit(env, key, max, windowSeconds) {
 
 // ── Donation tiers ──────────────────────────────────────────────────
 const TIERS = {
-  normal:  { label: 'Normal Heart',  php: 50,   usd: 1 },
-  gold:    { label: 'Gold Heart',    php: 250,  usd: 10 },
-  diamond: { label: 'Diamond Heart', php: 1000, usd: 50 },
-  real:    { label: 'Real Heart',    php: null, usd: null }, // any amount > diamond
-  ghost:   { label: 'Ghost Heart',   php: null, usd: null }  // any odd amount < diamond
+  normal:  { label: 'Pulse',  php: 50,   usd: 1 },
+  gold:    { label: 'Beat',   php: 250,  usd: 10 },
+  diamond: { label: 'Blood',  php: 1000, usd: 50 },
+  real:    { label: 'Soul',   php: null, usd: null }, // any amount > diamond, custom tag
+  ghost:   { label: 'Breath', php: null, usd: null }  // any odd amount < diamond
 };
 
 function notFoundPage(username) {
@@ -254,12 +254,15 @@ async function handleApi(request, env, url) {
     const cursor = url.searchParams.get('cursor') || undefined;
     const list = await env.SITES.list({ prefix: 'site:', cursor, limit: 30 });
     const records = (await Promise.all(list.keys.map(k => env.SITES.get(k.name, 'json'))))
-      .filter(r => r && r.status === 'live' && r.showcase);
+      .filter(r => r && r.username && r.status === 'live' && r.showcase);
     return json({
       ok: true,
       items: records.map(r => ({
         username: r.username, target: r.target, mode: r.mode,
-        repo: r.repo || null, repoName: r.repoName || null
+        repo: r.repo || null, repoName: r.repoName || null,
+        tier: r.showcaseTier || null,
+        amount: r.showcaseAmount ?? null,
+        customTag: r.showcaseCustomTag || null
       })),
       cursor: list.list_complete ? null : list.cursor
     });
@@ -285,9 +288,11 @@ async function handleApi(request, env, url) {
       if (!username) return json({ ok: false, error: 'Tell us which subdomain to boost.' }, 400);
       if (!EMAIL_RE.test(donationEmail)) return json({ ok: false, error: 'A valid email is required.' }, 400);
 
+      const customTag = tier === 'real' ? String(body.customTag || '').trim().slice(0, 28) : null;
+
       const record = {
         id: crypto.randomUUID(), type: 'donation', tier, amount, referenceNumber, username,
-        email: donationEmail,
+        email: donationEmail, customTag,
         note: String(body.message || '').slice(0, 2000),
         confirmed: false, createdAt: now.toISOString()
       };
@@ -345,7 +350,12 @@ async function handleApi(request, env, url) {
     if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
     const list = await env.SITES.list({ prefix: 'site:' });
     const records = await Promise.all(list.keys.map(k => env.SITES.get(k.name, 'json')));
-    return json({ ok: true, sites: records.filter(Boolean).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')) });
+    return json({
+      ok: true,
+      sites: records
+        .filter(r => r && r.username && r.target)
+        .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+    });
   }
 
   if (url.pathname === '/api/admin/set-status' && request.method === 'POST') {
@@ -401,6 +411,8 @@ async function handleApi(request, env, url) {
       if (site) {
         site.showcase = true;
         site.showcaseTier = donation.tier;
+        site.showcaseAmount = donation.amount ?? null;
+        site.showcaseCustomTag = donation.customTag || null;
         site.showcaseAddedAt = new Date().toISOString();
         await env.SITES.put(`site:${donation.username}`, JSON.stringify(site));
       }

@@ -27,36 +27,40 @@
     <a class="nav-logo" href="#top"><img class="logo-dot" src="favicon.png" alt="" /> proves.work</a>
     <ul class="nav-links nav-hearts" id="navHearts">
       <li>
-        <button type="button" class="heart-link" data-tier="normal" data-amount="50" aria-label="Job Hunter tag, ₱50">
+        <button type="button" class="heart-link" data-tier="normal" data-amount="50" aria-label="Pulse tag, ₱50">
           <svg class="pixel-heart pixel-heart--normal" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-          <span class="heart-tip">Job Hunter · ₱50</span>
+          <span class="heart-tip">Pulse · ₱50</span>
         </button>
       </li>
       <li>
-        <button type="button" class="heart-link" data-tier="gold" data-amount="250" aria-label="Career Booster tag, ₱250">
+        <button type="button" class="heart-link" data-tier="gold" data-amount="250" aria-label="Beat tag, ₱250">
           <svg class="pixel-heart pixel-heart--gold" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-          <span class="heart-tip">Career Booster · ₱250</span>
+          <span class="heart-tip">Beat · ₱250</span>
         </button>
       </li>
       <li>
-        <button type="button" class="heart-link" data-tier="diamond" data-amount="1000" aria-label="Portfolio Pro tag, ₱1,000">
+        <button type="button" class="heart-link" data-tier="diamond" data-amount="1000" aria-label="Blood tag, ₱1,000">
           <svg class="pixel-heart pixel-heart--diamond" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-          <span class="heart-tip">Portfolio Pro · ₱1,000</span>
+          <span class="heart-tip">Blood · ₱1,000</span>
         </button>
       </li>
       <li>
-        <button type="button" class="heart-link" data-tier="real" data-amount="1500" aria-label="Your own title, ₱1,500+">
+        <button type="button" class="heart-link" data-tier="real" data-amount="1500" aria-label="Soul tag, above ₱1,000">
           <svg class="pixel-heart pixel-heart--real" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-          <span class="heart-tip">Your own title</span>
+          <span class="heart-tip">Soul · custom tag</span>
         </button>
       </li>
       <li>
-        <button type="button" class="heart-link" data-tier="ghost" data-amount="25" aria-label="Wildcard Backer tag, ₱25">
+        <button type="button" class="heart-link" data-tier="ghost" data-amount="25" aria-label="Breath tag, ₱25">
           <svg class="pixel-heart pixel-heart--ghost" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-          <span class="heart-tip">Wildcard Backer · ₱25</span>
+          <span class="heart-tip">Breath · ₱25</span>
         </button>
       </li>
-      <li><a href="#claim" class="btn btn-primary btn-sm nav-cta">Prove your work</a></li>
+      <li>
+        <a href="#claim" class="nav-sunflower" aria-label="Claim your subdomain">
+          <svg class="pixel-sunflower" viewBox="0 0 9 9" aria-hidden="true"><use href="#pixel-sunflower"/></svg>
+        </a>
+      </li>
     </ul>
   </nav>
 
@@ -65,7 +69,7 @@
     <div class="tier-popup-card">
       <button type="button" class="tier-popup-close" id="tierPopupClose" aria-label="Close">✕</button>
       <svg id="tierPopupHeart" class="pixel-heart tier-popup-heart" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-      <h3 id="tierPopupTitle">Job Hunter</h3>
+      <h3 id="tierPopupTitle">Pulse</h3>
       <p class="tier-popup-amount">₱<span id="tierPopupAmount">50</span></p>
       <p class="tier-popup-copy" id="tierPopupCopy">Scan the QR code, send this exact amount, then continue to fill in your reference number.</p>
       <img src="payment-qr.png" alt="Donation QR code" class="tier-popup-qr" />
@@ -86,6 +90,24 @@
       <rect x="3" y="6" width="2" height="1" fill="currentColor"/>
     </symbol>
   </svg>
+
+  <!-- Pixel-art sunflower: 9x9 grid, petals in currentColor, center + stem fixed. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="pixel-sunflower" viewBox="0 0 9 9">
+      <rect x="3" y="0" width="3" height="1" fill="currentColor"/>
+      <rect x="1" y="1" width="1" height="1" fill="currentColor"/>
+      <rect x="7" y="1" width="1" height="1" fill="currentColor"/>
+      <rect x="0" y="3" width="1" height="3" fill="currentColor"/>
+      <rect x="8" y="3" width="1" height="3" fill="currentColor"/>
+      <rect x="1" y="7" width="1" height="1" fill="currentColor"/>
+      <rect x="7" y="7" width="1" height="1" fill="currentColor"/>
+      <rect x="3" y="8" width="3" height="1" fill="currentColor"/>
+      <rect x="3" y="3" width="3" height="3" fill="#5A3A1B"/>
+      <rect x="4" y="7" width="1" height="2" fill="#4C8C3A"/>
+    </symbol>
+  </svg>
+
+  <div id="pageDots" class="page-scroll-dots hidden" aria-label="Scroll position"></div>
 
   <main id="top">
 
@@ -222,7 +244,7 @@
             </div>
             <div class="tier-card" data-tier="diamond">
               <svg class="pixel-heart pixel-heart--diamond" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-              <div><strong>Life</strong><span>₱1,000 / $50</span></div>
+              <div><strong>Blood</strong><span>₱1,000 / $50</span></div>
             </div>
             <div class="tier-card" data-tier="real">
               <svg class="pixel-heart pixel-heart--real" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
@@ -242,7 +264,7 @@
               <option value="" disabled selected>Choose a tier…</option>
               <option value="normal">Pulse — ₱50 / $1</option>
               <option value="gold">Beat — ₱250 / $10</option>
-              <option value="diamond">Life — ₱1,000 / $50</option>
+              <option value="diamond">Blood — ₱1,000 / $50</option>
               <option value="real">Soul — above ₱1,000 / $50</option>
               <option value="ghost">Breath — odd amount below ₱1,000 / $50</option>
             </select>
@@ -282,11 +304,15 @@
         <span class="eyebrow">Community</span>
         <h2>everybody.proves.work</h2>
         <p class="showcase-sub">
-          Browse through the best proof-of-work here. Distinct hues for those with a
-          <span class="showcase-legend-inline">heart</span>.
+          Browse through the best proof-of-work here, grouped by tag —
+          <span class="showcase-legend-inline">Blood</span>,
+          <span class="showcase-legend-inline">Soul</span>,
+          <span class="showcase-legend-inline">Beat</span>,
+          <span class="showcase-legend-inline">Pulse</span> and
+          <span class="showcase-legend-inline">Breath</span> — larger donors first.
         </p>
       </div>
-      <div id="showcaseGrid" class="showcase-grid"></div>
+      <div id="showcaseGrid" class="showcase-tiers"></div>
       <p class="username-status" id="showcaseStatus"></p>
     </section>
 

@@ -15,87 +15,18 @@ const el = {
   adminAccountSlot: document.getElementById('adminAccountSlot'),
   claimsList: document.getElementById('claimsList'),
   donationsList: document.getElementById('donationsList'),
-  refreshBtn: document.getElementById('adminRefreshBtn'),
-  dots: document.getElementById('adminDots')
+  refreshBtn: document.getElementById('adminRefreshBtn')
 };
+
+// Same tag names used on the public site — keep in sync with home.js.
+const TIER_NAMES = { normal: 'Pulse', gold: 'Beat', diamond: 'Blood', real: 'Soul', ghost: 'Breath' };
+function tierLabel(tier) { return TIER_NAMES[tier] || tier || 'Untagged'; }
 
 let credential = null;
 let claimFilter = 'pending';
 let allSites = [];
 let allDonations = [];
 let currentView = 'claims';
-
-/* ── Slide layout (hidden native scrollbar, snap-centered cards,
-   fixed dot pagination bottom-center) ───────────────────────── */
-function activeListEl() {
-  return currentView === 'donations' ? el.donationsList : el.claimsList;
-}
-
-function layoutSlides() {
-  const panelOpen = !el.adminPanel.classList.contains('hidden');
-  document.body.classList.toggle('admin-locked', panelOpen);
-  if (!panelOpen) return;
-  const list = activeListEl();
-  if (!list) return;
-  // Fill exactly the space below the header/toolbar (excludes the
-  // sticky nav and everything above the list) so each card can be
-  // centered within that remaining area, not the whole viewport.
-  const top = list.getBoundingClientRect().top;
-  const available = Math.max(220, Math.round(window.innerHeight - top));
-  list.style.height = available + 'px';
-}
-
-function setupDots() {
-  const list = activeListEl();
-  const dotsWrap = el.dots;
-  if (!list || !dotsWrap) return;
-
-  const items = Array.from(list.children);
-  dotsWrap.innerHTML = '';
-
-  if (items.length <= 1) {
-    dotsWrap.classList.add('hidden');
-    if (list._dotObserver) list._dotObserver.disconnect();
-    return;
-  }
-  dotsWrap.classList.remove('hidden');
-
-  items.forEach((item, i) => {
-    const dot = document.createElement('button');
-    dot.type = 'button';
-    dot.className = 'admin-dot';
-    dot.setAttribute('aria-label', `Go to item ${i + 1} of ${items.length}`);
-    dot.addEventListener('click', () => {
-      list.scrollTo({
-        top: item.offsetTop - Math.max(0, (list.clientHeight - item.offsetHeight) / 2),
-        behavior: 'smooth'
-      });
-    });
-    dotsWrap.appendChild(dot);
-  });
-
-  if (list._dotObserver) list._dotObserver.disconnect();
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (!entry.isIntersecting) return;
-      const idx = items.indexOf(entry.target);
-      if (idx === -1) return;
-      dotsWrap.querySelectorAll('.admin-dot').forEach((d, di) => d.classList.toggle('active', di === idx));
-    });
-  }, { root: list, threshold: 0.6 });
-  items.forEach(item => observer.observe(item));
-  list._dotObserver = observer;
-}
-
-function refreshSlideUI() {
-  requestAnimationFrame(() => {
-    layoutSlides();
-    setupDots();
-  });
-}
-
-window.addEventListener('resize', refreshSlideUI);
-window.addEventListener('orientationchange', refreshSlideUI);
 
 /* ── Google sign-in ──────────────────────────────────────── */
 function handleGoogleCredential(response) {
@@ -157,7 +88,10 @@ document.querySelectorAll('.admin-tab').forEach(btn => {
 });
 
 function renderClaims() {
-  const filtered = claimFilter === 'all' ? allSites : allSites.filter(s => s.status === claimFilter);
+  // Guard against incomplete/corrupt records (missing username or target)
+  // so the dashboard never renders "undefined" cards.
+  const usable = allSites.filter(s => s && s.username && s.target);
+  const filtered = claimFilter === 'all' ? usable : usable.filter(s => s.status === claimFilter);
   el.claimsList.innerHTML = '';
   if (!filtered.length) {
     el.claimsList.innerHTML = `<p class="username-status">Nothing here.</p>`;
@@ -172,7 +106,7 @@ function renderClaims() {
         <span class="admin-card-title-sub">${site.status}${site.showcase ? ' · showcased' : ''}</span>
       </div>
       <p class="modal-sub" style="margin:0 0 .5rem;">
-        ${site.mode === 'coder' ? `Coder · repo: <a href="${site.repo}" target="_blank" rel="noopener">${site.repoName}</a>` : 'No-code'}
+        ${site.mode === 'coder' ? `Coder · repo: <a href="${site.repo}" target="_blank" rel="noopener">${site.repoName || site.repo}</a>` : 'No-code'}
         → <a href="${site.target}" target="_blank" rel="noopener">${site.target}</a>
         ${site.email ? ` · ${site.email}` : ''}
       </p>
@@ -188,7 +122,6 @@ function renderClaims() {
     row.querySelector('[data-act="delete"]').addEventListener('click', (e) => deleteSite(site.username, e.currentTarget));
     el.claimsList.appendChild(row);
   });
-  if (currentView === 'claims') refreshSlideUI();
 }
 
 async function setStatus(username, status) {
@@ -237,16 +170,17 @@ async function deleteSite(username, btn) {
 /* ── Donations tab ───────────────────────────────────────── */
 function renderDonations() {
   el.donationsList.innerHTML = '';
-  if (!allDonations.length) {
+  const usable = allDonations.filter(d => d && d.username);
+  if (!usable.length) {
     el.donationsList.innerHTML = `<p class="username-status">No donations yet.</p>`;
     return;
   }
-  allDonations.forEach(d => {
+  usable.forEach(d => {
     const row = document.createElement('div');
     row.className = 'admin-card';
     row.innerHTML = `
       <div class="admin-card-title-row">
-        <h3 class="admin-card-title">${d.tier} · ${d.amount ?? '?'} · ${d.username}.proves.work</h3>
+        <h3 class="admin-card-title">${tierLabel(d.tier)}${d.customTag ? ` "${d.customTag}"` : ''} · ${d.amount ?? '?'} · ${d.username}.proves.work</h3>
         <span class="admin-card-title-sub">${d.confirmed ? 'confirmed' : 'unconfirmed'}</span>
       </div>
       <p class="modal-sub" style="margin:0 0 .5rem;">
@@ -263,7 +197,6 @@ function renderDonations() {
     }
     el.donationsList.appendChild(row);
   });
-  if (currentView === 'donations') refreshSlideUI();
 }
 
 async function confirmDonation(id, tagShowcase) {
@@ -279,7 +212,6 @@ document.querySelectorAll('.admin-view-tab').forEach(btn => {
     document.querySelectorAll('.admin-view').forEach(v => v.classList.add('hidden'));
     document.getElementById(`${btn.dataset.view}View`).classList.remove('hidden');
     currentView = btn.dataset.view;
-    refreshSlideUI();
   });
 });
 

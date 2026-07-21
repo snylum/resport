@@ -135,7 +135,7 @@ donateForm.addEventListener('submit', async (e) => {
   const heartButtons = document.querySelectorAll('.heart-link[data-tier]');
   if (!popup) return;
 
-  const tierNames = { normal: 'Job Hunter', gold: 'Career Booster', diamond: 'Portfolio Pro', real: 'Your own title', ghost: 'Wildcard Backer' };
+  const tierNames = { normal: 'Pulse', gold: 'Beat', diamond: 'Blood', real: 'Soul', ghost: 'Breath' };
   const defaultCopy = 'Scan the QR code, send this exact amount, then continue to fill in your reference number.';
   const realCopy = 'Scan the QR code, send any amount above ₱1,000 / $50, then continue to name your own tag and fill in your reference number.';
   let activeTier = null;
@@ -255,6 +255,36 @@ donateForm.addEventListener('submit', async (e) => {
   });
 })();
 
+/* ── Dot nav: one dot per slide, hollow scrollbar replacement ────── */
+(function initPageDots() {
+  const slides = Array.from(document.querySelectorAll('main .section, .site-footer'));
+  const dotsWrap = document.getElementById('pageDots');
+  if (!slides.length || !dotsWrap) return;
+
+  dotsWrap.classList.remove('hidden');
+  dotsWrap.innerHTML = '';
+
+  slides.forEach((slide, i) => {
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    dot.className = 'page-dot';
+    dot.setAttribute('aria-label', `Go to section ${i + 1} of ${slides.length}`);
+    dot.addEventListener('click', () => slide.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    dotsWrap.appendChild(dot);
+  });
+
+  const dots = Array.from(dotsWrap.querySelectorAll('.page-dot'));
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const idx = slides.indexOf(entry.target);
+      if (idx === -1) return;
+      dots.forEach((d, di) => d.classList.toggle('active', di === idx));
+    });
+  }, { threshold: 0.55 });
+  slides.forEach(s => observer.observe(s));
+})();
+
 /* ── Slide tracking: fade each slide in as it becomes active ────── */
 (function initSlideFade() {
   const slides = Array.from(document.querySelectorAll('main .section, .site-footer'));
@@ -305,12 +335,25 @@ document.getElementById('scrollTopBtn')?.addEventListener('click', () => {
   document.getElementById('top')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
-/* ── Infinite showcase ───────────────────────────────────── */
+/* ── Infinite showcase, grouped by tag ───────────────────── */
 const showcaseGrid = document.getElementById('showcaseGrid');
 const showcaseStatus = document.getElementById('showcaseStatus');
 let showcaseCursor = null;
 let showcaseLoading = false;
 let showcaseDone = false;
+let showcaseItems = [];
+
+// Priority order: larger/rarer donor tags first. "diamond" (Blood) and
+// "real" (Soul, custom tag above ₱1,000) lead, then "gold" (Beat),
+// "normal" (Pulse), then "ghost" (Breath). Untagged entries go last.
+const TIER_META = {
+  diamond: { label: 'Blood',  color: '#00E5F0', order: 0 },
+  real:    { label: 'Soul',   color: '#FF3366', order: 1 },
+  gold:    { label: 'Beat',   color: '#FFD400', order: 2 },
+  normal:  { label: 'Pulse',  color: '#FFFFFF', order: 3 },
+  ghost:   { label: 'Breath', color: '#B9A7FF', order: 4 },
+  none:    { label: 'Community', color: null, order: 5 }
+};
 
 function renderShowcaseItem(item) {
   const card = document.createElement('a');
@@ -318,11 +361,51 @@ function renderShowcaseItem(item) {
   card.href = `https://${item.username}.proves.work`;
   card.target = '_blank';
   card.rel = 'noopener';
+  const tag = item.customTag || (item.tier ? TIER_META[item.tier]?.label : null);
   card.innerHTML = `
+    ${tag ? `<span class="showcase-card-tag">${tag}</span>` : ''}
     <div class="showcase-card-name">${item.username}.proves.work</div>
     ${item.mode === 'coder' ? `<div class="showcase-card-badge">⚡ open source${item.repoName ? ' · ' + item.repoName : ''}</div>` : ''}
   `;
   return card;
+}
+
+function renderShowcaseGroups() {
+  showcaseGrid.innerHTML = '';
+  if (!showcaseItems.length) return;
+
+  const buckets = new Map();
+  showcaseItems.forEach(item => {
+    const key = item.tier && TIER_META[item.tier] ? item.tier : 'none';
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(item);
+  });
+
+  Array.from(buckets.keys())
+    .sort((a, b) => TIER_META[a].order - TIER_META[b].order)
+    .forEach(key => {
+      const meta = TIER_META[key];
+      const items = buckets.get(key).sort((a, b) => (b.amount || 0) - (a.amount || 0));
+
+      const section = document.createElement('div');
+      section.className = 'showcase-tier-section';
+      if (meta.color) section.style.setProperty('--tier-color', meta.color);
+
+      const heading = document.createElement('h3');
+      heading.className = 'showcase-tier-heading';
+      heading.innerHTML = `
+        ${key !== 'none' ? `<svg class="pixel-heart pixel-heart--${key}" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>` : ''}
+        ${meta.label} <span class="showcase-tier-count">· ${items.length}</span>
+      `;
+
+      const grid = document.createElement('div');
+      grid.className = 'showcase-tier-grid';
+      items.forEach(item => grid.appendChild(renderShowcaseItem(item)));
+
+      section.appendChild(heading);
+      section.appendChild(grid);
+      showcaseGrid.appendChild(section);
+    });
 }
 
 async function loadShowcasePage() {
@@ -335,11 +418,12 @@ async function loadShowcasePage() {
     const res = await fetch(url);
     const data = await res.json();
     if (!data.ok) throw new Error();
-    data.items.forEach(item => showcaseGrid.appendChild(renderShowcaseItem(item)));
+    showcaseItems = showcaseItems.concat(data.items);
+    renderShowcaseGroups();
     showcaseCursor = data.cursor;
     if (!showcaseCursor) {
       showcaseDone = true;
-      showcaseStatus.textContent = showcaseGrid.children.length ? '' : 'No showcased sites yet — donate to be featured!';
+      showcaseStatus.textContent = showcaseItems.length ? '' : 'No showcased sites yet — donate to be featured!';
     } else {
       showcaseStatus.textContent = '';
     }
