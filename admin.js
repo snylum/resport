@@ -15,13 +15,87 @@ const el = {
   adminAccountSlot: document.getElementById('adminAccountSlot'),
   claimsList: document.getElementById('claimsList'),
   donationsList: document.getElementById('donationsList'),
-  refreshBtn: document.getElementById('adminRefreshBtn')
+  refreshBtn: document.getElementById('adminRefreshBtn'),
+  dots: document.getElementById('adminDots')
 };
 
 let credential = null;
 let claimFilter = 'pending';
 let allSites = [];
 let allDonations = [];
+let currentView = 'claims';
+
+/* ── Slide layout (hidden native scrollbar, snap-centered cards,
+   fixed dot pagination bottom-center) ───────────────────────── */
+function activeListEl() {
+  return currentView === 'donations' ? el.donationsList : el.claimsList;
+}
+
+function layoutSlides() {
+  const panelOpen = !el.adminPanel.classList.contains('hidden');
+  document.body.classList.toggle('admin-locked', panelOpen);
+  if (!panelOpen) return;
+  const list = activeListEl();
+  if (!list) return;
+  // Fill exactly the space below the header/toolbar (excludes the
+  // sticky nav and everything above the list) so each card can be
+  // centered within that remaining area, not the whole viewport.
+  const top = list.getBoundingClientRect().top;
+  const available = Math.max(220, Math.round(window.innerHeight - top));
+  list.style.height = available + 'px';
+}
+
+function setupDots() {
+  const list = activeListEl();
+  const dotsWrap = el.dots;
+  if (!list || !dotsWrap) return;
+
+  const items = Array.from(list.children);
+  dotsWrap.innerHTML = '';
+
+  if (items.length <= 1) {
+    dotsWrap.classList.add('hidden');
+    if (list._dotObserver) list._dotObserver.disconnect();
+    return;
+  }
+  dotsWrap.classList.remove('hidden');
+
+  items.forEach((item, i) => {
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    dot.className = 'admin-dot';
+    dot.setAttribute('aria-label', `Go to item ${i + 1} of ${items.length}`);
+    dot.addEventListener('click', () => {
+      list.scrollTo({
+        top: item.offsetTop - Math.max(0, (list.clientHeight - item.offsetHeight) / 2),
+        behavior: 'smooth'
+      });
+    });
+    dotsWrap.appendChild(dot);
+  });
+
+  if (list._dotObserver) list._dotObserver.disconnect();
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const idx = items.indexOf(entry.target);
+      if (idx === -1) return;
+      dotsWrap.querySelectorAll('.admin-dot').forEach((d, di) => d.classList.toggle('active', di === idx));
+    });
+  }, { root: list, threshold: 0.6 });
+  items.forEach(item => observer.observe(item));
+  list._dotObserver = observer;
+}
+
+function refreshSlideUI() {
+  requestAnimationFrame(() => {
+    layoutSlides();
+    setupDots();
+  });
+}
+
+window.addEventListener('resize', refreshSlideUI);
+window.addEventListener('orientationchange', refreshSlideUI);
 
 /* ── Google sign-in ──────────────────────────────────────── */
 function handleGoogleCredential(response) {
@@ -111,9 +185,10 @@ function renderClaims() {
     row.querySelector('[data-act="live"]').addEventListener('click', () => setStatus(site.username, 'live'));
     row.querySelector('[data-act="rejected"]').addEventListener('click', () => setStatus(site.username, 'rejected'));
     row.querySelector('[data-act="showcase"]').addEventListener('click', () => toggleShowcase(site.username, !site.showcase));
-    row.querySelector('[data-act="delete"]').addEventListener('click', () => deleteSite(site.username));
+    row.querySelector('[data-act="delete"]').addEventListener('click', (e) => deleteSite(site.username, e.currentTarget));
     el.claimsList.appendChild(row);
   });
+  if (currentView === 'claims') refreshSlideUI();
 }
 
 async function setStatus(username, status) {
@@ -124,10 +199,39 @@ async function toggleShowcase(username, showcase) {
   try { await api('/api/admin/showcase/tag', { username, showcase }); await loadEverything(); }
   catch (err) { el.adminListStatus.textContent = err.message; }
 }
-async function deleteSite(username) {
-  if (!confirm(`Permanently delete ${username}.proves.work? This frees the name immediately.`)) return;
+async function deleteSite(username, btn) {
+  // Two clicks required, no native confirm() dialog — some embedded /
+  // preview contexts silently block window.confirm(), which made the
+  // old delete button appear to do nothing.
+  if (btn && btn.dataset.confirming !== '1') {
+    btn.dataset.confirming = '1';
+    const original = btn.textContent;
+    btn.dataset.originalLabel = original;
+    btn.textContent = 'Confirm delete?';
+    btn.classList.add('btn-confirm-danger');
+    clearTimeout(btn._confirmTimer);
+    btn._confirmTimer = setTimeout(() => {
+      btn.dataset.confirming = '0';
+      btn.textContent = btn.dataset.originalLabel || 'Delete';
+      btn.classList.remove('btn-confirm-danger');
+    }, 3000);
+    return;
+  }
+  if (btn) {
+    clearTimeout(btn._confirmTimer);
+    btn.disabled = true;
+    btn.textContent = 'Deleting…';
+  }
   try { await api('/api/admin/delete', { username }); await loadEverything(); }
-  catch (err) { el.adminListStatus.textContent = err.message; }
+  catch (err) {
+    el.adminListStatus.textContent = err.message;
+    if (btn) {
+      btn.disabled = false;
+      btn.dataset.confirming = '0';
+      btn.textContent = btn.dataset.originalLabel || 'Delete';
+      btn.classList.remove('btn-confirm-danger');
+    }
+  }
 }
 
 /* ── Donations tab ───────────────────────────────────────── */
@@ -159,6 +263,7 @@ function renderDonations() {
     }
     el.donationsList.appendChild(row);
   });
+  if (currentView === 'donations') refreshSlideUI();
 }
 
 async function confirmDonation(id, tagShowcase) {
@@ -173,6 +278,8 @@ document.querySelectorAll('.admin-view-tab').forEach(btn => {
     btn.classList.add('active');
     document.querySelectorAll('.admin-view').forEach(v => v.classList.add('hidden'));
     document.getElementById(`${btn.dataset.view}View`).classList.remove('hidden');
+    currentView = btn.dataset.view;
+    refreshSlideUI();
   });
 });
 

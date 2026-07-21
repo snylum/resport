@@ -96,7 +96,86 @@
 .admin-sites-list {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* old Edge/IE */
+  padding-bottom: 3.5rem;       /* keep last card clear of the dot nav */
+  box-sizing: border-box;
+}
+
+.admin-sites-list::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+
+/* Each card (or the empty-state message) is one "slide": it fills the
+   viewport below the header/toolbar and is vertically centered inside it. */
+.admin-sites-list > * {
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+  min-height: 100%;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.admin-sites-list > .admin-card,
+.admin-sites-list > .admin-site-row {
+  margin-bottom: 0;
+  width: 100%;
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ── Fixed dot pagination, bottom-center of the viewport ─────── */
+.admin-scroll-dots {
+  position: fixed;
+  left: 50%;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 60;
+  padding: 0.45rem 0.6rem;
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  border: 1.5px solid var(--color-border);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(4px);
+}
+
+.admin-scroll-dots.hidden { display: none; }
+
+.admin-dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-border);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.admin-dot:hover { background: var(--color-text-muted); }
+
+.admin-dot.active {
+  background: var(--color-secondary);
+  transform: scale(1.35);
+}
+
+/* Two-step delete confirmation (see admin.js) instead of a native
+   confirm() dialog, which some embedded/preview contexts block. */
+.admin-site-actions .btn.btn-confirm-danger,
+.admin-card-actions .btn.btn-confirm-danger {
+  background: var(--color-danger, #C0392B);
+  border-color: var(--color-danger, #C0392B);
+  color: #fff;
 }
 
 .admin-site-row {
@@ -388,4 +467,47 @@
 .admin-empty-sm {
   padding: 0.75rem 0;
   text-align: left;
+}
+
+/* While the admin panel's slide view is active, the page itself doesn't
+   scroll — only the active .admin-sites-list does (see admin.js). */
+body.admin-locked {
+  overflow: hidden;
+  height: 100dvh;
+}
+
+/* ── Small windows / mobile ──────────────────────────────────── */
+@media (max-width: 640px) {
+  .admin-main { padding: 1.25rem 1rem 1rem; }
+
+  .admin-toolbar { align-items: center; }
+  .admin-heading { font-size: 1.3rem; }
+
+  .admin-view-tabs { gap: 0.3rem; }
+  .admin-view-tab { flex: 1 1 auto; text-align: center; padding: 0.5rem 0.6rem; font-size: 0.8rem; }
+
+  .admin-tabs { gap: 0.3rem; }
+  .admin-tab { flex: 1 1 auto; text-align: center; padding: 0.4rem 0.5rem; font-size: 0.72rem; }
+
+  .admin-sites-list { padding-bottom: 3rem; }
+
+  .admin-card,
+  .admin-site-row { padding: 0.9rem 0.85rem; }
+
+  .admin-card-actions,
+  .admin-site-actions { gap: 0.35rem; }
+
+  .admin-card-actions .btn,
+  .admin-site-actions .btn {
+    flex: 1 1 calc(50% - 0.35rem);
+    text-align: center;
+  }
+
+  .admin-scroll-dots {
+    bottom: calc(0.7rem + env(safe-area-inset-bottom, 0px));
+    padding: 0.4rem 0.5rem;
+    gap: 0.4rem;
+  }
+
+  .admin-dot { width: 7px; height: 7px; }
 }
