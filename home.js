@@ -1,140 +1,157 @@
 /* ============================================================
-   home.js — Horizontal scroll snap + dot nav
+   home.js — claim form, donation form, infinite showcase
    ============================================================ */
 
-const wrapper   = document.getElementById('wrapper');
-const dots      = document.querySelectorAll('.dot');
-const panels    = document.querySelectorAll('.panel');
-const totalSlides = panels.length;
-let currentSlide  = 0;
-let isScrolling   = false;
-
-/* ── Scroll to a specific slide ─────────────────────────── */
-function scrollToSlide(index) {
-  if (index < 0 || index >= totalSlides) return;
-  currentSlide = index;
-
-  // Horizontal or vertical depending on viewport
-  const isVertical = window.innerWidth <= 768;
-  const panel = panels[index];
-  panel.scrollIntoView({ behavior: 'smooth', block: isVertical ? 'start' : 'nearest', inline: isVertical ? 'nearest' : 'start' });
-
-  updateDots(index);
-}
-
-/* ── Update dot active state ─────────────────────────────── */
-function updateDots(index) {
-  dots.forEach((d, i) => d.classList.toggle('active', i === index));
-}
-
-/* ── Watch scroll position to sync dots ─────────────────── */
-function onWrapperScroll() {
-  if (isScrolling) return;
-
-  const isVertical = window.innerWidth <= 768;
-  let closest = 0;
-  let closestDist = Infinity;
-
-  panels.forEach((panel, i) => {
-    const rect = panel.getBoundingClientRect();
-    const dist = isVertical
-      ? Math.abs(rect.top)
-      : Math.abs(rect.left);
-    if (dist < closestDist) {
-      closestDist = dist;
-      closest = i;
-    }
-  });
-
-  if (closest !== currentSlide) {
-    currentSlide = closest;
-    updateDots(currentSlide);
-  }
-}
-
-wrapper.addEventListener('scroll', onWrapperScroll, { passive: true });
-
-/* ── Arrow key navigation ────────────────────────────────── */
-document.addEventListener('keydown', e => {
-  const isVertical = window.innerWidth <= 768;
-  if (e.key === 'ArrowRight' || (!isVertical && e.key === 'ArrowDown')) {
-    scrollToSlide(currentSlide + 1);
-  } else if (e.key === 'ArrowLeft' || (!isVertical && e.key === 'ArrowUp')) {
-    scrollToSlide(currentSlide - 1);
-  } else if (e.key === 'ArrowDown' && isVertical) {
-    scrollToSlide(currentSlide + 1);
-  } else if (e.key === 'ArrowUp' && isVertical) {
-    scrollToSlide(currentSlide - 1);
-  }
-});
-
-/* ── Mouse wheel hijack: one wheel tick = one slide ─────── */
-let wheelCooldown = false;
-window.addEventListener('wheel', e => {
-  if (window.innerWidth <= 768) return; // let native scroll handle mobile
-  e.preventDefault();
-  if (wheelCooldown) return;
-  wheelCooldown = true;
-
-  if (e.deltaY > 0 || e.deltaX > 0) {
-    scrollToSlide(currentSlide + 1);
-  } else {
-    scrollToSlide(currentSlide - 1);
-  }
-
-  setTimeout(() => { wheelCooldown = false; }, 800);
-}, { passive: false });
-
-/* ── Touch swipe ─────────────────────────────────────────── */
-let touchStartX = 0;
-let touchStartY = 0;
-
-window.addEventListener('touchstart', e => {
-  touchStartX = e.touches[0].clientX;
-  touchStartY = e.touches[0].clientY;
-}, { passive: true });
-
-window.addEventListener('touchend', e => {
-  const dx = touchStartX - e.changedTouches[0].clientX;
-  const dy = touchStartY - e.changedTouches[0].clientY;
-  const isVertical = window.innerWidth <= 768;
-
-  if (isVertical) {
-    if (Math.abs(dy) > 40) scrollToSlide(currentSlide + (dy > 0 ? 1 : -1));
-  } else {
-    if (Math.abs(dx) > 40) scrollToSlide(currentSlide + (dx > 0 ? 1 : -1));
-  }
-}, { passive: true });
-
-/* ── Page load reveal ────────────────────────────────────── */
 window.addEventListener('load', () => {
-  setTimeout(() => {
-    document.body.classList.remove('is-loading');
-    updateDots(0);
-  }, 100);
+  document.body.classList.remove('is-loading');
 });
 
-/* ── Live visitor counter ────────────────────────────────────
-   Registers this load as a visit (POST bumps the shared KV total by
-   one) and prints the number back into the hero. Falls back to just
-   reading the current count if the bump fails, and hides the whole
-   line if neither works rather than showing a stale/fake number. */
+/* ── Live visitor counter ─────────────────────────────────── */
 (function initVisitCounter() {
   const el = document.getElementById('visitCount');
   if (!el) return;
-
   fetch('/api/visits', { method: 'POST' })
     .then(res => res.ok ? res.json() : Promise.reject())
-    .then(data => {
-      el.textContent = data.count.toLocaleString();
-    })
+    .then(data => { el.textContent = data.count.toLocaleString(); })
     .catch(() => {
-      fetch('/api/visits')
-        .then(res => res.ok ? res.json() : Promise.reject())
-        .then(data => { el.textContent = data.count.toLocaleString(); })
-        .catch(() => {
-          const tag = el.closest('.user-count-tag');
-          if (tag) tag.style.display = 'none';
-        });
+      const tag = el.closest('.user-count-tag');
+      if (tag) tag.style.display = 'none';
     });
 })();
+
+/* ── Claim tabs (no-code / coder) ────────────────────────── */
+const claimTabs = document.querySelectorAll('.claim-tab');
+const nocodeFields = document.getElementById('nocodeFields');
+const coderFields = document.getElementById('coderFields');
+let claimMode = 'nocode';
+
+claimTabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    claimTabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    claimMode = tab.dataset.mode;
+    nocodeFields.classList.toggle('hidden', claimMode !== 'nocode');
+    coderFields.classList.toggle('hidden', claimMode !== 'coder');
+  });
+});
+
+/* ── Claim form submit ───────────────────────────────────── */
+const claimForm = document.getElementById('claimForm');
+const claimStatus = document.getElementById('claimStatus');
+
+claimForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  claimStatus.textContent = 'Submitting…';
+  claimStatus.className = 'username-status';
+
+  const username = document.getElementById('claimUsername').value.trim().toLowerCase();
+  const body = { mode: claimMode, username };
+
+  if (claimMode === 'coder') {
+    body.repo = document.getElementById('claimRepo').value.trim();
+    body.target = document.getElementById('claimTargetCoder').value.trim();
+    body.email = document.getElementById('claimEmailCoder').value.trim();
+  } else {
+    body.target = document.getElementById('claimTargetNocode').value.trim();
+    body.email = document.getElementById('claimEmailNocode').value.trim();
+  }
+
+  try {
+    const res = await fetch('/api/claim', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Something went wrong.');
+    claimStatus.textContent = `${username}.proves.work submitted — pending review.`;
+    claimStatus.classList.add('ok');
+    claimForm.reset();
+  } catch (err) {
+    claimStatus.textContent = err.message;
+    claimStatus.classList.add('error');
+  }
+});
+
+/* ── Donation form submit ────────────────────────────────── */
+const donateForm = document.getElementById('donateForm');
+const donateStatus = document.getElementById('donateStatus');
+
+donateForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  donateStatus.textContent = 'Submitting…';
+  donateStatus.className = 'username-status';
+
+  const body = {
+    type: 'donation',
+    tier: document.getElementById('donateTier').value,
+    amount: document.getElementById('donateAmount').value,
+    referenceNumber: document.getElementById('donateRef').value.trim(),
+    username: document.getElementById('donateUsername').value.trim().toLowerCase(),
+    email: document.getElementById('donateEmail').value.trim()
+  };
+
+  try {
+    const res = await fetch('/api/contact', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Something went wrong.');
+    donateStatus.textContent = 'Thank you! We\'ll confirm your reference number shortly.';
+    donateStatus.classList.add('ok');
+    donateForm.reset();
+  } catch (err) {
+    donateStatus.textContent = err.message;
+    donateStatus.classList.add('error');
+  }
+});
+
+/* ── Infinite showcase ───────────────────────────────────── */
+const showcaseGrid = document.getElementById('showcaseGrid');
+const showcaseStatus = document.getElementById('showcaseStatus');
+let showcaseCursor = null;
+let showcaseLoading = false;
+let showcaseDone = false;
+
+function renderShowcaseItem(item) {
+  const card = document.createElement('a');
+  card.className = 'showcase-card';
+  card.href = `https://${item.username}.proves.work`;
+  card.target = '_blank';
+  card.rel = 'noopener';
+  card.innerHTML = `
+    <div class="showcase-card-name">${item.username}.proves.work</div>
+    ${item.mode === 'coder' ? `<div class="showcase-card-badge">⚡ open source${item.repoName ? ' · ' + item.repoName : ''}</div>` : ''}
+  `;
+  return card;
+}
+
+async function loadShowcasePage() {
+  if (showcaseLoading || showcaseDone) return;
+  showcaseLoading = true;
+  showcaseStatus.textContent = 'Loading…';
+  try {
+    const url = new URL('/api/showcase', window.location.origin);
+    if (showcaseCursor) url.searchParams.set('cursor', showcaseCursor);
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!data.ok) throw new Error();
+    data.items.forEach(item => showcaseGrid.appendChild(renderShowcaseItem(item)));
+    showcaseCursor = data.cursor;
+    if (!showcaseCursor) {
+      showcaseDone = true;
+      showcaseStatus.textContent = showcaseGrid.children.length ? '' : 'No showcased sites yet — donate to be featured!';
+    } else {
+      showcaseStatus.textContent = '';
+    }
+  } catch {
+    showcaseStatus.textContent = 'Could not load the showcase right now.';
+  } finally {
+    showcaseLoading = false;
+  }
+}
+
+const showcaseObserver = new IntersectionObserver(entries => {
+  if (entries.some(e => e.isIntersecting)) loadShowcasePage();
+}, { rootMargin: '300px' });
+
+showcaseObserver.observe(document.getElementById('showcase'));
+loadShowcasePage();

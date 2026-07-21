@@ -1,31 +1,28 @@
 # Publishing `<username>.proves.work` on Cloudflare
 
-This folder makes the editor's "Publish" button actually go live at
-`https://<username>.proves.work`. It's one Cloudflare Worker +
-one KV namespace. Your existing app host (proves.work —
-index.html, editor.html, css, js) is untouched; this Worker is only
-routed on `/api/*` at that host, plus every `*.proves.work`
-subdomain.
+This folder makes free subdomains work: one Cloudflare Worker + one
+KV namespace. Your existing app host (proves.work — index.html, css,
+js) is untouched; this Worker is only routed on `/api/*` at that
+host, plus every `*.proves.work` subdomain.
 
-## AI features (résumé check + tailor-to-job-posting)
+There's no portfolio builder and no sign-up. Claiming a name is just:
+pick a username, tell us where it should point, submit — then you (the
+site owner) approve it by hand at `/admin`.
 
-These run on **Cloudflare Workers AI**, using an open-source model
-(`@cf/meta/llama-3.1-8b-instruct`), not a third-party API. There's
-nothing to sign up for beyond your existing Cloudflare account:
+## Two ways to claim a name
 
-- No API key to create or store.
-- Free tier: 10,000 "neurons" per day (roughly a few hundred requests/day
-  for a model this size — plenty for personal/small-scale use). See
-  current limits at https://developers.cloudflare.com/workers-ai/platform/pricing/
-- Already wired up via the `ai` binding in `wrangler.jsonc` — nothing
-  extra to configure. Just deploy (`npx wrangler deploy`) and the
-  `/api/ai/resume-check` and `/api/ai/tailor-resume` routes are live.
-- If the free daily quota is hit, or the request fails for any other
-  reason, the editor automatically falls back to a local, non-AI
-  heuristic check so the feature never just breaks — it just gets less
-  precise until quota resets.
-- Résumé/job-posting text sent to these routes is used only for that
-  one request and is never written to KV or logged.
+**No-code**: username + name/email + a URL (Linktree, Carrd, a resume
+PDF host, whatever). `username.proves.work` proxies to that URL.
+
+**Coders** (like [is-a.dev](https://www.is-a.dev)): username + a
+**public** GitHub repo URL + the URL it deploys to (GitHub Pages,
+Vercel, Netlify, etc). The Worker checks the repo is public via the
+GitHub API before the claim is even submitted for review, and the
+front end shows an "open source" badge linking back to the repo.
+Unlike is-a.dev, there's no PR/YAML-file workflow — it's a form, and
+you approve claims from `/admin` instead of merging pull requests.
+Point your own domain's DNS/deploy however you like on your repo's
+side; this system only needs the final URL it serves at.
 
 ## Why a Worker (and not Cloudflare Pages / Custom Domains)
 
@@ -33,11 +30,10 @@ nothing to sign up for beyond your existing Cloudflare account:
   you can't point `*.proves.work` at a Custom Domain.
 - **Workers Routes** *do* support wildcards (`*.proves.work/*`), and a
   Worker can inspect the `Host` header at request time to decide which
-  published site to serve. That's exactly what's needed here: one
-  Worker, one route, unlimited usernames — no per-user DNS record or
-  per-user deploy.
-- Storage is **Workers KV**: a global key-value store that's a natural
-  fit for "given a username, return the page to serve."
+  claimed name to serve. One Worker, one route, unlimited usernames —
+  no per-user DNS record or per-user deploy.
+- Storage is **Workers KV**: a global key-value store, a natural fit
+  for "given a username, return where to proxy."
 
 ## One-time setup
 
@@ -52,8 +48,8 @@ nothing to sign up for beyond your existing Cloudflare account:
    cd worker
    npx wrangler kv namespace create SITES
    ```
-   This prints an `id`. Paste it into `wrangler.jsonc`, replacing
-   `<REPLACE_WITH_YOUR_KV_NAMESPACE_ID>`.
+   This prints an `id`. Paste it into `wrangler.jsonc`, replacing the
+   existing `id` value.
 
 3. **Add a wildcard DNS record.** Cloudflare requires a DNS record to
    exist for any hostname a Route/Worker will intercept — even though
@@ -65,7 +61,7 @@ nothing to sign up for beyond your existing Cloudflare account:
      reaches this IP, the Worker intercepts it first)
    - Proxy status: **Proxied** (orange cloud) — this is required
 
-   Your existing `proves.work` record (wherever the editor is
+   Your existing `proves.work` record (wherever the marketing page is
    hosted today — Pages, etc.) stays exactly as it is.
 
 4. **Deploy the Worker:**
@@ -77,48 +73,45 @@ nothing to sign up for beyond your existing Cloudflare account:
    step needed.
 
 5. **Verify:**
-   - `https://anything-not-published.proves.work` → should show
-     the "hasn't published a portfolio yet" page.
-   - From the editor, click **Publish**, pick a username, and confirm
-     `https://<username>.proves.work` loads your portfolio
-     within a few seconds.
+   - `https://anything-not-claimed.proves.work` → should show the
+     "hasn't claimed this yet" page.
+   - Submit a claim from the front page, approve it at `/admin`, and
+     confirm `https://<username>.proves.work` proxies correctly.
 
-## How ownership works (and its current limitation)
+## Admin access
 
-Usernames are now tied to a **Google account** instead of a copy-paste
-publish key. The editor uses Google Identity Services to get a signed
-ID token from the person's browser, sends it along with the publish
-request, and this Worker verifies that token server-side (via Google's
-`tokeninfo` endpoint) before trusting the email it contains. A username
-already owned by one verified email can only be republished/updated by
-signing in with that same Google account again — from any browser or
-device.
-
-Publishing while signed out still works (`googleCredential` omitted),
-same as before — first-come, first-served, with no way to reclaim or
-update it later except by publishing again from a browser that still
-considers it "already yours" via the locally-saved username. If you
-want anonymous publishes to be updatable too, you'd need to bring back
-some kind of per-browser secret for that path specifically; as shipped,
-signing in with Google is the only durable way to keep publish rights
-across devices.
+`/admin` is gated by Google sign-in, checked server-side against a
+fixed allowlist (`ADMIN_EMAILS` in `worker/src/index.js` and
+`GOOGLE_CLIENT_ID` in `admin.js` — must match exactly). This isn't a
+user-facing sign-up system, just how you personally authenticate to
+approve claims, confirm donation reference numbers, and tag entries
+into the showcase.
 
 **Before this works, you must:**
 1. Create an OAuth 2.0 Client ID (type "Web application") in
    [Google Cloud Console](https://console.cloud.google.com/apis/credentials),
-   with your editor's origin(s) added under "Authorized JavaScript origins."
+   with your `/admin` page's origin added under "Authorized JavaScript
+   origins."
 2. Paste that Client ID into **both**:
-   - `GOOGLE_CLIENT_ID` in `editor.js`
+   - `GOOGLE_CLIENT_ID` in `admin.js`
    - `GOOGLE_CLIENT_ID` in `worker/src/index.js`
-   (they must match exactly — the Worker checks the token's `aud` claim
-   against this value.)
+
+## Donations & showcase
+
+Donations aren't processed automatically — there's no payment API
+wired in. The front end shows a QR code + tier list; the donor pays on
+their own banking/e-wallet app and submits the reference number plus
+the subdomain they want boosted through the contact form. You confirm
+the reference number by hand at `/admin` (against your own
+transaction history) and can tag that subdomain into the public
+showcase in the same step.
 
 ## Tightening CORS later
 
 `CORS_HEADERS` in `worker/src/index.js` currently allows any origin
-(`*`) so this works regardless of exactly how/where you host the
-editor while you're setting this up. Once the editor is confirmed live
-on `https://proves.work`, change that to
+(`*`) so this works regardless of exactly how/where you host the front
+end while you're setting this up. Once it's confirmed live on
+`https://proves.work`, change that to
 `'access-control-allow-origin': 'https://proves.work'`.
 
 ## Local testing

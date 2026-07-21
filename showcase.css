@@ -209,3 +209,33 @@
 @media (max-width: 640px) {
   .showcase-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Showcase grid (used inline in index.html) ───────────── */
+.showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+  max-width: 980px;
+  margin: 0 auto;
+}
+.showcase-card {
+  display: block;
+  padding: 1.1rem 1.25rem;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow);
+  text-decoration: none;
+  color: var(--color-text);
+  transition: transform .15s ease;
+}
+.showcase-card:hover { transform: translateY(-3px); }
+.showcase-card-name { font-family: var(--font-mono); font-weight: 600; font-size: .92rem; }
+.showcase-card-badge {
+  margin-top: .5rem;
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--color-secondary);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}

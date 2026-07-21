@@ -3,1064 +3,230 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>proves.work — Verifiable portfolios for modern professionals</title>
-  <meta name="description" content="Build a verifiable portfolio in minutes and publish it to your own yourname.proves.work address." />
+  <title>proves.work — Free subdomains, open source</title>
+  <meta name="description" content="Claim a free yourname.proves.work subdomain. No sign-up, no portfolio builder — just point it at your site or your open-source repo." />
   <link rel="canonical" href="https://proves.work/" />
-  <!-- Open Graph / social share previews (Facebook, LinkedIn, Slack, etc.) -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://proves.work/" />
-  <meta property="og:title" content="proves.work — Verifiable portfolios for modern professionals" />
-  <meta property="og:description" content="Build a verifiable portfolio in minutes and publish it to your own yourname.proves.work address." />
+  <meta property="og:title" content="proves.work — Free subdomains, open source" />
+  <meta property="og:description" content="Claim a free yourname.proves.work subdomain. No sign-up required." />
   <meta property="og:image" content="https://proves.work/favicon.png" />
-  <!-- Twitter/X card -->
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="proves.work — Verifiable portfolios for modern professionals" />
-  <meta name="twitter:description" content="Build a verifiable portfolio in minutes and publish it to your own yourname.proves.work address." />
   <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="icon" href="/favicon.ico" sizes="any" />
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
-  <link rel="icon" type="image/png" sizes="192x192" href="/favicon/android-chrome-192x192.png" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
   <link rel="manifest" href="/favicon/site.webmanifest" />
   <link rel="stylesheet" href="dazed.css" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="showcase.css" />
   <link rel="stylesheet" href="home.css" />
-  <style>
-    /* ── HERO SLIDE OVERRIDE ──────────────────────────────────
-       home.css's .panel-hero is built for the two-column layout
-       (.panel-content + .panel-visual) and sets align-items: stretch
-       on the shared .panel flex row. We're using a single centered
-       column instead, so .hero-header just needs to fill that row
-       (flex: 1 makes it stretch to the panel's full real height,
-       which home.css already sizes correctly below the fixed nav)
-       and center its own children — the exact same justify-content:
-       center pattern every other slide's intro column already uses.
-       No header-height math, no position:absolute, no JS measuring —
-       this automatically lines up with the dots because it's centered
-       within the same box the rest of the page's layout already
-       agrees on. */
-    .panel-hero {
-      justify-content: center;
-    }
-
-    .hero-header {
-      flex: 1;
-      max-width: 900px;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-      gap: 1.5rem;
-    }
-
-    .brand-container {
-      height: auto;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      max-width: 100%;
-      overflow: visible;
-    }
-
-    .slide-dots {
-  top: calc(50% + 28px);
-}
-    /* ── HERO-ACTIONS: COLLAPSED UNTIL THE TICKER SETTLES ──
-       max-height starts at 0 so this block takes (almost) no vertical
-       space while the ticker is cycling — the title sits centered by
-       itself. When .visible is added, max-height opens up and the
-       box's real height comes back. Because .hero-header centers its
-       children with justify-content: center inside a fixed-height flex
-       column (flex: 1 filling the real panel height), the whole group
-       re-centers automatically as this grows: title drifts up, buttons
-       + count grow in underneath, everything settles centered together. */
-.hero-actions {
-  margin-top: 0;
-  padding: 4px;              /* ← add this: absorbs the hover translate */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  gap: 1.5rem;
-  opacity: 0;
-  max-height: 0;
-  overflow: hidden;
-  transform: translateY(15px);
-  transition: opacity 0.6s ease, transform 0.6s ease, max-height 0.6s ease;
-}
-
-    .dynamic-subdomain {
-      font-family: var(--font-display, 'Courier New', monospace);
-      font-size: clamp(1.8rem, 6vw, 4rem); /* shrinks on narrow viewports, caps at 4rem */
-      font-weight: 800;
-      letter-spacing: -0.05em;
-      color: var(--color-text, #000000);
-      margin: 0;
-      white-space: nowrap;     /* keep it on one line since it has no natural wrap point */
-      text-align: center;
-    }
-
-    .tld-accent {
-      color: var(--color-primary, #6366f1);
-    }
-
-    .hero-tagline {
-      font-size: 1.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--color-text-muted, #4b5563);
-      margin: 0.5rem 0 0 0;
-      opacity: 0;
-      transition: opacity 0.5s ease-in-out;
-      text-align: center;
-      width: 100%;
-    }
-
-    .hero-tagline.visible {
-      opacity: 1;
-    }
-    
-    .hero-actions.visible {
-      opacity: 1;
-      max-height: 400px;       /* comfortably above real content height so it never clips */
-      transform: translateY(0);
-    }
-
-    .button-group {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .user-count-tag {
-      font-size: 0.9rem;
-      font-style: italic;
-      color: var(--color-text-muted, #6b7280);
-      margin-top: 0.5rem;
-      text-align: center;
-      width: 100%;
-    }
-
-    /* Pricing cards: fit 3 cards without wrapping/overflowing the
-       fixed-height panel. Cards flex-shrink together to fit whatever
-       width the row actually has (instead of a fixed px width that
-       can force a horizontal scrollbar on narrower/unmaximized
-       windows) — a proper mobile stack still takes over below 768px
-       via home.css. */
-    .panel-pricing .pricing-cards {
-      flex-wrap: nowrap;
-      overflow: visible;
-      padding: 2rem 2vw;
-      gap: 1rem;
-      align-items: stretch;
-    }
-
-    .panel-pricing .price-card {
-      flex: 1 1 0;
-      min-width: 0;
-      max-width: 240px;
-      padding: 1.5rem 1.25rem;
-      gap: 1rem;
-    }
-
-    .panel-pricing .price-name { font-size: 1rem; }
-    .panel-pricing .price-amount { font-size: 1.9rem; }
-    .panel-pricing .price-features { font-size: 0.78rem; gap: 0.4rem; }
-
-    .price-tagline {
-      font-size: 0.78rem;
-      color: var(--color-text-muted);
-      line-height: 1.4;
-      margin: -0.75rem 0 0;
-    }
-
-    .price-tagline s {
-      opacity: 0.6;
-    }
-
-    /* The "was ₱1,999" figure sits beside the real price in the same
-       display font, just smaller and struck through, so it reads as
-       an active discount rather than a footnote. */
-    .price-was {
-      font-family: var(--font-display);
-      font-weight: 700;
-      font-size: 1.15rem;
-      color: var(--color-text-muted);
-      text-decoration: line-through;
-      opacity: 0.65;
-      margin-right: 0.3rem;
-    }
-
-    .price-amount span {
-      white-space: nowrap;
-    }
-
-    /* "Just the name" card only: price and duration ("/ 8 mos") are
-       laid out as two deliberate rows instead of one wrapping inline
-       line. A plain inline layout would only break onto a second line
-       once the duration text got long enough (e.g. double-digit
-       months), so the card's height — and where things sat — shifted
-       depending on which month value was selected. Making it always
-       two rows means it looks identical at 1 month and at 12. */
-    #homeDomainPriceDisplay {
-      display: flex;
-      flex-direction: column;
-      gap: 0.15rem;
-    }
-
-    .price-amount-row {
-      line-height: 1;
-    }
-
-    .price-amount-duration {
-      font-size: 0.875rem;
-      font-weight: 400;
-      color: var(--color-text-muted);
-      white-space: nowrap;
-    }
-
-    .price-duration-row {
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-    }
-
-    .price-duration-row input[type="range"] {
-      width: 100%;
-      accent-color: var(--color-primary);
-    }
-
-    .price-duration-label {
-      font-size: 0.75rem;
-      color: var(--color-text-muted);
-      display: flex;
-      justify-content: space-between;
-    }
-
-    @media (max-width: 768px) {
-      .panel-pricing .price-card { width: 82vw; max-width: none; }
-    }
-  </style>
 </head>
 <body class="is-loading">
 
-  <!-- NAV (fixed, always visible) -->
   <nav class="site-nav">
-    <a href="index.html" class="nav-logo">
-      <img src="favicon.png" alt="" class="logo-dot" />proves.work
-    </a>
+    <a class="nav-logo" href="#top"><img class="logo-dot" src="favicon.png" alt="" /> proves.work</a>
     <ul class="nav-links">
-      <li><a href="showcase.html">Showcase</a></li>
-      <li><a href="#" onclick="scrollToSlide(4);return false;">Pricing</a></li>
-      <li><a href="manage.html">Manage</a></li>
-      <li><a href="#" id="navContactLink" onclick="openContactModal();return false;">Contact</a></li>
-      <li><a href="editor.html" class="btn btn-primary btn-sm">Open Editor →</a></li>
+      <li><a href="#claim">Claim a name</a></li>
+      <li><a href="#coders">For coders</a></li>
+      <li><a href="#donate">Donate</a></li>
+      <li><a href="#showcase">Showcase</a></li>
+      <li><a href="admin.html">Admin</a></li>
     </ul>
   </nav>
 
-  <!-- CONTACT MODAL -->
-  <div class="domain-modal-overlay hidden" id="contactModalOverlay" style="z-index:1002;">
-    <div class="domain-modal" id="contactModalContent">
-      <button type="button" class="close-x" onclick="closeContactModal()" aria-label="Close">&times;</button>
-      <h3>Get in touch</h3>
-      <p class="sub">Questions, feedback, bug reports — send a message and we'll get back to you.</p>
-      <form id="contactForm">
-        <label for="contactName" style="display:block;font-size:0.8rem;font-weight:600;margin-bottom:0.25rem;">Name</label>
-        <input type="text" id="contactName" placeholder="Your name" maxlength="120" />
+  <main id="top">
 
-        <label for="contactEmail" style="display:block;font-size:0.8rem;font-weight:600;margin-bottom:0.25rem;">Email <span style="opacity:.6;font-weight:400;">(optional, so we can reply)</span></label>
-        <input type="email" id="contactEmail" placeholder="you@example.com" maxlength="200" />
+    <!-- ── HERO ─────────────────────────────────────────── -->
+    <section class="section hero-section">
+      <div class="hero-inner">
+        <span class="eyebrow">100% free · open source</span>
+        <h1>Your name. A free subdomain. No sign-up.</h1>
+        <p class="hero-sub">
+          Claim <strong>yourname.proves.work</strong> and point it at any URL —
+          a link-in-bio page, a résumé, your GitHub Pages site, anything.
+          The whole project is open source; run your own copy if you'd rather.
+        </p>
+        <div class="hero-actions">
+          <a href="#claim" class="btn btn-primary">Claim your subdomain →</a>
+          <a href="https://github.com/" target="_blank" rel="noopener" class="btn btn-ghost" id="repoLink">View the source</a>
+        </div>
+        <p class="user-count-tag"><span id="visitCount">—</span> page views so far</p>
+      </div>
+    </section>
 
-        <!-- Honeypot — hidden from real visitors via CSS, skipped by
-             keyboard/screen-reader nav. Bots that auto-fill every field
-             trip this; real people never see or touch it. -->
-        <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;" aria-hidden="true">
-          <label for="contactCompany">Company</label>
-          <input type="text" id="contactCompany" name="company" tabindex="-1" autocomplete="off" />
+    <!-- ── HOW IT WORKS ─────────────────────────────────── -->
+    <section class="section how-section">
+      <h2>How it works</h2>
+      <div class="how-grid">
+        <div class="how-card">
+          <span class="how-num">1</span>
+          <h3>Pick a name</h3>
+          <p>3–30 lowercase letters, numbers, or hyphens. First come, first served.</p>
+        </div>
+        <div class="how-card">
+          <span class="how-num">2</span>
+          <h3>Point it somewhere</h3>
+          <p>Give a URL (no-code) or a public GitHub repo + deployed URL (coders).</p>
+        </div>
+        <div class="how-card">
+          <span class="how-num">3</span>
+          <h3>We review it</h3>
+          <p>A human checks each claim before it goes live — usually within a day.</p>
+        </div>
+        <div class="how-card">
+          <span class="how-num">4</span>
+          <h3>It's live</h3>
+          <p>yourname.proves.work proxies straight to your page. Free, forever.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── CLAIM FORM ───────────────────────────────────── -->
+    <section class="section claim-section" id="claim">
+      <h2>Claim your subdomain</h2>
+      <p class="section-sub">Free for everyone. No account needed.</p>
+
+      <div class="claim-tabs">
+        <button class="claim-tab active" data-mode="nocode" type="button">No-code</button>
+        <button class="claim-tab" data-mode="coder" type="button" id="coders">Coder / repo</button>
+      </div>
+
+      <form id="claimForm" class="claim-form">
+        <label class="field">
+          <span>Subdomain</span>
+          <div class="domain-input">
+            <input type="text" id="claimUsername" placeholder="yourname" required autocomplete="off" spellcheck="false" />
+            <span class="domain-suffix">.proves.work</span>
+          </div>
+        </label>
+
+        <div id="nocodeFields">
+          <label class="field">
+            <span>Where should it point?</span>
+            <input type="url" id="claimTargetNocode" placeholder="https://linktr.ee/yourname" />
+          </label>
+          <label class="field">
+            <span>Your email (optional, so we can reach you about your claim)</span>
+            <input type="email" id="claimEmailNocode" placeholder="you@example.com" />
+          </label>
         </div>
 
-        <label for="contactMessage" style="display:block;font-size:0.8rem;font-weight:600;margin-bottom:0.25rem;">Message</label>
-        <textarea id="contactMessage" rows="5" maxlength="5000" placeholder="What's on your mind?" required
-          style="width:100%;padding:0.65rem 0.85rem;border:2px solid var(--color-border,#000);font-size:1rem;font-family:inherit;margin-bottom:0.75rem;box-sizing:border-box;resize:vertical;"></textarea>
+        <div id="coderFields" class="hidden">
+          <label class="field">
+            <span>Public GitHub repo (must be open source)</span>
+            <input type="url" id="claimRepo" placeholder="https://github.com/you/your-site" />
+          </label>
+          <label class="field">
+            <span>Deployed site URL</span>
+            <input type="url" id="claimTargetCoder" placeholder="https://you.github.io/your-site" />
+          </label>
+          <label class="field">
+            <span>Your email (optional)</span>
+            <input type="email" id="claimEmailCoder" placeholder="you@example.com" />
+          </label>
+          <p class="field-hint">
+            Like <a href="https://www.is-a.dev" target="_blank" rel="noopener">is-a.dev</a>, but simpler —
+            no PR/YAML file to write. We verify your repo is public via the GitHub API, then a human
+            approves the claim. Once live, your showcase card links straight back to the repo.
+          </p>
+        </div>
 
-        <button type="submit" class="btn btn-gradient" id="contactSubmitBtn" style="width:100%;">Send message</button>
-        <p class="status-line" id="contactStatus" aria-live="polite" style="margin-top:0.6rem;"></p>
+        <button type="submit" class="btn btn-primary btn-block">Submit claim</button>
+        <p class="username-status" id="claimStatus"></p>
       </form>
-    </div>
-  </div>
-
-  <!-- SLIDE DOTS (right side) -->
-  <nav class="slide-dots" aria-label="Page sections">
-    <button class="dot active" onclick="scrollToSlide(0)" aria-label="Hero"></button>
-    <button class="dot" onclick="scrollToSlide(1)" aria-label="How it works"></button>
-    <button class="dot" onclick="scrollToSlide(2)" aria-label="Features"></button>
-    <button class="dot" onclick="scrollToSlide(3)" aria-label="Demo"></button>
-    <button class="dot" onclick="scrollToSlide(4)" aria-label="Pricing"></button>
-    <button class="dot" onclick="scrollToSlide(5)" aria-label="Get started"></button>
-  </nav>
-
-  <!-- HORIZONTAL SCROLL WRAPPER -->
-  <div id="wrapper">
-
-    <!-- SLIDE 1: HERO (PERFECTLY CENTERED) -->
-    <section class="panel panel-hero" id="slide-0">
-      <header class="hero-header">
-        <div class="brand-container">
-          <h1 class="dynamic-subdomain" id="tickerTarget">
-            claims<span class="tld-accent">.proves.work</span>
-          </h1>
-        </div>
-
-        <!-- <p class="hero-tagline" id="taglineTarget">Stop claiming. Start proving.</p> -->
-
-        <div class="hero-actions" id="actionsTarget">
-          <div class="button-group">
-            <a href="editor.html" class="btn btn-primary btn-lg">Show yours</a>
-            <button class="btn btn-ghost btn-lg" onclick="scrollToSlide(1)">See how →</button>
-          </div>
-          <span class="user-count-tag"><span id="visitCount">—</span> visitors and counting.</span>
-        </div>
-      </header>
     </section>
 
-    <!-- SLIDE 2: HOW IT WORKS -->
-    <section class="panel panel-how" id="slide-1">
-      <div class="panel-intro">
-        <p class="eyebrow">How it works</p>
-        <h2>Three steps.<br>One live profile.</h2>
-        <p class="intro-sub">No filler content. Just blocks you control inside the website builder.</p>
-        <button class="btn btn-ghost btn-sm" onclick="scrollToSlide(2)">See features →</button>
-      </div>
-      <div class="panel-steps">
-        <div class="step">
-          <div class="step-num">01</div>
-          <div class="step-tape"></div>
-          <h3>Design Profile</h3>
-          <p>Customize components inside your visual profile editor. Style it precisely to match your aesthetics.</p>
-        </div>
-        <div class="step">
-          <div class="step-num">02</div>
-          <div class="step-tape"></div>
-          <h3>Export PDF</h3>
-          <p>Instantly download a clean, vector-perfect, ATS-safe PDF résumé mapped directly from your page design.</p>
-        </div>
-        <div class="step">
-          <div class="step-num">03</div>
-          <div class="step-tape"></div>
-          <h3>Launch Link</h3>
-          <p>Publish your page to your personal subdomain link to display your verifiable portfolio evidence live.</p>
-        </div>
-      </div>
-    </section>
+    <!-- ── DONATE ───────────────────────────────────────── -->
+    <section class="section donate-section" id="donate">
+      <h2>Support the project</h2>
+      <p class="section-sub">
+        Hosting is free, but donations help keep it running and can boost your subdomain into the
+        showcase below. Pay via the QR code, then submit your reference number — donations are
+        confirmed by hand, not automatically.
+      </p>
 
-    <!-- SLIDE 3: FEATURES GRID -->
-    <section class="panel panel-features" id="slide-2">
-      <div class="panel-intro panel-intro-dark">
-        <p class="eyebrow" style="color:var(--color-accent)">What you get</p>
-        <h2>Everything a<br>creator needs.</h2>
-        <p class="intro-sub" style="color:rgba(255,255,255,0.6)">Built for modern professionals who want to display verifiable portfolios.</p>
-        <button class="btn btn-ghost btn-sm btn-ghost-on-dark" onclick="scrollToSlide(3)" style="border-color:rgba(255,255,255,0.3);color:#fff">See it in action →</button>
-      </div>
-      <div class="panel-feature-grid">
-        <div class="feat">
-          <div class="feat-icon">🧱</div>
-          <h3>Blockcraft Canvas Editor</h3>
-          <p>A simple, sleek sidebar canvas customizer to style typography, spacing, and layout columns instantly.</p>
-        </div>
-        <div class="feat">
-          <div class="feat-icon">👁</div>
-          <h3>Live Subdomain</h3>
-          <p>Your workspace configuration compiles straight into a live web portfolio presentation path.</p>
-        </div>
-        <div class="feat">
-          <div class="feat-icon">🌍</div>
-          <h3>Public Showcase</h3>
-          <p>Opt in to the community gallery. Let your working artifacts speak for themselves.</p>
-        </div>
-        <div class="feat">
-          <div class="feat-icon">🔒</div>
-          <h3>Privacy Controls</h3>
-          <p>Hide custom tabs, redact specific data blocks, or toggle visibility per setup option.</p>
-        </div>
-        <div class="feat">
-          <div class="feat-icon">📄</div>
-          <h3>PDF Export Optionality</h3>
-          <p>One-click pristine vector PDF output engine built straight into your live website configuration.</p>
-        </div>
-        <div class="feat">
-          <div class="feat-icon">✨</div>
-          <h3>Verifiable Proof</h3>
-          <p>Let viewers verify layout asset origins directly through embedded design records.</p>
-        </div>
-      </div>
-    </section>
+      <div class="donate-grid">
+        <img src="payment-qr.png" alt="Donation QR code" class="donate-qr" />
 
-    <!-- SLIDE 4: SPLIT DEMO / TESTIMONIAL -->
-    <section class="panel panel-split" id="slide-3">
-      <div class="split-left">
-        <p class="eyebrow">See it in action</p>
-        <h2>Build your<br>résumé &amp; portfolio.</h2>
-        <p class="intro-sub">Add and reorder real sections — summary, experience, education, skills, photos — edit them inline, and preview both your résumé and your live portfolio site at once.</p>
-        <button class="btn btn-gradient" onclick="scrollToSlide(4)">See pricing →</button>
-      </div>
-      <div class="split-right">
-        <div class="editor-preview-demo" id="liveBlockDemo">
-          <div class="demo-tabs">
-            <button type="button" class="demo-tab active" id="demoTabEditor">Editor</button>
-            <button type="button" class="demo-tab" id="demoTabPortfolio">Published portfolio</button>
+        <div class="tier-list">
+          <div class="tier-card" data-tier="normal">
+            <span class="tier-icon">🤍</span>
+            <div><strong>Normal Heart</strong><span>₱50 / $1</span></div>
           </div>
-          <div class="epd-window" id="epdWindowEditor">
-            <div class="epd-titlebar">
-              <span class="epd-dot" style="background:#FF5F57"></span>
-              <span class="epd-dot" style="background:#FEBC2E"></span>
-              <span class="epd-dot" style="background:#28C840"></span>
-              <span class="epd-titlebar-label">editor.proves.work</span>
-            </div>
-            <div class="epd-body">
-              <div class="epd-sidebar">
-                <div class="epd-sidebar-label">Blocks</div>
-                <div class="epd-block epd-block-active">
-                  <span class="epd-icon">📝</span>
-                  <span>Summary</span>
-                </div>
-                <div class="epd-block">
-                  <span class="epd-icon">💼</span>
-                  <span>Experience</span>
-                </div>
-                <div class="epd-block">
-                  <span class="epd-icon">🎓</span>
-                  <span>Education</span>
-                </div>
-                <div class="epd-block">
-                  <span class="epd-icon">🖼️</span>
-                  <span>Photo Gallery</span>
-                </div>
-              </div>
-              <div class="epd-canvas">
-                <div class="epd-preview-badge">Live preview</div>
-                <div class="epd-preview-avatar"></div>
-                <div class="epd-preview-line epd-preview-line-title"></div>
-                <div class="epd-preview-line epd-preview-line-sub"></div>
-                <div class="epd-preview-tiles">
-                  <div class="epd-tile"></div>
-                  <div class="epd-tile"></div>
-                  <div class="epd-tile"></div>
-                </div>
-                <div class="epd-preview-line epd-preview-line-wide"></div>
-                <div class="epd-preview-line epd-preview-line-wide" style="width:70%"></div>
-              </div>
-            </div>
+          <div class="tier-card" data-tier="gold">
+            <span class="tier-icon">💛</span>
+            <div><strong>Gold Heart</strong><span>₱250 / $10</span></div>
           </div>
-          <div class="epd-window hidden" id="epdWindowPortfolio">
-            <div class="epd-titlebar">
-              <span class="epd-dot" style="background:#FF5F57"></span>
-              <span class="epd-dot" style="background:#FEBC2E"></span>
-              <span class="epd-dot" style="background:#28C840"></span>
-              <span class="epd-titlebar-label">yourname.proves.work</span>
-            </div>
-            <div class="pvd-body">
-              <div class="pvd-hero">
-                <div class="pvd-avatar"></div>
-                <div class="pvd-hero-lines">
-                  <div class="epd-preview-line epd-preview-line-title" style="width:70%"></div>
-                  <div class="epd-preview-line epd-preview-line-sub" style="width:45%"></div>
-                </div>
-              </div>
-              <div class="pvd-section">
-                <div class="pvd-section-label">Experience</div>
-                <div class="pvd-row">
-                  <div class="epd-preview-line epd-preview-line-wide" style="width:80%"></div>
-                  <span class="pvd-verify-badge" title="Verifiable proof attached">✓ Verified</span>
-                </div>
-                <div class="pvd-row">
-                  <div class="epd-preview-line epd-preview-line-wide" style="width:60%"></div>
-                  <span class="pvd-verify-badge" title="Verifiable proof attached">✓ Verified</span>
-                </div>
-              </div>
-              <div class="pvd-section">
-                <div class="pvd-section-label">Portfolio</div>
-                <div class="epd-preview-tiles">
-                  <div class="epd-tile"></div>
-                  <div class="epd-tile"></div>
-                  <div class="epd-tile"></div>
-                </div>
-              </div>
-            </div>
+          <div class="tier-card" data-tier="diamond">
+            <span class="tier-icon">💎</span>
+            <div><strong>Diamond Heart</strong><span>₱1,000 / $50</span></div>
+          </div>
+          <div class="tier-card" data-tier="real">
+            <span class="tier-icon">❤️</span>
+            <div><strong>Real Heart</strong><span>Any amount above ₱1,000 / $50</span></div>
+          </div>
+          <div class="tier-card" data-tier="ghost">
+            <span class="tier-icon">👻</span>
+            <div><strong>Ghost Heart</strong><span>Any odd amount below ₱1,000 / $50</span></div>
           </div>
         </div>
       </div>
-    </section>
 
-    <!-- SLIDE 5: PRICING -->
-    <section class="panel panel-pricing" id="slide-4">
-      <div class="panel-intro">
-        <p class="eyebrow">Pricing</p>
-        <h2>Free to use.<br>Donations optional.</h2>
-        <p class="intro-sub">No credit card needed to start, and hosting your portfolio never requires one. This is a one-person, AI-assisted side project running on Cloudflare's free tier — it's given as-is, with no promised uptime, support, or new features. Donations don't buy a service contract; they just help cover real costs (the domain itself) and are appreciated if this was useful to you.</p>
-      </div>
-      <div class="pricing-cards">
-        <div class="price-card">
-          <div class="price-name">Free</div>
-          <div class="price-amount">₱0 <span>always</span></div>
-          <ul class="price-features">
-            <li>✓ Blockcraft canvas editor</li>
-            <li>✓ Live at your-name.proves.work</li>
-            <li>✓ Add it to the Showcase</li>
-            <li>✓ PDF résumé export</li>
-          </ul>
-          <a href="editor.html" class="btn btn-ghost" style="width:100%;justify-content:center">Start free</a>
-        </div>
-        <div class="price-card price-featured">
-          <div class="price-badge">Optional support</div>
-          <div class="price-name">Support the project</div>
-          <div class="price-amount"><div class="price-amount-row">₱99–₱999</div> <span>one-off donation</span></div>
-          <p class="price-tagline">Pick your own duration (1–12 months) in the editor. Not a subscription, not a service plan — just a thank-you that happens to unlock two extras.</p>
-          <ul class="price-features">
-            <li>✓ Everything in Free (already yours either way)</li>
-            <li>✓ ★ Starred, front-of-line Showcase spot</li>
-            <li>✓ Recruiter Password Lock, if you set one</li>
-            <li>✓ Helps cover the domain's real cost</li>
-          </ul>
-          <a href="editor.html" class="btn btn-primary" style="width:100%;justify-content:center">Open the editor</a>
-        </div>
-        <div class="price-card">
-          <div class="price-name">Just the name</div>
-          <div class="price-amount" id="homeDomainPriceDisplay"><div class="price-amount-row"><s class="price-was">₱1,999</s>₱199</div><span class="price-amount-duration">/ 1 mo</span></div>
-          <p class="price-tagline">This one's a real, ongoing cost (the actual domain), so it's not optional the way the donation above is — max ₱599 for a full year.</p>
-          <div class="price-duration-row">
-            <input type="range" min="1" max="12" step="1" value="1" id="homeDomainMonthsSlider" aria-label="Reservation length in months" />
-            <div class="price-duration-label"><span id="homeDomainMonthsLabel">1 month</span><span>one-time</span></div>
+      <form id="donateForm" class="claim-form">
+        <label class="field">
+          <span>Tier</span>
+          <select id="donateTier" required>
+            <option value="" disabled selected>Choose a tier…</option>
+            <option value="normal">🤍 Normal Heart — ₱50 / $1</option>
+            <option value="gold">💛 Gold Heart — ₱250 / $10</option>
+            <option value="diamond">💎 Diamond Heart — ₱1,000 / $50</option>
+            <option value="real">❤️ Real Heart — above ₱1,000 / $50</option>
+            <option value="ghost">👻 Ghost Heart — odd amount below ₱1,000 / $50</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Amount you sent</span>
+          <input type="number" id="donateAmount" step="0.01" min="0" placeholder="50" required />
+        </label>
+        <label class="field">
+          <span>Reference number</span>
+          <input type="text" id="donateRef" placeholder="From your payment app" required />
+        </label>
+        <label class="field">
+          <span>Subdomain to boost</span>
+          <div class="domain-input">
+            <input type="text" id="donateUsername" placeholder="yourname" required autocomplete="off" spellcheck="false" />
+            <span class="domain-suffix">.proves.work</span>
           </div>
-          <ul class="price-features">
-            <li class="price-feature-nowrap">✓ your-name.proves.work reserved</li>
-            <li>✓ Cheaper than a real domain + host</li>
-            <li>✓ No Cloudflare setup needed</li>
-            <li>✓ Add a portfolio anytime</li>
-          </ul>
-          <button type="button" class="btn btn-ghost" style="width:100%;justify-content:center" id="domainClaimOpenBtn">Reserve it →</button>
-        </div>
-      </div>
+        </label>
+        <label class="field">
+          <span>Email (optional)</span>
+          <input type="email" id="donateEmail" placeholder="you@example.com" />
+        </label>
+        <button type="submit" class="btn btn-primary btn-block">Submit donation</button>
+        <p class="username-status" id="donateStatus"></p>
+      </form>
     </section>
 
-    <!-- SLIDE 6: CTA / FOOTER -->
-    <section class="panel panel-cta" id="slide-5">
-      <div class="cta-inner">
-        <p class="eyebrow" style="color:var(--color-accent)">You're one link away</p>
-        <h2 class="cta-title">Ready to back up your statements?</h2>
-        <p class="cta-sub">Stop telling people what you've done. Show them, with a link.</p>
-        <a href="editor.html" class="btn btn-gradient cta-btn">Open your workspace — it's free →</a>
-        <div class="cta-links">
-          <a href="showcase.html">Browse Showcase</a>
-          <span>·</span>
-          <a href="editor.html">Open Editor</a>
-        </div>
-        <div class="cta-honesty">
-          <span class="cta-honesty-label">The fine print, honestly</span>
-          <p>Built solo with a lot of AI assistance and run on Cloudflare's free tier. It's offered as-is: no guaranteed uptime, no support line, no roadmap. If something breaks, it may stay broken for a while.</p>
-          <p>Donations aren't payment for a service — they just help cover the one recurring cost (the domain), and they're genuinely appreciated either way.</p>
-        </div>
-        <p class="cta-copy">© 2026 proves.work · Built with ❤️</p>
+    <!-- ── SHOWCASE (infinite scroll) ───────────────────── -->
+    <section class="section showcase-section" id="showcase">
+      <div class="showcase-hero">
+        <span class="eyebrow">Community</span>
+        <h2>The showcase</h2>
+        <p class="showcase-sub">
+          Subdomains boosted here by donors, hand-picked and tagged from <a href="admin.html">/admin</a>.
+          <span class="showcase-legend-inline">Open-source badge</span> shows on repo-backed sites.
+        </p>
       </div>
+      <div id="showcaseGrid" class="showcase-grid"></div>
+      <p class="username-status" id="showcaseStatus"></p>
     </section>
 
-  </div>
+    <footer class="site-footer">
+      <p>proves.work is open source. Fork it, self-host it, improve it.</p>
+    </footer>
 
-  <script src="home.js"></script>
-  <script>
-    (function () {
-      const tabEditor = document.getElementById('demoTabEditor');
-      const tabPortfolio = document.getElementById('demoTabPortfolio');
-      const winEditor = document.getElementById('epdWindowEditor');
-      const winPortfolio = document.getElementById('epdWindowPortfolio');
-      if (!tabEditor || !tabPortfolio) return;
-      tabEditor.addEventListener('click', () => {
-        tabEditor.classList.add('active');
-        tabPortfolio.classList.remove('active');
-        winEditor.classList.remove('hidden');
-        winPortfolio.classList.add('hidden');
-      });
-      tabPortfolio.addEventListener('click', () => {
-        tabPortfolio.classList.add('active');
-        tabEditor.classList.remove('active');
-        winPortfolio.classList.remove('hidden');
-        winEditor.classList.add('hidden');
-      });
-    })();
-  </script>
-  
-  <!-- FIX ROOT DOMAIN RAPID TICKER ENGINE -->
-  <script type="module">
-    document.addEventListener('DOMContentLoaded', () => {
-      const tickerTarget = document.getElementById('tickerTarget');
-      const actionsTarget = document.getElementById('actionsTarget');
+  </main>
 
-      const urlParams = new URLSearchParams(window.location.search);
-      const customName = urlParams.get('name');
-      const storedName = localStorage.getItem('user_first_name');
-      
-      // The final prefix target is set dynamically, defaulting to "everyone"
-      const finalTargetPrefix = customName || storedName || "everyone";
-
-      const basePrefixes = [
-        "luca", "lebron", "leni", "juan", "yuki", 
-        "mei", "aarav", "sofia", "kwame", "amélie", 
-        "nikolai", "tariq", "chloe", "mateo", "soraya", 
-        "sven", "ji-woo", "kenji", "anya", "oxana"
-      ];
-
-      const prefixes = [...basePrefixes, finalTargetPrefix];
-      let currentIndex = 0;
-      const stepSpeedTime = 110; // Rapid succession speed
-
-      function cyclePrefix() {
-        if (currentIndex < prefixes.length) {
-          const currentPrefix = prefixes[currentIndex];
-          
-          if (currentPrefix === finalTargetPrefix) {
-            // Render the final string with 'everyone' or the custom name italicized
-            tickerTarget.innerHTML = `<em>${currentPrefix}</em><span class="tld-accent">.proves.work</span>`;
-            currentIndex++;
-            
-            // Lock on this final state for 1 second before displaying tags and CTAs
-            setTimeout(revealSubElements, 1000);
-          } else {
-            // Rapid swap without any visual fade adjustments
-            tickerTarget.innerHTML = `${currentPrefix}<span class="tld-accent">.proves.work</span>`;
-            currentIndex++;
-            setTimeout(cyclePrefix, stepSpeedTime);
-          }
-        }
-      }
-
-      // Start looping elements immediately
-      cyclePrefix();
-
-      function revealSubElements() {
-        // Removed taglineTarget code to prevent null reference errors
-        actionsTarget.classList.add('visible');
-      }
-    });
-  </script>
-
-  <!-- DOMAIN-ONLY CLAIM MODAL -->
-  <div class="domain-modal-overlay hidden" id="domainModalOverlay">
-    <div class="domain-modal" id="domainModalContent"></div>
-  </div>
-
-  <!-- PRICE LIST POPUP — reached from "Price list" button on the
-       "I'll do this later" success step, so an undecided buyer still
-       has the price + QR + redirect-vs-adaptation explanation on hand. -->
-  <div class="domain-modal-overlay hidden" id="pricelistOverlay" style="z-index:1001;">
-    <div class="domain-modal" id="pricelistContent"></div>
-  </div>
-
-  <style>
-    .domain-modal-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 1000; padding: 1rem;
-    }
-    .domain-modal-overlay.hidden { display: none; }
-    .domain-modal {
-      background: var(--color-surface, #fff);
-      border: 2px solid var(--color-border, #000);
-      box-shadow: var(--shadow, 6px 6px 0 0 #000);
-      padding: 2rem;
-      width: 100%;
-      max-width: 420px;
-    }
-    .domain-modal h3 { margin: 0 0 0.5rem; font-family: var(--font-display); font-size: 1.2rem; }
-    .domain-modal p.sub { margin: 0 0 1.25rem; color: var(--color-text-muted, #6b7280); font-size: 0.9rem; }
-    .domain-signin-slot {
-      display: flex;
-      justify-content: center;
-      margin: 0.25rem 0 1.5rem;
-    }
-    .domain-modal input[type="text"],
-    .domain-modal input[type="email"] {
-      width: 100%; padding: 0.65rem 0.85rem; border: 2px solid var(--color-border, #000);
-      font-size: 1rem; font-family: inherit; margin-bottom: 0.5rem; box-sizing: border-box;
-    }
-    .domain-modal .domain-suffix { color: var(--color-text-muted, #6b7280); font-size: 0.85rem; margin-bottom: 1rem; }
-    .domain-modal .status-line { font-size: 0.85rem; min-height: 1.2em; margin-bottom: 0.75rem; }
-    .domain-modal .status-line.warn { color: #c0392b; }
-    .domain-modal .status-line.ok { color: #1f9d55; }
-    .domain-modal .actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem; }
-    .domain-modal .close-x {
-      position: absolute; top: 0.75rem; right: 1rem; background: none; border: none;
-      font-size: 1.2rem; cursor: pointer; color: var(--color-text-muted, #6b7280);
-    }
-    .domain-modal { position: relative; }
-  </style>
-
-  <!-- Google Identity Services — used only to attach a verified email
-       to a domain reservation, same trust model as the editor's
-       publish flow. -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script type="module">
-    // Must match GOOGLE_CLIENT_ID in worker/src/index.js and editor.js.
-    const GOOGLE_CLIENT_ID = '41010460965-oti1phnr8kdbij312qijrg82bc2japj7.apps.googleusercontent.com';
-    const GOOGLE_ACCOUNT_KEY = 'proveswork_google_account';
-
-    // Scaling one-time price for a domain-only (.proves.work) reservation:
-    // ₱199 for 1 month up to ₱599 for the max 12 months — the longer the
-    // lock-in, the cheaper it is per month, even though the one-time total
-    // still ticks up slightly with duration. Keep in sync with the
-    // DOMAIN_PRICE_MIN/MAX/MAX_MONTHS constants in worker/src/index.js.
-    const DOMAIN_PRICE_MIN = 199;
-    const DOMAIN_PRICE_MAX = 599;
-    const DOMAIN_MAX_MONTHS = 12;
-    function domainPrice(months) {
-      const m = Math.min(Math.max(Number(months) || 1, 1), DOMAIN_MAX_MONTHS);
-      return Math.round(DOMAIN_PRICE_MIN + (DOMAIN_PRICE_MAX - DOMAIN_PRICE_MIN) * (m - 1) / (DOMAIN_MAX_MONTHS - 1));
-    }
-
-    // Wire up the live price preview on the pricing card itself.
-    const homeSlider = document.getElementById('homeDomainMonthsSlider');
-    const homePriceDisplay = document.getElementById('homeDomainPriceDisplay');
-    const homeMonthsLabel = document.getElementById('homeDomainMonthsLabel');
-    if (homeSlider) {
-      homeSlider.addEventListener('input', () => {
-        const m = Number(homeSlider.value);
-        homePriceDisplay.innerHTML = `<div class="price-amount-row"><s class="price-was">₱1,999</s>₱${domainPrice(m)}</div><span class="price-amount-duration">/ ${m} mo${m > 1 ? 's' : ''}</span>`;
-        homeMonthsLabel.textContent = `${m} month${m > 1 ? 's' : ''}`;
-      });
-    }
-
-    function decodeGoogleCredential(credential) {
-      const payload = credential.split('.')[1];
-      return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-    }
-    // Google ID tokens expire (usually ~1hr) — without this check, an
-    // account saved earlier in the session would still show "Signed in
-    // as ..." here while the server silently rejects the now-stale
-    // token, producing exactly the confusing "signed in, but told to
-    // sign in" state. Treat an expired token as no account at all, and
-    // clear it so the sign-in button reappears.
-    function getSavedGoogleAccount() {
-      let account;
-      try { account = JSON.parse(localStorage.getItem(GOOGLE_ACCOUNT_KEY) || 'null'); }
-      catch { return null; }
-      if (!account || !account.credential) return null;
-      try {
-        const payload = decodeGoogleCredential(account.credential);
-        if (!payload.exp || payload.exp * 1000 <= Date.now()) {
-          localStorage.removeItem(GOOGLE_ACCOUNT_KEY);
-          return null;
-        }
-      } catch {
-        localStorage.removeItem(GOOGLE_ACCOUNT_KEY);
-        return null;
-      }
-      return account;
-    }
-    function saveGoogleAccount(account) {
-      localStorage.setItem(GOOGLE_ACCOUNT_KEY, JSON.stringify(account));
-    }
-
-    const overlay = document.getElementById('domainModalOverlay');
-    const content = document.getElementById('domainModalContent');
-
-    function closeDomainModal() {
-      overlay.classList.add('hidden');
-      content.innerHTML = '';
-    }
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeDomainModal(); });
-
-    let checkTimer = null;
-
-    function renderClaimStep() {
-      const account = getSavedGoogleAccount();
-      const initialMonths = Number((homeSlider && homeSlider.value) || 1);
-      content.innerHTML = `
-        <button type="button" class="close-x" id="domainCloseBtn" aria-label="Close">✕</button>
-        <h3>Reserve your name</h3>
-        <p class="sub">Just the address, no portfolio required — add one later anytime.</p>
-        ${account
-          ? `<p class="sub" style="margin-bottom:1.25rem">Signed in as <strong>${account.email}</strong></p>`
-          : `<div id="domainSignInSlot" class="domain-signin-slot"></div>`}
-        <input type="text" id="domainNameInput" placeholder="yourname" autocomplete="off" />
-        <div class="domain-suffix">.proves.work</div>
-        <div class="status-line" id="domainStatusLine"></div>
-        <div class="price-duration-row" style="margin: 0.75rem 0;">
-          <input type="range" min="1" max="${DOMAIN_MAX_MONTHS}" step="1" value="${initialMonths}" id="domainMonthsSlider" aria-label="Reservation length in months" />
-          <div class="price-duration-label">
-            <span id="domainMonthsLabel">${initialMonths} month${initialMonths > 1 ? 's' : ''}</span>
-            <span id="domainAmountLabel">₱${domainPrice(initialMonths)} one-time</span>
-          </div>
-        </div>
-        <div class="actions">
-          <button type="button" class="btn btn-ghost btn-sm" id="domainCancelBtn">Cancel</button>
-          <button type="button" class="btn btn-primary btn-sm" id="domainSubmitBtn" ${account ? '' : 'disabled'}>Reserve it</button>
-        </div>
-      `;
-
-      document.getElementById('domainCloseBtn').addEventListener('click', closeDomainModal);
-      document.getElementById('domainCancelBtn').addEventListener('click', closeDomainModal);
-
-      const monthsSlider = document.getElementById('domainMonthsSlider');
-      const monthsLabel = document.getElementById('domainMonthsLabel');
-      const amountLabel = document.getElementById('domainAmountLabel');
-      monthsSlider.addEventListener('input', () => {
-        const m = Number(monthsSlider.value);
-        monthsLabel.textContent = `${m} month${m > 1 ? 's' : ''}`;
-        amountLabel.textContent = `₱${domainPrice(m)} one-time`;
-      });
-
-      const input = document.getElementById('domainNameInput');
-      const statusLine = document.getElementById('domainStatusLine');
-      const submitBtn = document.getElementById('domainSubmitBtn');
-
-      input.addEventListener('input', () => {
-        clearTimeout(checkTimer);
-        const val = input.value.trim().toLowerCase();
-        if (!val) { statusLine.textContent = ''; return; }
-        statusLine.textContent = 'Checking…';
-        statusLine.className = 'status-line';
-        checkTimer = setTimeout(async () => {
-          try {
-            const acc = getSavedGoogleAccount();
-            const res = await fetch('/api/check-username', {
-              method: 'POST',
-              headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({ username: val, googleCredential: acc ? acc.credential : undefined })
-            });
-            const data = await res.json();
-            const isOk = data.available || data.ownedByYou;
-            statusLine.textContent = isOk
-              ? `${val}.proves.work is available`
-              : (data.reason === 'invalid' ? 'That name is invalid.' : 'That name is already taken.');
-            statusLine.className = `status-line ${isOk ? 'ok' : 'warn'}`;
-          } catch {
-            statusLine.textContent = "Couldn't check availability — try again.";
-            statusLine.className = 'status-line warn';
-          }
-        }, 400);
-      });
-
-      if (!getSavedGoogleAccount() && window.google && window.google.accounts && window.google.accounts.id) {
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: (response) => {
-            const payload = decodeGoogleCredential(response.credential);
-            saveGoogleAccount({ email: payload.email, name: payload.name, credential: response.credential });
-            renderClaimStep();
-          }
-        });
-        window.google.accounts.id.renderButton(document.getElementById('domainSignInSlot'), { theme: 'outline', size: 'medium', text: 'signin_with' });
-      }
-
-      submitBtn.addEventListener('click', async () => {
-        const val = input.value.trim().toLowerCase();
-        const acc = getSavedGoogleAccount();
-        if (!val) { statusLine.textContent = 'Enter a name first.'; statusLine.className = 'status-line warn'; return; }
-        if (!acc) { statusLine.textContent = 'Sign in with Google first.'; statusLine.className = 'status-line warn'; return; }
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Reserving…';
-        try {
-          const months = Number(monthsSlider.value);
-          const res = await fetch('/api/domain/claim', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ username: val, googleCredential: acc.credential, months, amount: domainPrice(months) })
-          });
-          const data = await res.json();
-          if (!data.ok) {
-            statusLine.textContent = data.error || 'Something went wrong.';
-            statusLine.className = 'status-line warn';
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Reserve it';
-            return;
-          }
-          renderPaymentStep(val, months, acc);
-        } catch {
-          statusLine.textContent = 'Network error — try again.';
-          statusLine.className = 'status-line warn';
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Reserve it';
-        }
-      });
-    }
-
-    // Shown right after a name is reserved: the buyer still needs to
-    // actually pay (scan the QR) and tell us how, so an admin can match
-    // the payment to this reservation and confirm it by hand. Nothing
-    // here makes the address live on its own — this only records the
-    // buyer's own claim of payment for the admin to verify.
-    function renderPaymentStep(username, months, account) {
-      const m = Number(months) || 1;
-      const amount = domainPrice(m);
-      content.innerHTML = `
-        <button type="button" class="close-x" id="domainCloseBtn3" aria-label="Close">✕</button>
-        <h3>Pay to confirm your reservation</h3>
-        <p class="sub"><strong>${username}.proves.work</strong> is held for you. Scan the QR below to pay <strong>₱${amount}</strong> (${m} month${m > 1 ? 's' : ''}), then enter the reference number from your payment so an admin can confirm it.</p>
-        <img src="payment-qr.png" alt="Payment QR code" width="220" height="220" style="display:block;margin:0 auto 1rem;border-radius:12px;border:1px solid rgba(0,0,0,0.08);" />
-        <input type="text" id="domainRefInput" placeholder="Payment reference number" autocomplete="off" />
-        <div class="status-line" id="domainRefStatus"></div>
-        <div class="actions">
-          <button type="button" class="btn btn-ghost btn-sm" id="domainRefLaterBtn">I'll do this later</button>
-          <button type="button" class="btn btn-primary btn-sm" id="domainRefSubmitBtn">Submit reference</button>
-        </div>
-      `;
-      document.getElementById('domainCloseBtn3').addEventListener('click', closeDomainModal);
-      document.getElementById('domainRefLaterBtn').addEventListener('click', () => renderSuccessStep(username, months, false));
-
-      document.getElementById('domainRefSubmitBtn').addEventListener('click', async () => {
-        const refInput = document.getElementById('domainRefInput');
-        const refStatus = document.getElementById('domainRefStatus');
-        const ref = refInput.value.trim();
-        if (!ref) { refStatus.textContent = 'Enter your payment reference number.'; refStatus.className = 'status-line warn'; return; }
-        const btn = document.getElementById('domainRefSubmitBtn');
-        btn.disabled = true;
-        btn.textContent = 'Submitting…';
-        try {
-          const res = await fetch('/api/domain/submit-proof', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ username, googleCredential: account.credential, referenceNumber: ref })
-          });
-          const data = await res.json();
-          if (!data.ok) {
-            refStatus.textContent = data.error || 'Something went wrong.';
-            refStatus.className = 'status-line warn';
-            btn.disabled = false;
-            btn.textContent = 'Submit reference';
-            return;
-          }
-          renderSuccessStep(username, months, true);
-        } catch {
-          refStatus.textContent = 'Network error — try again.';
-          refStatus.className = 'status-line warn';
-          btn.disabled = false;
-          btn.textContent = 'Submit reference';
-        }
-      });
-    }
-
-    function renderSuccessStep(username, months, refSubmitted) {
-      const m = Number(months) || 1;
-      content.innerHTML = `
-        <button type="button" class="close-x" id="domainCloseBtn2" aria-label="Close">✕</button>
-        <h3>Request received 🎉</h3>
-        <p class="sub"><strong>${username}.proves.work</strong> is reserved for you pending payment confirmation (₱${domainPrice(m)} one-time, ${m} month${m > 1 ? 's' : ''}). An admin reviews and confirms every payment by hand${refSubmitted ? ' — we have your reference number' : ''}; once confirmed, the address goes live automatically.</p>
-        <p class="sub">Anytime after that, come back to <strong>proves.work/manage</strong> to point this address at an existing page (Carrd, Gumroad, Vercel, etc.) or check your payment status.</p>
-        <div class="actions">
-          ${!refSubmitted ? `<button type="button" class="btn btn-ghost btn-sm" id="pricelistBtn">Price list</button>` : ''}
-          <a href="manage.html" class="btn btn-ghost btn-sm">Go to /manage</a>
-          <button type="button" class="btn btn-primary btn-sm" id="domainDoneBtn">Got it</button>
-        </div>
-      `;
-      document.getElementById('domainCloseBtn2').addEventListener('click', closeDomainModal);
-      document.getElementById('domainDoneBtn').addEventListener('click', closeDomainModal);
-      const pricelistBtn = document.getElementById('pricelistBtn');
-      if (pricelistBtn) pricelistBtn.addEventListener('click', () => openPricelistPopup(username, months));
-    }
-
-    // Reference popup shown from "Price list" — reminds a buyer who said
-    // "I'll do this later" what they still owe and how to pay it, plus
-    // clarifies the two things a domain-only purchase can mean.
-    const pricelistOverlay = document.getElementById('pricelistOverlay');
-    const pricelistContent = document.getElementById('pricelistContent');
-    function closePricelistPopup() {
-      pricelistOverlay.classList.add('hidden');
-      pricelistContent.innerHTML = '';
-    }
-    pricelistOverlay.addEventListener('click', (e) => { if (e.target === pricelistOverlay) closePricelistPopup(); });
-
-    function openPricelistPopup(username, months) {
-      const m = Number(months) || 1;
-      const amount = domainPrice(m);
-      pricelistContent.innerHTML = `
-        <button type="button" class="close-x" id="pricelistCloseBtn" aria-label="Close">✕</button>
-        <h3>Price list</h3>
-        <p class="sub">For reference — <strong>${username}.proves.work</strong>, ${m} month${m > 1 ? 's' : ''}: <strong>₱${amount}</strong> one-time. (₱199 for 1 month, up to ₱599 for a full 12 months.)</p>
-        <img src="payment-qr.png" alt="Payment QR code" width="180" height="180" style="display:block;margin:0 auto 1rem;border-radius:12px;border:1px solid rgba(0,0,0,0.08);" />
-        <p class="sub" style="margin-bottom:0.5rem"><strong>Two ways this can go once it's paid:</strong></p>
-        <ul style="margin:0 0 1.25rem;padding-left:1.1rem;font-size:0.85rem;color:var(--color-text-muted,#6b7280);">
-          <li style="margin-bottom:0.5rem"><strong>Just a redirect</strong> — ${username}.proves.work forwards visitors to a page you already have elsewhere (Carrd, Gumroad, Vercel, etc.). No portfolio is built on our end.</li>
-          <li><strong>Full adaptation</strong> — we build the actual page that lives at ${username}.proves.work, so it's a real site on the domain itself, not a forward to somewhere else.</li>
-        </ul>
-        <div class="actions">
-          <button type="button" class="btn btn-primary btn-sm" id="pricelistOkBtn">Got it</button>
-        </div>
-      `;
-      pricelistOverlay.classList.remove('hidden');
-      document.getElementById('pricelistCloseBtn').addEventListener('click', closePricelistPopup);
-      document.getElementById('pricelistOkBtn').addEventListener('click', closePricelistPopup);
-    }
-
-    document.getElementById('domainClaimOpenBtn').addEventListener('click', () => {
-      overlay.classList.remove('hidden');
-      renderClaimStep();
-    });
-
-    // ── Contact form ──────────────────────────────────────────────
-    // Posts to /api/contact on the Worker; the destination address
-    // and any send credentials live only server-side, never here.
-    const contactOverlay = document.getElementById('contactModalOverlay');
-    const contactForm = document.getElementById('contactForm');
-    const contactStatus = document.getElementById('contactStatus');
-    const contactSubmitBtn = document.getElementById('contactSubmitBtn');
-
-    function openContactModal() {
-      contactOverlay.classList.remove('hidden');
-      contactStatus.textContent = '';
-      contactStatus.className = 'status-line';
-      document.getElementById('contactMessage').focus();
-    }
-    function closeContactModal() {
-      contactOverlay.classList.add('hidden');
-    }
-    contactOverlay.addEventListener('click', (e) => { if (e.target === contactOverlay) closeContactModal(); });
-    window.openContactModal = openContactModal;
-    window.closeContactModal = closeContactModal;
-
-    contactForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const message = document.getElementById('contactMessage').value.trim();
-      if (!message) return;
-
-      contactSubmitBtn.disabled = true;
-      contactSubmitBtn.textContent = 'Sending…';
-      contactStatus.textContent = '';
-      contactStatus.className = 'status-line';
-
-      try {
-        const res = await fetch('/api/contact', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: document.getElementById('contactName').value.trim(),
-            email: document.getElementById('contactEmail').value.trim(),
-            message,
-            company: document.getElementById('contactCompany').value // honeypot
-          })
-        });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok && data.ok) {
-          contactStatus.textContent = "Sent — thanks! We'll get back to you soon.";
-          contactStatus.className = 'status-line ok';
-          contactForm.reset();
-          setTimeout(closeContactModal, 1600);
-        } else {
-          contactStatus.textContent = data.error || 'Could not send. Please try again.';
-          contactStatus.className = 'status-line warn';
-        }
-      } catch {
-        contactStatus.textContent = 'Network error — please try again.';
-        contactStatus.className = 'status-line warn';
-      } finally {
-        contactSubmitBtn.disabled = false;
-        contactSubmitBtn.textContent = 'Send message';
-      }
-    });
-  </script>
+  <script src="home.js" defer></script>
 </body>
 </html>

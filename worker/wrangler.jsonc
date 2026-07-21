@@ -5,11 +5,9 @@
   "compatibility_date": "2026-07-03",
 
   // Only these two patterns are routed to this Worker.
-  // Everything else on proves.work (the editor, marketing
-  // page, css, js) keeps being served by whatever hosts that
-  // domain today — untouched by this Worker.
-  // "zone_name" is the Cloudflare zone (your registered domain,
-  // proves.work itself, since this is the apex now, not a subdomain).
+  // Everything else on proves.work (the marketing page, css, js)
+  // keeps being served by whatever hosts that domain today —
+  // untouched by this Worker.
   "routes": [
     { "pattern": "proves.work/api/*", "zone_name": "proves.work" },
     { "pattern": "*.proves.work/*", "zone_name": "proves.work" }
@@ -20,22 +18,15 @@
       "binding": "SITES",
       "id": "06ef81d83ca54bfaa3cc4ff7a8ecaf10"
     }
-  ],
+  ]
 
-  // Cloudflare Workers AI — runs open-source models (Llama 3.1 8B here)
-  // directly on Cloudflare's infrastructure. Free tier: 10,000 "neurons"
-  // per day, no external API key/account needed, nothing to rotate. This
-  // powers the résumé-check and tailor-to-job-posting AI features.
-  // Docs: https://developers.cloudflare.com/workers-ai/
-  "ai": {
-    "binding": "AI"
-  }
-
-  // The public Contact form (POST /api/contact) sends via Resend
-  // (https://resend.com). Set the API key as a secret — never commit
-  // it here — with:
+  // The public Contact/Donation form (POST /api/contact) sends via
+  // Resend (https://resend.com) for plain contact messages. Set the
+  // API key as a secret — never commit it here — with:
   //   npx wrangler secret put RESEND_API_KEY
   // Until that secret is set, contact messages are still safely kept
   // (in the SITES KV namespace, under the "contact:" prefix) rather
-  // than being dropped, but no email is actually sent.
+  // than being dropped, but no email is actually sent. Donation
+  // submissions are always stored in KV either way, for you to review
+  // and confirm by hand at /admin.
 }
