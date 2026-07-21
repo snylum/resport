@@ -1,4 +1,4 @@
-<img width="596" height="484" alt="image" src="https://github.com/user-attachments/assets/cafc3789-3543-4af1-851e-07b5212c4578" /># proves.work
+# proves.work
 
 **Free `your-name.proves.work` subdomains**
 
