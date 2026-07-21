@@ -6,59 +6,56 @@ body.is-loading { opacity: 0; }
 body { opacity: 1; transition: opacity .3s ease; }
 
 /* ── Vertical slides: each section fills the viewport (minus the
-   sticky nav) and snaps into place on scroll, one at a time. ────── */
-html { scroll-behavior: smooth; }
-
-body {
-  height: 100vh;
-  overflow: hidden;
-}
-
-main {
-  height: calc(100vh - 56px);
-  overflow-y: scroll;
-  overflow-x: hidden;
-  scroll-snap-type: y mandatory;
+   sticky nav) exactly, with no internal scrollbar — sizing is fluid
+   (tied to viewport height) so content shrinks to fit rather than
+   overflowing. The document itself scroll-snaps between slides, so
+   native momentum/inertia does the paging (smooth on trackpad, mouse,
+   and touch alike). ────────────────────────────────────────────── */
+html {
   scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: y mandatory;
+  height: 100%;
 }
+body { min-height: 100%; }
 
-/* Each slide is exactly one viewport tall (minus the pinned nav) and
-   snaps fully into place — no partial-slide peeking, no free scroll. */
+main { display: block; }
+
 .section {
-  max-width: 980px;
+  width: 100%;
+  max-width: 1240px;
   margin: 0 auto;
-  padding: 2.5rem 1.5rem;
+  padding: clamp(1rem, 3vh, 2.5rem) clamp(1rem, 4vw, 2.5rem);
+  height: 100dvh;
   height: calc(100vh - 56px);
-  max-height: calc(100vh - 56px);
+  height: calc(100dvh - 56px);
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
   scroll-snap-align: start;
   scroll-snap-stop: always;
   box-sizing: border-box;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
-/* Fade + rise each slide in as it becomes the active one, for a
-   smoother feel than a hard snap-cut. */
+.site-footer {
+  scroll-snap-align: start;
+  height: auto;
+  min-height: auto;
+}
+
+/* Gentle fade + rise as each slide becomes active — subtle enough not
+   to fight the native scroll momentum. */
 .section,
 .site-footer {
-  opacity: 0.35;
-  transform: translateY(24px);
-  transition: opacity .5s ease, transform .5s ease;
+  opacity: 0.55;
+  transform: translateY(12px);
+  transition: opacity .4s ease-out, transform .4s ease-out;
 }
 .section.in-view,
 .site-footer.in-view {
   opacity: 1;
   transform: translateY(0);
-}
-
-.site-footer {
-  scroll-snap-align: start;
-  min-height: auto;
-  height: auto;
-  max-height: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -67,10 +64,10 @@ main {
 
 /* ── Hero ─────────────────────────────────────────────── */
 .hero-section { text-align: center; }
-.hero-inner { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 1.25rem; }
+.hero-inner { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: clamp(.6rem, 2vh, 1.25rem); }
 .eyebrow { font-size: .7rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--color-primary); }
-.hero-section h1 { font-size: clamp(2.2rem, 5vw, 3.4rem); line-height: 1.1; }
-.hero-sub { color: var(--color-text-muted); font-size: 1.05rem; max-width: 620px; }
+.hero-section h1 { font-size: clamp(1.8rem, 4.5vh, 3.4rem); line-height: 1.1; }
+.hero-sub { color: var(--color-text-muted); font-size: clamp(.85rem, 2vh, 1.05rem); max-width: 620px; }
 .hero-actions { display: flex; gap: .75rem; flex-wrap: wrap; justify-content: center; margin-top: .5rem; }
 .user-count-tag { font-size: .8rem; color: var(--color-text-muted); margin-top: .5rem; }
 
@@ -80,39 +77,75 @@ main {
 .btn-block { width: 100%; text-align: center; }
 
 /* ── How it works ─────────────────────────────────────── */
-.how-section h2, .claim-section h2, .donate-section h2 { text-align: center; margin-bottom: .5rem; font-size: clamp(1.6rem, 3vw, 2.2rem); }
-.section-sub { text-align: center; color: var(--color-text-muted); max-width: 620px; margin: 0 auto 2.5rem; }
-.how-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; margin-top: 2.5rem; }
-.how-card { background: var(--color-surface); border: 2px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 1.5rem; }
+.how-section h2, .claim-section h2, .donate-section h2 { text-align: center; margin-bottom: .5rem; font-size: clamp(1.3rem, 3.5vh, 2.2rem); }
+.section-sub { text-align: center; color: var(--color-text-muted); max-width: 680px; margin: 0 auto clamp(1rem, 3vh, 2.5rem); font-size: clamp(.8rem, 1.8vh, 1rem); }
+.how-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: clamp(.75rem, 2vh, 1.25rem); margin-top: clamp(1rem, 3vh, 2.5rem); width: 100%; }
+.how-card { background: var(--color-surface); border: 2px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: clamp(1rem, 2.5vh, 1.5rem); }
 .how-num { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 50%; background: var(--color-accent); font-weight: 700; margin-bottom: .75rem; }
-.how-card h3 { font-size: 1.05rem; margin-bottom: .35rem; }
-.how-card p { color: var(--color-text-muted); font-size: .9rem; }
+.how-card h3 { font-size: clamp(.95rem, 2vh, 1.05rem); margin-bottom: .35rem; }
+.how-card p { color: var(--color-text-muted); font-size: clamp(.8rem, 1.7vh, .9rem); }
 
 /* ── Claim form ───────────────────────────────────────── */
-.claim-tabs { display: flex; gap: .5rem; justify-content: center; margin-bottom: 1.75rem; }
-.claim-tab { padding: .6rem 1.25rem; border-radius: var(--radius); border: 2px solid var(--color-border); background: var(--color-surface); font-weight: 600; cursor: pointer; }
+.claim-tabs { display: flex; gap: .5rem; justify-content: center; margin-bottom: clamp(.75rem, 2vh, 1.75rem); }
+.claim-tab { padding: .55rem 1.15rem; border-radius: var(--radius); border: 2px solid var(--color-border); background: var(--color-surface); font-weight: 600; cursor: pointer; font-size: clamp(.8rem, 1.7vh, .95rem); }
 .claim-tab.active { background: var(--color-secondary); color: #fff; }
 
-.claim-form { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem; background: var(--color-surface); border: 2px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 2rem; }
-.field { display: flex; flex-direction: column; gap: .4rem; font-size: .85rem; font-weight: 600; }
-.field input, .field select { font: inherit; padding: .65rem .8rem; border-radius: var(--radius); border: 2px solid var(--color-border); background: var(--color-background); }
+.claim-form {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(.5rem, 1.6vh, 1rem);
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: clamp(1.1rem, 3vh, 2rem);
+}
+.field { display: flex; flex-direction: column; gap: .3rem; font-size: clamp(.78rem, 1.6vh, .85rem); font-weight: 600; }
+.field input, .field select { font: inherit; padding: clamp(.5rem, 1.4vh, .65rem) .8rem; border-radius: var(--radius); border: 2px solid var(--color-border); background: var(--color-background); }
 .domain-input { display: flex; align-items: center; border: 2px solid var(--color-border); border-radius: var(--radius); overflow: hidden; background: var(--color-background); }
 .domain-input input { border: none; flex: 1; background: transparent; }
 .domain-suffix { padding: 0 .8rem; color: var(--color-text-muted); font-size: .85rem; white-space: nowrap; }
-.field-hint { font-weight: 400; color: var(--color-text-muted); font-size: .8rem; }
+.field-hint { font-weight: 400; color: var(--color-text-muted); font-size: .78rem; }
 .field-hint a { color: var(--color-primary); }
-.username-status { text-align: center; font-size: .85rem; min-height: 1.2em; }
+.username-status { text-align: center; font-size: .82rem; min-height: 1.1em; }
 .username-status.error { color: var(--color-danger); }
 .username-status.ok { color: var(--color-success); }
 .hidden { display: none !important; }
 
+/* Side-by-side fields on wider screens so the form takes less vertical
+   space and the display's width is put to use. */
+@media (min-width: 760px) {
+  #nocodeFields, #coderFields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; align-items: start; }
+  #coderFields .field-hint { grid-column: 1 / -1; }
+}
+
 /* ── Donate ───────────────────────────────────────────── */
-.donate-grid { display: flex; gap: 2.5rem; align-items: flex-start; justify-content: center; flex-wrap: wrap; margin-bottom: 2.5rem; }
-.donate-qr { width: 220px; height: 220px; object-fit: contain; border: 2px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow); background: #fff; }
-.tier-list { display: flex; flex-direction: column; gap: .6rem; min-width: 280px; }
-.tier-card { display: flex; align-items: center; gap: .75rem; padding: .8rem 1rem; border: 2px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
-.tier-card strong { display: block; font-size: .95rem; }
-.tier-card span { color: var(--color-text-muted); font-size: .82rem; }
+.donate-columns {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 3vh, 2rem);
+  width: 100%;
+  align-items: center;
+}
+.donate-grid { display: flex; gap: clamp(1rem, 3vw, 2.5rem); align-items: flex-start; justify-content: center; flex-wrap: wrap; }
+.donate-qr { width: clamp(120px, 16vh, 200px); height: clamp(120px, 16vh, 200px); object-fit: contain; border: 2px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow); background: #fff; }
+.tier-list { display: flex; flex-direction: column; gap: clamp(.35rem, 1vh, .6rem); min-width: 260px; }
+.tier-card { display: flex; align-items: center; gap: .75rem; padding: clamp(.5rem, 1.4vh, .8rem) 1rem; border: 2px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
+.tier-card strong { display: block; font-size: clamp(.85rem, 1.8vh, .95rem); }
+.tier-card span { color: var(--color-text-muted); font-size: clamp(.75rem, 1.5vh, .82rem); }
+.donate-section .claim-form { max-width: 420px; }
+
+/* Wide screens: QR/tiers on the left, donation form on the right, so
+   the whole thing sits in one row instead of stacking three sections
+   worth of height. */
+@media (min-width: 980px) {
+  .donate-columns { flex-direction: row; align-items: flex-start; justify-content: center; }
+  .donate-grid { flex-direction: column; align-items: center; }
+  .donate-section .claim-form { margin: 0; }
+}
 
 /* ── Pixel-art hearts (Undertale-style), one color per tier ─────── */
 .pixel-heart {
@@ -128,7 +161,8 @@ main {
 .pixel-heart--real    { color: #FF3366; }
 .pixel-heart--ghost   { color: #B9A7FF; opacity: .75; }
 
-/* ── Heart nav (navigation IS the hearts) ────────────────── */
+/* ── Heart nav: each heart is a direct "donate this tier" button,
+   not a section link — clicking it pops up that tier's fixed amount. */
 .nav-hearts { gap: .5rem; }
 
 .heart-link {
@@ -139,7 +173,9 @@ main {
   width: 34px;
   height: 34px;
   border-radius: var(--radius);
-  text-decoration: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
   transition: transform .15s ease, background .15s ease;
 }
 .heart-link:hover { background: var(--color-surface-alt); transform: translateY(-2px); }
@@ -147,20 +183,17 @@ main {
 .heart-link .pixel-heart {
   width: 1.35rem;
   height: 1.35rem;
-  opacity: .5;
-  transform: scale(.85);
+  opacity: .65;
+  transform: scale(.9);
   transition: opacity .2s ease, transform .2s ease;
 }
-.heart-link:hover .pixel-heart { opacity: .85; }
-
-.heart-link.active .pixel-heart {
+.heart-link:hover .pixel-heart,
+.heart-link:focus-visible .pixel-heart {
   opacity: 1;
-  transform: scale(1.15);
-  filter: drop-shadow(0 2px 3px rgba(26,26,26,0.25));
+  transform: scale(1.1);
 }
-.heart-link.active { background: var(--color-surface-alt); }
 
-/* Tooltip label under each heart, shown on hover/focus/active */
+/* Tooltip label under each heart, shown on hover/focus */
 .heart-tip {
   position: absolute;
   top: calc(100% + 6px);
@@ -193,10 +226,83 @@ main {
   .nav-cta { padding: .4rem .7rem; font-size: .75rem; }
 }
 
+/* ── Tier popup ───────────────────────────────────────────── */
+.tier-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(26,26,26,0.45);
+  padding: 1.5rem;
+  opacity: 1;
+  transition: opacity .15s ease;
+}
+.tier-popup.hidden { display: none; }
+
+.tier-popup-card {
+  position: relative;
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 2rem 1.75rem;
+  max-width: 320px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .5rem;
+}
+
+.tier-popup-close {
+  position: absolute;
+  top: .6rem;
+  right: .6rem;
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: .8rem;
+  line-height: 1;
+}
+.tier-popup-close:hover { background: var(--color-surface-alt); }
+
+.tier-popup-heart { width: 3rem; height: 3rem; margin-bottom: .25rem; }
+.tier-popup-card h3 { font-size: 1.15rem; }
+.tier-popup-amount { font-family: var(--font-display); font-size: 2rem; font-weight: 700; color: var(--color-primary); }
+.tier-popup-copy { color: var(--color-text-muted); font-size: .85rem; }
+.tier-popup-qr { width: 150px; height: 150px; object-fit: contain; border: 2px solid var(--color-border); border-radius: var(--radius-lg); background: #fff; margin: .25rem 0 .5rem; }
+
+.showcase-section {
+  justify-content: flex-start;
+  align-items: stretch;
+}
+.showcase-hero { flex: 0 0 auto; }
+#showcaseGrid { flex: 1 1 auto; min-height: 0; }
+#showcaseStatus { flex: 0 0 auto; }
+
 /* ── Footer ───────────────────────────────────────────── */
-.site-footer { text-align: center; padding: 3rem 1.5rem; color: var(--color-text-muted); font-size: .85rem; }
+.site-footer { text-align: center; padding: clamp(1.5rem, 4vh, 3rem) 1.5rem; color: var(--color-text-muted); font-size: .85rem; }
 
 @media (max-width: 640px) {
-  .section { padding: 3.5rem 1.25rem; }
-  .claim-form { padding: 1.5rem; }
+  .how-grid { grid-template-columns: repeat(2, 1fr); }
+  .donate-grid { gap: .75rem; }
+}
+
+/* Very short viewports (small landscape phones, short laptop windows):
+   shrink further and drop the how-grid to 2 columns so four cards fit
+   without overflow. */
+@media (max-height: 620px) {
+  .hero-inner { gap: .4rem; }
+  .how-grid { grid-template-columns: repeat(2, 1fr); gap: .5rem; }
+  .how-card { padding: .6rem .75rem; }
+  .how-num { width: 1.5rem; height: 1.5rem; margin-bottom: .3rem; }
+  .claim-form, .donate-section .claim-form { gap: .35rem; padding: .85rem 1rem; }
+  .tier-list { gap: .25rem; }
+  .tier-card { padding: .35rem .6rem; }
 }

@@ -1,0 +1,149 @@
+/*
+ * Dazed Dark — neon variant
+ * Same bones as dazed.css, but built for a near-black canvas so the
+ * signature hot-pink stays the loudest thing on the page — now with glow.
+ */
+
+:root[data-theme="dazed-dark"],
+.theme-dazed-dark {
+  --color-background: #0A0612;
+  --color-surface: #150B22;
+  --color-surface-alt: #1E1030;
+  --color-border: #FF2E9F;
+  --color-text: #F3EEFB;
+  --color-text-muted: #A99BC9;
+  --color-text-inverse: #0A0612;
+  --color-primary: #FF2E9F;
+  --color-primary-contrast: #0A0612;
+  --color-secondary: #9B6BFF;
+  --color-accent: #00F5C4;
+  --color-success: #00F5C4;
+  --color-warning: #FFC93C;
+  --color-danger: #FF4D6D;
+  --radius: 0rem;
+  --radius-lg: 0.25rem;
+  --shadow: 5px 5px 0 0 #FF2E9F, 0 0 22px 0 rgba(255,46,159,0.35);
+  --shadow-lg: 10px 10px 0 0 #FF2E9F, 0 0 34px 4px rgba(255,46,159,0.45);
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", "Inter", sans-serif;
+  --font-mono: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --gradient: linear-gradient(135deg, #FF2E9F 0%, #9B6BFF 50%, #00F5C4 100%);
+  --pattern:
+    radial-gradient(circle at 15% 20%, rgba(255,46,159,0.16), transparent 45%),
+    radial-gradient(circle at 85% 15%, rgba(155,107,255,0.14), transparent 45%),
+    radial-gradient(circle at 50% 90%, rgba(0,245,196,0.10), transparent 50%);
+}
+
+:root[data-theme="dazed-dark"] body,
+.theme-dazed-dark body {
+  background: var(--color-background);
+  background-image: var(--pattern);
+  background-attachment: fixed;
+  color: var(--color-text);
+  font-family: var(--font-sans);
+}
+
+/* Borders read as thin neon hairlines instead of solid black on dark. */
+:root[data-theme="dazed-dark"] .site-nav,
+:root[data-theme="dazed-dark"] .how-card,
+:root[data-theme="dazed-dark"] .claim-form,
+:root[data-theme="dazed-dark"] .tier-card,
+:root[data-theme="dazed-dark"] .donate-qr,
+:root[data-theme="dazed-dark"] .field input,
+:root[data-theme="dazed-dark"] .field select,
+:root[data-theme="dazed-dark"] .domain-input,
+:root[data-theme="dazed-dark"] .claim-tab,
+:root[data-theme="dazed-dark"] .btn,
+:root[data-theme="dazed-dark"] .showcase-card,
+:root[data-theme="dazed-dark"] .tier-popup-card,
+:root[data-theme="dazed-dark"] .tier-popup-close,
+:root[data-theme="dazed-dark"] .showcase-avatar {
+  border-color: rgba(255,46,159,0.45);
+}
+
+:root[data-theme="dazed-dark"] .site-nav {
+  background: rgba(10,6,18,0.86);
+  backdrop-filter: blur(10px);
+  border-bottom-color: rgba(255,46,159,0.5);
+  box-shadow: 0 2px 24px rgba(255,46,159,0.12);
+}
+
+/* Headings get a faint neon glow instead of flat ink. */
+:root[data-theme="dazed-dark"] h1,
+:root[data-theme="dazed-dark"] h2,
+:root[data-theme="dazed-dark"] h3 {
+  text-shadow: 0 0 18px rgba(255,46,159,0.25);
+}
+
+:root[data-theme="dazed-dark"] .eyebrow {
+  text-shadow: 0 0 10px rgba(255,46,159,0.55);
+}
+
+:root[data-theme="dazed-dark"] .btn-primary {
+  text-shadow: 0 0 8px rgba(10,6,18,0.4);
+}
+
+:root[data-theme="dazed-dark"] .btn-ghost {
+  background: rgba(255,255,255,0.03);
+  color: var(--color-text);
+}
+:root[data-theme="dazed-dark"] .btn-ghost:hover {
+  background: rgba(255,46,159,0.08);
+}
+
+:root[data-theme="dazed-dark"] .field input,
+:root[data-theme="dazed-dark"] .field select,
+:root[data-theme="dazed-dark"] .domain-input {
+  background: rgba(255,255,255,0.04);
+  color: var(--color-text);
+}
+:root[data-theme="dazed-dark"] .field input::placeholder {
+  color: rgba(169,155,201,0.6);
+}
+:root[data-theme="dazed-dark"] .field input:focus,
+:root[data-theme="dazed-dark"] .field select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(255,46,159,0.25);
+}
+
+:root[data-theme="dazed-dark"] .how-num {
+  color: #0A0612;
+  box-shadow: 0 0 14px rgba(0,245,196,0.5);
+}
+
+:root[data-theme="dazed-dark"] .pixel-heart--normal {
+  color: #F3EEFB;
+  filter:
+    drop-shadow(1px 0 0 #FF2E9F) drop-shadow(-1px 0 0 #FF2E9F)
+    drop-shadow(0 1px 0 #FF2E9F) drop-shadow(0 -1px 0 #FF2E9F)
+    drop-shadow(0 0 6px rgba(255,46,159,0.6));
+}
+:root[data-theme="dazed-dark"] .pixel-heart--gold    { filter: drop-shadow(0 0 6px rgba(255,201,60,0.65)); }
+:root[data-theme="dazed-dark"] .pixel-heart--diamond { filter: drop-shadow(0 0 7px rgba(0,229,240,0.7)); }
+:root[data-theme="dazed-dark"] .pixel-heart--real    { filter: drop-shadow(0 0 8px rgba(255,51,102,0.75)); }
+:root[data-theme="dazed-dark"] .pixel-heart--ghost   { filter: drop-shadow(0 0 6px rgba(185,167,255,0.55)); }
+
+:root[data-theme="dazed-dark"] .heart-link:hover,
+:root[data-theme="dazed-dark"] .heart-link:focus-visible {
+  background: rgba(255,46,159,0.1);
+  box-shadow: 0 0 16px rgba(255,46,159,0.25);
+}
+
+:root[data-theme="dazed-dark"] .donate-qr {
+  background: #fff;
+}
+
+:root[data-theme="dazed-dark"] .tier-popup {
+  background: rgba(5,3,10,0.72);
+  backdrop-filter: blur(6px);
+}
+
+:root[data-theme="dazed-dark"] .username-status.ok { color: #00F5C4; text-shadow: 0 0 8px rgba(0,245,196,0.5); }
+:root[data-theme="dazed-dark"] .username-status.error { color: #FF4D6D; text-shadow: 0 0 8px rgba(255,77,109,0.5); }
+
+/* Utility classes carried over from dazed.css */
+.theme-dazed-dark .af-surface { background: var(--color-surface); color: var(--color-text); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 1.5rem; border: 1px solid var(--color-border); }
+.theme-dazed-dark .af-button  { background: var(--color-primary); color: var(--color-primary-contrast); border-radius: var(--radius); padding: 0.75rem 1.5rem; font-weight: 600; border: 0; cursor: pointer; box-shadow: var(--shadow); font-family: var(--font-sans); }
+.theme-dazed-dark .af-display { font-family: var(--font-display); color: var(--color-text); }
+.theme-dazed-dark .af-muted   { color: var(--color-text-muted); }

@@ -104,28 +104,63 @@ donateForm.addEventListener('submit', async (e) => {
   }
 });
 
-/* ── Slide tracking: highlight the active heart, fade slides in ── */
-(function initSlideNav() {
-  const main = document.querySelector('main');
-  const slides = Array.from(document.querySelectorAll('main .section, .site-footer'));
-  const heartLinks = Array.from(document.querySelectorAll('.heart-link'));
-  if (!main || !slides.length) return;
+/* ── Heart tier popup ─────────────────────────────────────── */
+(function initTierPopup() {
+  const popup = document.getElementById('tierPopup');
+  const closeBtn = document.getElementById('tierPopupClose');
+  const continueBtn = document.getElementById('tierPopupContinue');
+  const titleEl = document.getElementById('tierPopupTitle');
+  const amountEl = document.getElementById('tierPopupAmount');
+  const heartEl = document.getElementById('tierPopupHeart');
+  const heartButtons = document.querySelectorAll('.heart-link[data-tier]');
+  if (!popup) return;
 
-  const linkFor = (id) => heartLinks.find(a => a.dataset.target === id);
+  const tierNames = { normal: 'Normal Heart', gold: 'Gold Heart', diamond: 'Diamond Heart', real: 'Real Heart', ghost: 'Ghost Heart' };
+  let activeTier = null;
+  let activeAmount = null;
+
+  function openPopup(tier, amount) {
+    activeTier = tier;
+    activeAmount = amount;
+    titleEl.textContent = tierNames[tier] || 'Donate';
+    amountEl.textContent = amount;
+    heartEl.className = `pixel-heart tier-popup-heart pixel-heart--${tier}`;
+    popup.classList.remove('hidden');
+  }
+
+  function closePopup() { popup.classList.add('hidden'); }
+
+  heartButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      openPopup(btn.dataset.tier, btn.dataset.amount);
+    });
+  });
+
+  closeBtn.addEventListener('click', closePopup);
+  popup.addEventListener('click', (e) => { if (e.target === popup) closePopup(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePopup(); });
+
+  continueBtn.addEventListener('click', () => {
+    const tierSelect = document.getElementById('donateTier');
+    const amountInput = document.getElementById('donateAmount');
+    if (tierSelect) tierSelect.value = activeTier;
+    if (amountInput) amountInput.value = activeAmount;
+    closePopup();
+    document.getElementById('donate')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('donateRef')?.focus({ preventScroll: true });
+  });
+})();
+
+/* ── Slide tracking: fade each slide in as it becomes active ────── */
+(function initSlideFade() {
+  const slides = Array.from(document.querySelectorAll('main .section, .site-footer'));
+  if (!slides.length) return;
 
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       entry.target.classList.toggle('in-view', entry.isIntersecting);
-      if (entry.isIntersecting && entry.target.id) {
-        const link = linkFor(entry.target.id);
-        if (link) {
-          heartLinks.forEach(a => { a.classList.remove('active'); a.removeAttribute('aria-current'); });
-          link.classList.add('active');
-          link.setAttribute('aria-current', 'true');
-        }
-      }
     });
-  }, { root: main, threshold: 0.6 });
+  }, { threshold: 0.35 });
 
   slides.forEach(s => observer.observe(s));
 })();
@@ -177,7 +212,7 @@ async function loadShowcasePage() {
 
 const showcaseObserver = new IntersectionObserver(entries => {
   if (entries.some(e => e.isIntersecting)) loadShowcasePage();
-}, { root: document.querySelector('main'), rootMargin: '300px' });
+}, { rootMargin: '300px' });
 
 showcaseObserver.observe(document.getElementById('showcase'));
 loadShowcasePage();

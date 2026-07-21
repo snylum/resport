@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dazed">
+<html lang="en" data-theme="dazed-dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -16,6 +16,7 @@
   <link rel="icon" href="/favicon.ico" sizes="any" />
   <link rel="manifest" href="/favicon/site.webmanifest" />
   <link rel="stylesheet" href="dazed.css" />
+  <link rel="stylesheet" href="dazed-dark.css" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="showcase.css" />
   <link rel="stylesheet" href="home.css" />
@@ -26,38 +27,51 @@
     <a class="nav-logo" href="#top"><img class="logo-dot" src="favicon.png" alt="" /> proves.work</a>
     <ul class="nav-links nav-hearts" id="navHearts">
       <li>
-        <a href="#top" class="heart-link active" data-target="top-slide" aria-label="Home" aria-current="true">
+        <button type="button" class="heart-link" data-tier="normal" data-amount="50" aria-label="Donate a Normal Heart, ₱50">
           <svg class="pixel-heart pixel-heart--normal" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-          <span class="heart-tip">Home</span>
-        </a>
+          <span class="heart-tip">Normal · ₱50</span>
+        </button>
       </li>
       <li>
-        <a href="#how" class="heart-link" data-target="how" aria-label="How it works">
+        <button type="button" class="heart-link" data-tier="gold" data-amount="250" aria-label="Donate a Gold Heart, ₱250">
           <svg class="pixel-heart pixel-heart--gold" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-          <span class="heart-tip">How it works</span>
-        </a>
+          <span class="heart-tip">Gold · ₱250</span>
+        </button>
       </li>
       <li>
-        <a href="#claim" class="heart-link" data-target="claim" aria-label="Claim a name">
+        <button type="button" class="heart-link" data-tier="diamond" data-amount="1000" aria-label="Donate a Diamond Heart, ₱1,000">
           <svg class="pixel-heart pixel-heart--diamond" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-          <span class="heart-tip">Claim a name</span>
-        </a>
+          <span class="heart-tip">Diamond · ₱1,000</span>
+        </button>
       </li>
       <li>
-        <a href="#donate" class="heart-link" data-target="donate" aria-label="Donate">
+        <button type="button" class="heart-link" data-tier="real" data-amount="1500" aria-label="Donate a Real Heart, ₱1,500">
           <svg class="pixel-heart pixel-heart--real" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-          <span class="heart-tip">Donate</span>
-        </a>
+          <span class="heart-tip">Real · ₱1,500</span>
+        </button>
       </li>
       <li>
-        <a href="#showcase" class="heart-link" data-target="showcase" aria-label="Showcase">
+        <button type="button" class="heart-link" data-tier="ghost" data-amount="25" aria-label="Donate a Ghost Heart, ₱25">
           <svg class="pixel-heart pixel-heart--ghost" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-          <span class="heart-tip">Showcase</span>
-        </a>
+          <span class="heart-tip">Ghost · ₱25</span>
+        </button>
       </li>
       <li><a href="#claim" class="btn btn-primary btn-sm nav-cta">Claim →</a></li>
     </ul>
   </nav>
+
+  <!-- ── Tier popup: shown when a nav heart is clicked ─────────── -->
+  <div id="tierPopup" class="tier-popup hidden" role="dialog" aria-modal="true" aria-labelledby="tierPopupTitle">
+    <div class="tier-popup-card">
+      <button type="button" class="tier-popup-close" id="tierPopupClose" aria-label="Close">✕</button>
+      <svg id="tierPopupHeart" class="pixel-heart tier-popup-heart" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+      <h3 id="tierPopupTitle">Normal Heart</h3>
+      <p class="tier-popup-amount">₱<span id="tierPopupAmount">50</span></p>
+      <p class="tier-popup-copy">Scan the QR code, send this exact amount, then continue to fill in your reference number.</p>
+      <img src="payment-qr.png" alt="Donation QR code" class="tier-popup-qr" />
+      <button type="button" class="btn btn-primary btn-block" id="tierPopupContinue">I've paid — continue →</button>
+    </div>
+  </div>
 
   <!-- Pixel-art heart, reused via <use> and recolored per tier with CSS `color`. -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -184,67 +198,69 @@
         confirmed by hand, not automatically.
       </p>
 
-      <div class="donate-grid">
-        <img src="payment-qr.png" alt="Donation QR code" class="donate-qr" />
+      <div class="donate-columns">
+        <div class="donate-grid">
+          <img src="payment-qr.png" alt="Donation QR code" class="donate-qr" />
 
-        <div class="tier-list">
-          <div class="tier-card" data-tier="normal">
-            <svg class="pixel-heart pixel-heart--normal" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-            <div><strong>Normal Heart</strong><span>₱50 / $1</span></div>
-          </div>
-          <div class="tier-card" data-tier="gold">
-            <svg class="pixel-heart pixel-heart--gold" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-            <div><strong>Gold Heart</strong><span>₱250 / $10</span></div>
-          </div>
-          <div class="tier-card" data-tier="diamond">
-            <svg class="pixel-heart pixel-heart--diamond" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-            <div><strong>Diamond Heart</strong><span>₱1,000 / $50</span></div>
-          </div>
-          <div class="tier-card" data-tier="real">
-            <svg class="pixel-heart pixel-heart--real" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-            <div><strong>Real Heart</strong><span>Any amount above ₱1,000 / $50</span></div>
-          </div>
-          <div class="tier-card" data-tier="ghost">
-            <svg class="pixel-heart pixel-heart--ghost" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
-            <div><strong>Ghost Heart</strong><span>Any odd amount below ₱1,000 / $50</span></div>
+          <div class="tier-list">
+            <div class="tier-card" data-tier="normal">
+              <svg class="pixel-heart pixel-heart--normal" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+              <div><strong>Normal Heart</strong><span>₱50 / $1</span></div>
+            </div>
+            <div class="tier-card" data-tier="gold">
+              <svg class="pixel-heart pixel-heart--gold" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+              <div><strong>Gold Heart</strong><span>₱250 / $10</span></div>
+            </div>
+            <div class="tier-card" data-tier="diamond">
+              <svg class="pixel-heart pixel-heart--diamond" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+              <div><strong>Diamond Heart</strong><span>₱1,000 / $50</span></div>
+            </div>
+            <div class="tier-card" data-tier="real">
+              <svg class="pixel-heart pixel-heart--real" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+              <div><strong>Real Heart</strong><span>Any amount above ₱1,000 / $50</span></div>
+            </div>
+            <div class="tier-card" data-tier="ghost">
+              <svg class="pixel-heart pixel-heart--ghost" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+              <div><strong>Ghost Heart</strong><span>Any odd amount below ₱1,000 / $50</span></div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <form id="donateForm" class="claim-form">
-        <label class="field">
-          <span>Tier</span>
-          <select id="donateTier" required>
-            <option value="" disabled selected>Choose a tier…</option>
-            <option value="normal">Normal Heart — ₱50 / $1</option>
-            <option value="gold">Gold Heart — ₱250 / $10</option>
-            <option value="diamond">Diamond Heart — ₱1,000 / $50</option>
-            <option value="real">Real Heart — above ₱1,000 / $50</option>
-            <option value="ghost">Ghost Heart — odd amount below ₱1,000 / $50</option>
-          </select>
-        </label>
-        <label class="field">
-          <span>Amount you sent</span>
-          <input type="number" id="donateAmount" step="0.01" min="0" placeholder="50" required />
-        </label>
-        <label class="field">
-          <span>Reference number</span>
-          <input type="text" id="donateRef" placeholder="From your payment app" required />
-        </label>
-        <label class="field">
-          <span>Subdomain to boost</span>
-          <div class="domain-input">
-            <input type="text" id="donateUsername" placeholder="yourname" required autocomplete="off" spellcheck="false" />
-            <span class="domain-suffix">.proves.work</span>
-          </div>
-        </label>
-        <label class="field">
-          <span>Email</span>
-          <input type="email" id="donateEmail" placeholder="you@example.com" required />
-        </label>
-        <button type="submit" class="btn btn-primary btn-block">Submit donation</button>
-        <p class="username-status" id="donateStatus"></p>
-      </form>
+        <form id="donateForm" class="claim-form">
+          <label class="field">
+            <span>Tier</span>
+            <select id="donateTier" required>
+              <option value="" disabled selected>Choose a tier…</option>
+              <option value="normal">Normal Heart — ₱50 / $1</option>
+              <option value="gold">Gold Heart — ₱250 / $10</option>
+              <option value="diamond">Diamond Heart — ₱1,000 / $50</option>
+              <option value="real">Real Heart — above ₱1,000 / $50</option>
+              <option value="ghost">Ghost Heart — odd amount below ₱1,000 / $50</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Amount you sent</span>
+            <input type="number" id="donateAmount" step="0.01" min="0" placeholder="50" required />
+          </label>
+          <label class="field">
+            <span>Reference number</span>
+            <input type="text" id="donateRef" placeholder="From your payment app" required />
+          </label>
+          <label class="field">
+            <span>Subdomain to boost</span>
+            <div class="domain-input">
+              <input type="text" id="donateUsername" placeholder="yourname" required autocomplete="off" spellcheck="false" />
+              <span class="domain-suffix">.proves.work</span>
+            </div>
+          </label>
+          <label class="field">
+            <span>Email</span>
+            <input type="email" id="donateEmail" placeholder="you@example.com" required />
+          </label>
+          <button type="submit" class="btn btn-primary btn-block">Submit donation</button>
+          <p class="username-status" id="donateStatus"></p>
+        </form>
+      </div>
     </section>
 
     <!-- ── SHOWCASE (infinite scroll) ───────────────────── -->
