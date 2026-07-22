@@ -115,16 +115,16 @@
 
 .showcase-search {
   font-family: var(--font-sans);
-  font-size: 0.85rem;
-  padding: 0.5rem 0.9rem;
+  font-size: 0.8rem;
+  padding: 0.45rem 0.9rem;
   border: 2px solid var(--color-border);
   border-radius: 999px;
-  min-width: 220px;
+  min-width: 180px;
   background: var(--color-surface);
   color: var(--color-text);
 }
 
-.showcase-search:focus { outline: none; box-shadow: 3px 3px 0 0 var(--color-border); }
+.showcase-search:focus { outline: none; box-shadow: none; }
 
 /* ── State / empty ───────────────────────────────────────── */
 .showcase-state {
