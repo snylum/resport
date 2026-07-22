@@ -28,37 +28,37 @@
     <ul class="nav-links nav-hearts" id="navHearts">
       <li>
         <button type="button" class="heart-link" data-tier="normal" data-amount="50" aria-label="Pulse tag, ₱50">
-          <svg class="pixel-heart pixel-heart--normal" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+          <svg class="pixel-heart pixel-heart--normal" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
           <span class="heart-tip">Pulse · ₱50</span>
         </button>
       </li>
       <li>
         <button type="button" class="heart-link" data-tier="gold" data-amount="250" aria-label="Beat tag, ₱250">
-          <svg class="pixel-heart pixel-heart--gold" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+          <svg class="pixel-heart pixel-heart--gold" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
           <span class="heart-tip">Beat · ₱250</span>
         </button>
       </li>
       <li>
         <button type="button" class="heart-link" data-tier="diamond" data-amount="1000" aria-label="Blood tag, ₱1,000">
-          <svg class="pixel-heart pixel-heart--diamond" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+          <svg class="pixel-heart pixel-heart--diamond" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
           <span class="heart-tip">Blood · ₱1,000</span>
         </button>
       </li>
       <li>
         <button type="button" class="heart-link" data-tier="real" data-amount="1500" aria-label="Soul tag, above ₱1,000">
-          <svg class="pixel-heart pixel-heart--real" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+          <svg class="pixel-heart pixel-heart--real" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
           <span class="heart-tip">Soul · custom tag</span>
         </button>
       </li>
       <li>
         <button type="button" class="heart-link" data-tier="ghost" data-amount="25" aria-label="Breath tag, ₱25">
-          <svg class="pixel-heart pixel-heart--ghost" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+          <svg class="pixel-heart pixel-heart--ghost" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
           <span class="heart-tip">Breath · ₱25</span>
         </button>
       </li>
       <li>
         <a href="#claim" class="nav-brand-heart" aria-label="Claim your subdomain">
-          <svg class="pixel-heart pixel-heart--brand" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+          <svg class="pixel-heart pixel-heart--brand" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
         </a>
       </li>
     </ul>
@@ -70,7 +70,7 @@
     <div class="tier-popup-card">
       <button type="button" class="tier-popup-close" id="tierPopupClose" aria-label="Close">✕</button>
       <div class="tier-popup-left">
-        <svg id="tierPopupHeart" class="pixel-heart tier-popup-heart" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+        <svg id="tierPopupHeart" class="pixel-heart tier-popup-heart" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
         <h3 id="tierPopupTitle">Pulse</h3>
         <p class="tier-popup-copy" id="tierPopupCopy">Scan the QR code, send exactly this amount, then fill in the details below.</p>
         <img src="payment-qr.png" alt="Donation QR code" class="tier-popup-qr" />
@@ -108,15 +108,20 @@
 
   <!-- Pixel-art heart, reused via <use> and recolored per tier with CSS `color`. -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-    <symbol id="pixel-heart" viewBox="0 0 8 7">
-      <!-- 8x7 grid, one <rect> per filled pixel, Undertale-style blocky heart -->
-      <rect x="1" y="0" width="2" height="1" fill="currentColor"/>
-      <rect x="5" y="0" width="2" height="1" fill="currentColor"/>
-      <rect x="0" y="1" width="8" height="2" fill="currentColor"/>
-      <rect x="0" y="3" width="8" height="1" fill="currentColor"/>
-      <rect x="1" y="4" width="6" height="1" fill="currentColor"/>
-      <rect x="2" y="5" width="4" height="1" fill="currentColor"/>
-      <rect x="3" y="6" width="2" height="1" fill="currentColor"/>
+    <symbol id="pixel-heart" viewBox="0 0 16 16">
+      <!-- 16x16 grid, one <rect> per filled pixel, accurate blocky heart -->
+      <rect x="2" y="0" width="2" height="1" fill="currentColor"/>
+      <rect x="12" y="0" width="2" height="1" fill="currentColor"/>
+      <rect x="1" y="1" width="5" height="1" fill="currentColor"/>
+      <rect x="10" y="1" width="5" height="1" fill="currentColor"/>
+      <rect x="0" y="2" width="6" height="1" fill="currentColor"/>
+      <rect x="10" y="2" width="6" height="1" fill="currentColor"/>
+      <rect x="0" y="3" width="7" height="2" fill="currentColor"/>
+      <rect x="9" y="3" width="7" height="2" fill="currentColor"/>
+      <rect x="0" y="5" width="16" height="5" fill="currentColor"/>
+      <rect x="2" y="10" width="12" height="2" fill="currentColor"/>
+      <rect x="4" y="12" width="8" height="2" fill="currentColor"/>
+      <rect x="6" y="14" width="4" height="2" fill="currentColor"/>
     </symbol>
   </svg>
 
@@ -250,23 +255,23 @@
 
           <div class="tier-list" id="donateTierList" role="radiogroup" aria-label="Choose a donation tier">
             <button type="button" class="tier-card" data-tier="normal" role="radio" aria-checked="false">
-              <svg class="pixel-heart pixel-heart--normal" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+              <svg class="pixel-heart pixel-heart--normal" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
               <div><strong>Pulse</strong><span>₱50 / $1</span></div>
             </button>
             <button type="button" class="tier-card" data-tier="gold" role="radio" aria-checked="false">
-              <svg class="pixel-heart pixel-heart--gold" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+              <svg class="pixel-heart pixel-heart--gold" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
               <div><strong>Beat</strong><span>₱250 / $10</span></div>
             </button>
             <button type="button" class="tier-card" data-tier="diamond" role="radio" aria-checked="false">
-              <svg class="pixel-heart pixel-heart--diamond" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+              <svg class="pixel-heart pixel-heart--diamond" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
               <div><strong>Blood</strong><span>₱1,000 / $50</span></div>
             </button>
             <button type="button" class="tier-card" data-tier="real" role="radio" aria-checked="false">
-              <svg class="pixel-heart pixel-heart--real" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+              <svg class="pixel-heart pixel-heart--real" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
               <div><strong>Soul</strong><span>Any amount above ₱1,000 / $50 · pick your own tag</span></div>
             </button>
             <button type="button" class="tier-card" data-tier="ghost" role="radio" aria-checked="false">
-              <svg class="pixel-heart pixel-heart--ghost" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+              <svg class="pixel-heart pixel-heart--ghost" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
               <div><strong>Breath</strong><span>Any odd amount below ₱1,000 / $50</span></div>
             </button>
           </div>
@@ -371,7 +376,7 @@
           <span>© 2026 SNYLUM</span>
           <span class="footer-heart">
             Your support helps me out-code AI.
-            <svg class="pixel-heart pixel-heart--real footer-heart-icon" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>
+            <svg class="pixel-heart pixel-heart--real footer-heart-icon" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
           </span>
         </div>
       </div>

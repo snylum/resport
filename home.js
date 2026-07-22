@@ -619,7 +619,7 @@ function renderShowcaseGroups() {
       const heading = document.createElement('h3');
       heading.className = 'showcase-tier-heading';
       heading.innerHTML = `
-        ${key !== 'none' ? `<svg class="pixel-heart pixel-heart--${key}" viewBox="0 0 8 7" aria-hidden="true"><use href="#pixel-heart"/></svg>` : ''}
+        ${key !== 'none' ? `<svg class="pixel-heart pixel-heart--${key}" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>` : ''}
         ${meta.label} <span class="showcase-tier-count">· ${items.length}</span>
       `;
 
