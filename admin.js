@@ -591,8 +591,8 @@ function editDonationModal(donation) {
         <input type="text" id="editDonationEmail" value="${esc(donation.email ?? '')}" />
       </label>
       <label class="admin-form-field admin-form-field-wide">
-        <span>Custom tag</span>
-        <input type="text" id="editDonationCustomTag" value="${esc(donation.customTag ?? '')}" maxlength="28" />
+        <span>Tag / title (shown on their showcase heart badge)</span>
+        <input type="text" id="editDonationCustomTag" value="${esc(donation.customTag ?? '')}" maxlength="28" placeholder="${esc(tierLabel(donation.tier))}" />
       </label>
       <label class="admin-form-field admin-form-field-wide">
         <span>Note</span>

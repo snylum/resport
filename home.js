@@ -711,16 +711,27 @@ let showcaseQuery = '';
 
 // Larger/rarer donor tags read as "top donor" (starred); the rest just
 // carry their tag label. Untagged entries fall back to "Community".
+// `color` mirrors the pixel-heart tier colors in home.css — used to tint
+// each card's badge/shadow to match the heart the donor actually gave.
 const TIER_META = {
-  diamond: { label: 'Blood',  starred: true },
-  real:    { label: 'Soul',   starred: true },
-  gold:    { label: 'Beat',   starred: false },
-  normal:  { label: 'Pulse',  starred: false },
-  ghost:   { label: 'Breath', starred: false }
+  diamond: { label: 'Blood',  starred: true,  color: '#00E5F0' },
+  real:    { label: 'Soul',   starred: true,  color: '#FF3366' },
+  gold:    { label: 'Beat',   starred: false, color: '#FFD400' },
+  normal:  { label: 'Pulse',  starred: false, color: '#FFFFFF' },
+  ghost:   { label: 'Breath', starred: false, color: '#B9A7FF' }
 };
 
 function showcaseInitials(username) {
   return (username || '?').slice(0, 2).toUpperCase();
+}
+
+// Minimal escaper for the bits of donor-supplied text (custom tag) we now
+// inject into card markup — the custom tag is admin-editable free text,
+// so it gets the same treatment as admin.js's esc().
+function escHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
 }
 
 function renderShowcaseItem(item) {
@@ -729,16 +740,21 @@ function renderShowcaseItem(item) {
   const starred = !!meta?.starred;
 
   const card = document.createElement('a');
-  card.className = `showcase-card${starred ? ' is-starred' : ''}`;
+  card.className = `showcase-card${starred ? ' is-starred' : ''}${meta ? ' has-donor-tag' : ''}`;
   card.href = `https://${item.username}.proves.work`;
   card.target = '_blank';
   card.rel = 'noopener';
   card.dataset.starred = starred ? '1' : '0';
   card.dataset.coder = item.mode === 'coder' ? '1' : '0';
   card.dataset.username = item.username;
+  if (meta) card.style.setProperty('--donor-heart-color', meta.color);
 
   card.innerHTML = `
-    ${starred ? `<span class="showcase-badge">★ Top donor</span>` : ''}
+    ${meta ? `
+      <span class="showcase-badge showcase-badge--heart">
+        <svg class="pixel-heart pixel-heart--${item.tier}" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
+        ${escHtml(tag)}
+      </span>` : ''}
     <div class="showcase-card-top">
       <div class="showcase-avatar">${showcaseInitials(item.username)}</div>
       <div>
@@ -749,7 +765,7 @@ function renderShowcaseItem(item) {
     <p class="showcase-card-desc">
       ${item.mode === 'coder'
         ? `Open source${item.repoName ? ` — ${item.repoName}` : ''}. Live proof-of-work, not just a resume line.`
-        : `${tag} supporter — proof-of-work published for everyone to see.`}
+        : `${escHtml(tag)} supporter — proof-of-work published for everyone to see.`}
     </p>
     <span class="showcase-card-cta">View portfolio →</span>
   `;

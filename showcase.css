@@ -70,6 +70,20 @@
   border-color: var(--color-primary);
 }
 
+/* "Top donor" filter — just the two top-tier hearts, no text label. */
+.chip-hearts {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.4rem 0.85rem;
+}
+
+.chip-hearts .pixel-heart {
+  width: 15px;
+  height: 15px;
+  opacity: 1;
+}
+
 .showcase-search {
   font-family: var(--font-sans);
   font-size: 0.85rem;
@@ -118,28 +132,58 @@
   box-shadow: var(--shadow-lg);
 }
 
+/* Any card tied to a donation gets its border/shadow tinted to the
+   heart color of the tier that was actually given (set inline as
+   --donor-heart-color by home.js). Top-tier (starred) donors get a
+   slightly heavier shadow so they still stand out from the crowd. */
+.showcase-card.has-donor-tag {
+  border-color: var(--donor-heart-color, var(--color-primary));
+  box-shadow: 6px 6px 0 0 var(--donor-heart-color, var(--color-primary));
+}
+
+.showcase-card.has-donor-tag:hover {
+  box-shadow: 12px 12px 0 0 var(--donor-heart-color, var(--color-primary));
+}
+
 .showcase-card.is-starred {
-  border-color: var(--color-primary);
-  box-shadow: 6px 6px 0 0 var(--color-primary);
+  box-shadow: 8px 8px 0 0 var(--donor-heart-color, var(--color-primary));
 }
 
 .showcase-card.is-starred:hover {
-  box-shadow: 12px 12px 0 0 var(--color-primary);
+  box-shadow: 14px 14px 0 0 var(--donor-heart-color, var(--color-primary));
 }
 
 .showcase-badge {
   position: absolute;
   top: -13px;
   left: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
   background: var(--color-primary);
   color: #fff;
   font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: 0.2rem 0.7rem;
+  padding: 0.22rem 0.7rem;
   border-radius: 999px;
   white-space: nowrap;
+}
+
+/* Heart-tier badge: pill tinted to the donor's actual heart color, with
+   the pixel heart icon for that tier and the donor's tag/title as text
+   (custom tag if the admin set one, otherwise the tier's default name). */
+.showcase-badge--heart {
+  background: var(--donor-heart-color, var(--color-primary));
+  color: #0b0410;
+}
+
+.showcase-badge--heart .pixel-heart {
+  width: 12px;
+  height: 12px;
+  color: #0b0410;
+  opacity: 1;
 }
 
 .showcase-card-top {
