@@ -83,9 +83,17 @@ claimForm.addEventListener('submit', async (e) => {
   // Turnstile tokens are single-use — read it fresh each submit, and
   // reset the widget afterwards (success or failure) so the next attempt
   // gets a new token instead of silently failing verification.
-  body.turnstileToken = window.turnstile?.getResponse('claimTurnstile') || '';
+  // getResponse()/reset() throw (not reject) if the widget never
+  // mounted — e.g. an ad blocker or privacy extension blocked
+  // challenges.cloudflare.com from loading — so this must be try/caught
+  // here rather than relying on the outer try/catch below.
+  try {
+    body.turnstileToken = window.turnstile?.getResponse('claimTurnstile') || '';
+  } catch {
+    body.turnstileToken = '';
+  }
   if (!body.turnstileToken) {
-    claimStatus.textContent = 'Please complete the verification challenge.';
+    claimStatus.textContent = 'Verification challenge failed to load. Disable ad blockers/privacy extensions for this site and try again.';
     claimStatus.classList.add('error');
     return;
   }
@@ -103,7 +111,7 @@ claimForm.addEventListener('submit', async (e) => {
     claimStatus.textContent = err.message;
     claimStatus.classList.add('error');
   } finally {
-    window.turnstile?.reset('claimTurnstile');
+    try { window.turnstile?.reset('claimTurnstile'); } catch { /* widget never mounted */ }
   }
 });
 
