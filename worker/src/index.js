@@ -388,9 +388,10 @@ async function handleApi(request, env, url) {
       createdAt: now.toISOString()
     };
 
+    let delivered = false;
     if (env.RESEND_API_KEY) {
       try {
-        await fetch('https://api.resend.com/emails', {
+        const res = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: { 'content-type': 'application/json', 'Authorization': `Bearer ${env.RESEND_API_KEY}` },
           body: JSON.stringify({
@@ -400,9 +401,15 @@ async function handleApi(request, env, url) {
             text: `From: ${record.name} <${record.email}>\n\n${record.message}`
           })
         });
-      } catch { /* fall through to KV storage below */ }
+        delivered = res.ok;
+      } catch { /* delivered stays false — queue it below */ }
     }
-    await env.SITES.put(`contact:${Date.now()}:${crypto.randomUUID()}`, JSON.stringify(record), { expirationTtl: 60 * 60 * 24 * 90 });
+    // Only queue in KV (for the admin Messages tab) when email delivery
+    // didn't actually happen — otherwise every message would sit in both
+    // places forever.
+    if (!delivered) {
+      await env.SITES.put(`contact:${Date.now()}:${crypto.randomUUID()}`, JSON.stringify(record), { expirationTtl: 60 * 60 * 24 * 90 });
+    }
     return json({ ok: true });
   }
 
@@ -424,7 +431,9 @@ async function handleApi(request, env, url) {
   }
 
   // ═══════════════════ ADMIN (Google-gated) ═══════════════════════
-  if (url.pathname === '/api/admin/claims' && request.method === 'POST') {
+  // "sites" is the current name for this list (matches admin.js); kept
+  // functionally identical to the old /api/admin/claims endpoint.
+  if (url.pathname === '/api/admin/sites' && request.method === 'POST') {
     const body = await request.json().catch(() => ({}));
     const adminEmail = await verifyAdminCredential(body.googleCredential);
     if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
@@ -456,14 +465,65 @@ async function handleApi(request, env, url) {
     return json({ ok: true });
   }
 
-  if (url.pathname === '/api/admin/delete' && request.method === 'POST') {
+  // Hard delete — permanently frees the username. Unlike 'rejected' (which
+  // just hides the site but keeps the name reserved to that email), this
+  // erases the record entirely. Keeps a snapshot in an audit log first,
+  // since this can't be undone and admins want to know what was deleted.
+  if (url.pathname === '/api/admin/delete-site' && request.method === 'POST') {
     const body = await request.json().catch(() => ({}));
     const adminEmail = await verifyAdminCredential(body.googleCredential);
     if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
     const username = String(body.username || '').toLowerCase().trim();
     const existing = await env.SITES.get(`site:${username}`, 'json');
-    if (existing) await releaseEmailSlot(env, existing.email, username);
+    if (!existing) return json({ ok: false, error: 'Not found.' }, 404);
+    await releaseEmailSlot(env, existing.email, username);
     await env.SITES.delete(`site:${username}`);
+    const auditEntry = {
+      username, deletedBy: adminEmail, deletedAt: new Date().toISOString(),
+      snapshot: {
+        status: existing.status, mode: existing.mode, email: existing.email,
+        showcase: !!existing.showcase, target: existing.target
+      }
+    };
+    await env.SITES.put(`auditlog:${Date.now()}:${crypto.randomUUID()}`, JSON.stringify(auditEntry));
+    return json({ ok: true });
+  }
+
+  // Last 200 hard-delete audit entries, newest first. Read-only — the
+  // point is visibility into what was deleted and by whom, not recovery.
+  if (url.pathname === '/api/admin/audit-log' && request.method === 'POST') {
+    const body = await request.json().catch(() => ({}));
+    const adminEmail = await verifyAdminCredential(body.googleCredential);
+    if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
+    const list = await env.SITES.list({ prefix: 'auditlog:', limit: 200 });
+    const entries = (await Promise.all(list.keys.map(k => env.SITES.get(k.name, 'json'))))
+      .filter(Boolean)
+      .sort((a, b) => (b.deletedAt || '').localeCompare(a.deletedAt || ''));
+    return json({ ok: true, entries });
+  }
+
+  // Contact-form messages that landed in KV because Resend either isn't
+  // configured or a send failed (see /api/contact below) — the queue an
+  // admin actually needs to work through.
+  if (url.pathname === '/api/admin/contact-messages' && request.method === 'POST') {
+    const body = await request.json().catch(() => ({}));
+    const adminEmail = await verifyAdminCredential(body.googleCredential);
+    if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
+    const list = await env.SITES.list({ prefix: 'contact:', limit: 200 });
+    const entries = (await Promise.all(list.keys.map(async k => {
+      const value = await env.SITES.get(k.name, 'json');
+      return value ? { ...value, key: k.name } : null;
+    }))).filter(Boolean).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    return json({ ok: true, entries });
+  }
+
+  if (url.pathname === '/api/admin/contact-messages/delete' && request.method === 'POST') {
+    const body = await request.json().catch(() => ({}));
+    const adminEmail = await verifyAdminCredential(body.googleCredential);
+    if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
+    const key = String(body.key || '');
+    if (!key.startsWith('contact:')) return json({ ok: false, error: 'Invalid key.' }, 400);
+    await env.SITES.delete(key);
     return json({ ok: true });
   }
 
