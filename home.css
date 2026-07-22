@@ -204,8 +204,8 @@ main { display: block; }
 
 .donate-amount-ref { display: grid; grid-template-columns: 1fr; gap: .85rem 1rem; min-width: 0; }
 .donate-amount-ref .field { min-width: 0; }
-@media (min-width: 480px) {
-  .donate-amount-ref { grid-template-columns: 1fr 1fr; }
+@media (min-width: 420px) {
+  .donate-amount-ref { grid-template-columns: 1.3fr 1fr; }
 }
 .currency-tabs { margin-bottom: .1rem; }
 
@@ -217,8 +217,8 @@ main { display: block; }
   width: 100%;
   align-items: center;
 }
-.donate-grid { display: flex; flex-direction: column; justify-content: center; gap: clamp(.75rem, 2.5vw, 2rem); align-items: stretch; flex-wrap: wrap; }
-.tier-list { display: flex; flex-direction: column; justify-content: center; gap: clamp(.3rem, 1vh, .5rem); width: 100%; max-width: 340px; margin: 0 auto; }
+.donate-grid { display: flex; flex-direction: column; gap: clamp(.75rem, 2.5vw, 2rem); align-items: center; flex-wrap: wrap; }
+.tier-list { display: flex; flex-direction: column; gap: clamp(.3rem, 1vh, .5rem); width: 100%; max-width: 420px; margin: 0 auto; }
 
 /* QR trigger button — sits above the PHP/USD currency tabs; opens the
    standalone QR popup instead of showing the code inline. */
@@ -273,9 +273,9 @@ main { display: block; }
 .tier-card {
   display: flex;
   align-items: center;
-  gap: .75rem;
+  gap: .65rem;
   width: 100%;
-  padding: clamp(.4rem, 1.2vh, .65rem) .9rem;
+  padding: clamp(.4rem, 1.2vh, .65rem) .8rem;
   border: 2px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
@@ -289,22 +289,21 @@ main { display: block; }
 .tier-card:hover { transform: translateY(-1px); background: var(--color-surface-alt); }
 .tier-card:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 .tier-card--selected { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
+.tier-card > div { min-width: 0; }
 .tier-card strong { display: block; font-size: clamp(.82rem, 1.6vh, .95rem); }
-.tier-card span { color: var(--color-text-muted); font-size: clamp(.7rem, 1.35vh, .8rem); }
+.tier-card span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-text-muted); font-size: clamp(.65rem, 1.25vh, .76rem); }
 /* Heart colors stay fixed per tier regardless of hover/selection; sized
    up from the base .pixel-heart so the tier list reads as substantial
    next to the donation form, not dwarfed by it. */
-.tier-card .pixel-heart { opacity: 1; width: 2.1rem; height: 2.1rem; flex: 0 0 auto; }
-.donate-section .claim-form { width: 100%; max-width: 340px; margin: 0 auto; }
+.tier-card .pixel-heart { opacity: 1; width: 1.9rem; height: 1.9rem; flex: 0 0 auto; }
+.donate-section .claim-form { width: 100%; max-width: 420px; margin: 0 auto; }
 
-/* Wide screens: QR/tiers on the left, donation form on the right, so
-   the whole thing sits in one row instead of stacking three sections
-   worth of height. Both columns share the same width and stretch to
-   match each other's height, so revealing the Soul tag field (which
-   makes the form taller) doesn't throw the two columns out of balance
-   — the shorter tier list just re-centers within the extra height. */
+/* Wide screens: tiers on the left, donation form on the right, so the
+   whole thing sits in one row instead of stacking two sections worth
+   of height. Both columns share the same width and top-align so they
+   read as one balanced block regardless of which fields are showing. */
 @media (min-width: 980px) {
-  .donate-columns { flex-direction: row; align-items: stretch; justify-content: center; }
+  .donate-columns { flex-direction: row; align-items: flex-start; justify-content: center; }
   .donate-grid { flex-direction: column; align-items: center; }
   .donate-section .claim-form { margin: 0; }
 }
@@ -699,6 +698,7 @@ main { display: block; }
 @media (max-width: 640px) {
   .how-grid { grid-template-columns: repeat(2, 1fr); }
   .donate-grid { gap: .75rem; }
+  .tier-card span { white-space: normal; }
 }
 
 /* Very short viewports (small landscape phones, short laptop windows):
