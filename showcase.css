@@ -72,12 +72,44 @@
 
 /* Heart-priority sort pill — same size as the other filter chips, no
    text label, just the hearts in current sort-priority order. Clicking
-   it rotates the order (see home.js). */
+   it rotates the order (see home.js). Doubles as the "all profiles"
+   filter, so it needs its own selected state distinct from the plain
+   pink fill other chips use — a black pill with a spinning rainbow
+   outline reads as "on" without fighting the tier-colored hearts. */
 .chip-hearts {
   display: inline-flex;
   align-items: center;
   gap: 0.2rem;
   padding: 0.45rem 0.9rem;
+  position: relative;
+}
+
+.chip-hearts.active {
+  background: #000;
+  color: var(--color-text);
+  border-color: transparent;
+}
+
+.chip-hearts.active::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(from 0deg, #ff3366, #ffd400, #4dff88, #00e5f0, #7c4dff, #ff3366);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  animation: chip-hearts-spin 3s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes chip-hearts-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip-hearts.active::before { animation: none; }
 }
 
 .chip-hearts .pixel-heart {
