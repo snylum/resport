@@ -323,7 +323,8 @@ async function handleApi(request, env, url) {
         tier: r.showcaseTier || null,
         amount: r.showcaseAmount ?? null,
         customTag: r.showcaseCustomTag || null,
-        description: r.description || null
+        description: r.description || null,
+        addedAt: r.showcaseAddedAt || null
       })),
       cursor: list.list_complete ? null : list.cursor
     });

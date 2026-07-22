@@ -785,7 +785,7 @@ let showcaseCursor = null;
 let showcaseLoading = false;
 let showcaseDone = false;
 let showcaseItems = [];
-let showcaseFilter = 'all';
+let showcaseFilter = 'donors';
 let showcaseQuery = '';
 
 // `color` mirrors the pixel-heart tier colors in home.css — used to tint
@@ -867,9 +867,14 @@ function renderShowcaseItem(item) {
   return card;
 }
 
-// Stable sort by current heart priority order; untagged/no-donation
-// entries always sink to the bottom, keeping their relative order.
-function sortShowcaseItems(list) {
+// Donor cards sort by heart-tier priority (see heartOrder above).
+// Community cards (no donation) have no tier to rank by, so they sort
+// newest-showcased-first instead — keeps freshly-added community
+// members visible instead of permanently buried under older ones.
+function sortShowcaseItems(list, filter) {
+  if (filter === 'community') {
+    return list.slice().sort((a, b) => new Date(b.addedAt || 0) - new Date(a.addedAt || 0));
+  }
   const rank = new Map(heartOrder.map((tier, i) => [tier, i]));
   return list
     .map((item, i) => ({ item, i, r: item.tier && rank.has(item.tier) ? rank.get(item.tier) : heartOrder.length }))
@@ -880,10 +885,11 @@ function sortShowcaseItems(list) {
 function renderShowcaseGrid() {
   const q = showcaseQuery.trim().toLowerCase();
   const filtered = sortShowcaseItems(showcaseItems.filter(item => {
-    if (showcaseFilter === 'coder' && item.mode !== 'coder') return false;
+    if (showcaseFilter === 'donors' && !item.tier) return false;
+    if (showcaseFilter === 'community' && item.tier) return false;
     if (q && !item.username.toLowerCase().includes(q)) return false;
     return true;
-  }));
+  }), showcaseFilter);
 
   showcaseGrid.innerHTML = '';
   if (!filtered.length) {
