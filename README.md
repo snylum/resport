@@ -104,8 +104,8 @@ Ways to help:
 Yeah sorry for the AI post above. I didn't have enough time
 (it's my enrollment period now). Yes, behind this idea is a human.
 I'm sorry for using AI, even though I am aware of the environmental effects.
-I will only use AI to build open-source projects, and hopefully my ideas
-can hold on until I learn how to code on my own. Give or take 5 years.
+Everything I'll make it AI (well, ito lang muna) will be an open source project, 
+and hopefully my ideas can hold on until I learn how to code on my own. Give or take 5 years.
 Your donations will tremendously help.
 
 Also, this way of creating projects isn't sustainable for me too.
