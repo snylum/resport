@@ -57,6 +57,17 @@ const claimStatus = document.getElementById('claimStatus');
 
 const GMAIL_RE = /^[a-z0-9](?:\.?[a-z0-9]){5,29}@gmail\.com$/i;
 
+// Capture the Turnstile token via callback rather than querying the
+// widget with getResponse() at submit time. Some browsers/extensions
+// let the widget render and complete visually while still breaking the
+// query-based lookup (getResponse throwing "Could not find widget for
+// provided container" even after a real success) — listening for the
+// token directly avoids that whole class of failure.
+let claimTurnstileToken = '';
+window.onClaimTurnstileVerified = (token) => { claimTurnstileToken = token; };
+window.onClaimTurnstileExpired = () => { claimTurnstileToken = ''; };
+window.onClaimTurnstileError = () => { claimTurnstileToken = ''; };
+
 claimForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   claimStatus.textContent = 'Submitting…';
@@ -80,20 +91,13 @@ claimForm.addEventListener('submit', async (e) => {
     return;
   }
 
-  // Turnstile tokens are single-use — read it fresh each submit, and
-  // reset the widget afterwards (success or failure) so the next attempt
-  // gets a new token instead of silently failing verification.
-  // getResponse()/reset() throw (not reject) if the widget never
-  // mounted — e.g. an ad blocker or privacy extension blocked
-  // challenges.cloudflare.com from loading — so this must be try/caught
-  // here rather than relying on the outer try/catch below.
-  try {
-    body.turnstileToken = window.turnstile?.getResponse('claimTurnstile') || '';
-  } catch {
-    body.turnstileToken = '';
-  }
+  // Turnstile tokens are single-use — this is captured fresh via the
+  // widget's own success callback (see onClaimTurnstileVerified above),
+  // not queried on demand, since some browsers/extensions let the widget
+  // render and complete visually while breaking getResponse() lookups.
+  body.turnstileToken = claimTurnstileToken;
   if (!body.turnstileToken) {
-    claimStatus.textContent = 'Verification challenge failed to load. Disable ad blockers/privacy extensions for this site and try again.';
+    claimStatus.textContent = 'Please complete the verification challenge (or it may have failed to load — try disabling ad blockers/privacy extensions for this site).';
     claimStatus.classList.add('error');
     return;
   }
@@ -111,6 +115,7 @@ claimForm.addEventListener('submit', async (e) => {
     claimStatus.textContent = err.message;
     claimStatus.classList.add('error');
   } finally {
+    claimTurnstileToken = '';
     try { window.turnstile?.reset('claimTurnstile'); } catch { /* widget never mounted */ }
   }
 });
