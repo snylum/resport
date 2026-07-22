@@ -42,7 +42,6 @@
 :root[data-theme="dazed-dark"] body,
 .theme-dazed-dark body {
   background: var(--color-background);
-  background-image: var(--pattern);
   background-attachment: fixed;
   color: var(--color-text);
   font-family: var(--font-sans);

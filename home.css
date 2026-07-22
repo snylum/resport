@@ -136,16 +136,18 @@ main { display: block; }
   width: 100%;
   max-width: 560px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(.6rem, 1.6vh, 1rem);
 }
 .claim-intro-copy {
   color: var(--color-text-muted);
   font-size: clamp(.85rem, 1.9vh, 1rem);
   line-height: 1.6;
-  margin-top: 1rem;
 }
 .claim-intro-copy a { color: var(--color-primary); }
-.claim-intro .section-sub { margin-bottom: 0; }
-.claim-intro h2 { margin-bottom: .35rem; }
+.claim-intro .section-sub { margin: 0; }
+.claim-intro h2 { margin: 0; }
 
 @media (min-width: 860px) {
   .claim-columns {
@@ -160,7 +162,7 @@ main { display: block; }
 }
 
 /* ── Claim form ───────────────────────────────────────── */
-.claim-tabs { display: flex; gap: .5rem; justify-content: center; margin-bottom: clamp(.75rem, 2vh, 1.75rem); }
+.claim-tabs { display: flex; gap: .5rem; justify-content: center; }
 .claim-tab { padding: .55rem 1.15rem; border-radius: var(--radius); border: 2px solid var(--color-border); background: var(--color-surface); font-weight: 600; cursor: pointer; font-size: clamp(.8rem, 1.7vh, .95rem); }
 .claim-tab.active { background: var(--color-secondary); color: #fff; }
 

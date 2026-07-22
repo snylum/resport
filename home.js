@@ -241,7 +241,7 @@ donateForm.addEventListener('submit', async (e) => {
 
     titleEl.textContent = rule.label;
     copyEl.textContent = rule.copy;
-    heartEl.className = `pixel-heart tier-popup-heart pixel-heart--${tier}`;
+    heartEl.setAttribute('class', `pixel-heart tier-popup-heart pixel-heart--${tier}`);
 
     if (rule.fixed) {
       amountEl.value = rule.fixed;
