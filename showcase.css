@@ -59,41 +59,27 @@
   background: var(--color-surface);
   color: var(--color-text);
   cursor: pointer;
+  position: relative;
   transition: transform 0.1s, box-shadow 0.1s, background 0.15s;
 }
 
 .chip:hover { background: var(--color-surface-alt); }
 
+/* Selected state, shared by every filter chip: black fill with a
+   slow-shifting gradient outline (the same gradient as the proves.work
+   logo). The outline sits exactly where the plain 2px border used to
+   be (inset: 0, 2px ring), so switching a chip between unselected and
+   selected only changes color, never size. */
 .chip.active {
-  background: var(--color-primary);
-  color: var(--color-primary-contrast);
-  border-color: var(--color-primary);
-}
-
-/* Heart-priority sort pill — same size as the other filter chips, no
-   text label, just the hearts in current sort-priority order. Clicking
-   it rotates the order (see home.js). Doubles as the "all profiles"
-   filter, so it needs its own selected state distinct from the plain
-   pink fill other chips use — a black pill with a spinning rainbow
-   outline reads as "on" without fighting the tier-colored hearts. */
-.chip-hearts {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-  padding: 0.45rem 0.9rem;
-  position: relative;
-}
-
-.chip-hearts.active {
   background: #000;
   color: var(--color-text);
   border-color: transparent;
 }
 
-.chip-hearts.active::before {
+.chip.active::before {
   content: "";
   position: absolute;
-  inset: -3px;
+  inset: 0;
   border-radius: inherit;
   padding: 2px;
   background: var(--gradient);
@@ -101,18 +87,30 @@
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
           mask-composite: exclude;
-  animation: chip-hearts-gradient-shift 6s ease-in-out infinite;
+  animation: chip-gradient-shift 6s ease-in-out infinite;
   pointer-events: none;
 }
 
-@keyframes chip-hearts-gradient-shift {
+@keyframes chip-gradient-shift {
   0%   { background-position: 0% 50%; }
   50%  { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .chip-hearts.active::before { animation: none; }
+  .chip.active::before { animation: none; }
+}
+
+/* Heart-priority sort pill — same size as the other filter chips, no
+   text label, just the hearts in current sort-priority order. Clicking
+   it rotates the order (see home.js). Doubles as the "all profiles"
+   filter, so its selected state is the same shared black/gradient
+   look defined above. */
+.chip-hearts {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.45rem 0.9rem;
 }
 
 .chip-hearts .pixel-heart {
