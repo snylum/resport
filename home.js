@@ -80,6 +80,16 @@ claimForm.addEventListener('submit', async (e) => {
     return;
   }
 
+  // Turnstile tokens are single-use — read it fresh each submit, and
+  // reset the widget afterwards (success or failure) so the next attempt
+  // gets a new token instead of silently failing verification.
+  body.turnstileToken = window.turnstile?.getResponse('claimTurnstile') || '';
+  if (!body.turnstileToken) {
+    claimStatus.textContent = 'Please complete the verification challenge.';
+    claimStatus.classList.add('error');
+    return;
+  }
+
   try {
     const res = await fetch('/api/claim', {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body)
@@ -92,6 +102,8 @@ claimForm.addEventListener('submit', async (e) => {
   } catch (err) {
     claimStatus.textContent = err.message;
     claimStatus.classList.add('error');
+  } finally {
+    window.turnstile?.reset('claimTurnstile');
   }
 });
 

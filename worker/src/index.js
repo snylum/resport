@@ -57,6 +57,11 @@ function escapeHtml(str) {
 // showcase entries from /admin. Add more addresses if needed.
 const ADMIN_EMAILS = new Set(['snylumagbas@gmail.com']);
 
+// Cap how many active (pending or live) subdomains one email can hold at
+// once, so a single person/bot can't hoard names. Rejected/deleted claims
+// free up the slot again — see releaseEmailSlot().
+const MAX_CLAIMS_PER_EMAIL = 3;
+
 async function verifyAdminCredential(credential) {
   if (!credential) return null;
   try {
@@ -82,6 +87,49 @@ async function checkAndBumpRateLimit(env, key, max, windowSeconds) {
     expirationTtl: windowSeconds
   });
   return true;
+}
+
+// ── Cloudflare Turnstile — blocks scripted/bot submissions before they
+// ever reach the rate limiter or KV. Requires TURNSTILE_SECRET_KEY set via
+// `npx wrangler secret put TURNSTILE_SECRET_KEY`. Until that secret is
+// set, verification is skipped entirely (so local/dev setups don't break) —
+// set it before going live if bot spam is a concern.
+async function verifyTurnstile(token, ip, env) {
+  if (!env.TURNSTILE_SECRET_KEY) return true; // not configured — skip
+  if (!token) return false;
+  try {
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ secret: env.TURNSTILE_SECRET_KEY, response: token, remoteip: ip })
+    });
+    const data = await res.json();
+    return !!data.success;
+  } catch {
+    return false;
+  }
+}
+
+// ── Per-email active-claim tracking (KV list, prefix "emailclaims:") ──
+// Keeps this cheap (no D1/database) while still capping how many live
+// names one email can hold. Call releaseEmailSlot() whenever a claim is
+// rejected or deleted so that email can claim again.
+async function addEmailSlot(env, email, username, max) {
+  const key = `emailclaims:${email}`;
+  const current = (await env.SITES.get(key, 'json')) || [];
+  if (current.includes(username)) return true;
+  if (current.length >= max) return false;
+  current.push(username);
+  await env.SITES.put(key, JSON.stringify(current));
+  return true;
+}
+async function releaseEmailSlot(env, email, username) {
+  if (!email) return;
+  const key = `emailclaims:${email}`;
+  const current = (await env.SITES.get(key, 'json')) || [];
+  const next = current.filter(u => u !== username);
+  if (next.length) await env.SITES.put(key, JSON.stringify(next));
+  else await env.SITES.delete(key);
 }
 
 // ── Donation tiers ──────────────────────────────────────────────────
@@ -210,6 +258,10 @@ async function handleApi(request, env, url) {
     if (!ok) return json({ ok: false, error: 'Too many claims from this connection. Try again later.' }, 429);
 
     const body = await request.json().catch(() => ({}));
+
+    const turnstileOk = await verifyTurnstile(body.turnstileToken, ip, env);
+    if (!turnstileOk) return json({ ok: false, error: 'Verification failed. Please retry the challenge and submit again.' }, 400);
+
     const username = String(body.username || '').toLowerCase().trim();
     const mode = body.mode === 'coder' ? 'coder' : 'nocode';
 
@@ -249,6 +301,9 @@ async function handleApi(request, env, url) {
         status: 'pending', showcase: false, createdAt: new Date().toISOString()
       };
     }
+
+    const slotOk = await addEmailSlot(env, record.email, username, MAX_CLAIMS_PER_EMAIL);
+    if (!slotOk) return json({ ok: false, error: `That email already has ${MAX_CLAIMS_PER_EMAIL} active claims — the limit per email.` }, 429);
 
     await env.SITES.put(`site:${username}`, JSON.stringify(record));
     return json({ ok: true, username, status: 'pending' });
@@ -396,6 +451,8 @@ async function handleApi(request, env, url) {
     existing.reviewedBy = adminEmail;
     existing.reviewedAt = new Date().toISOString();
     await env.SITES.put(`site:${username}`, JSON.stringify(existing));
+    // Rejected claims free up that email's slot so they (or someone else) can claim again.
+    if (status === 'rejected') await releaseEmailSlot(env, existing.email, username);
     return json({ ok: true });
   }
 
@@ -404,6 +461,8 @@ async function handleApi(request, env, url) {
     const adminEmail = await verifyAdminCredential(body.googleCredential);
     if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
     const username = String(body.username || '').toLowerCase().trim();
+    const existing = await env.SITES.get(`site:${username}`, 'json');
+    if (existing) await releaseEmailSlot(env, existing.email, username);
     await env.SITES.delete(`site:${username}`);
     return json({ ok: true });
   }

@@ -106,6 +106,32 @@ the reference number by hand at `/admin` (against your own
 transaction history) and can tag that subdomain into the public
 showcase in the same step.
 
+## Anti-spam: Turnstile + per-email cap
+
+Two independent layers protect claims from bots and hoarding:
+
+**Cloudflare Turnstile** (blocks scripted/bot submissions):
+1. In the Cloudflare dashboard → **Turnstile**, add a site, get a
+   **Site Key** and **Secret Key**.
+2. Paste the Site Key into `data-sitekey="..."` on the
+   `<div class="cf-turnstile">` in `index.html` (currently a
+   placeholder).
+3. Set the Secret Key as a Worker secret (never commit it):
+   ```
+   cd worker
+   npx wrangler secret put TURNSTILE_SECRET_KEY
+   ```
+   Until this secret is set, the Worker skips verification entirely
+   (so local dev keeps working) — set it before going live.
+
+**Per-email claim cap** (stops one email from hoarding names): each
+email can hold at most `MAX_CLAIMS_PER_EMAIL` (3, in
+`worker/src/index.js`) active (pending or live) claims at once.
+Rejecting or deleting a claim from `/admin` frees that slot again.
+Raise/lower the constant to taste — this is separate from the
+per-IP rate limit (`checkAndBumpRateLimit`), which caps *requests*
+per hour regardless of email.
+
 ## Tightening CORS later
 
 `CORS_HEADERS` in `worker/src/index.js` currently allows any origin
