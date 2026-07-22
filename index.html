@@ -24,7 +24,7 @@
 <body class="is-loading">
 
   <nav class="site-nav">
-    <a class="nav-logo" href="#top"><img class="logo-dot" src="favicon.png" alt="" /> proves.work</a>
+    <a class="nav-logo" href="#top"><img class="logo-dot" src="favicon.png" alt="" /> <span class="nav-logo-text">proves.work</span></a>
     <ul class="nav-links nav-hearts" id="navHearts">
       <li>
         <button type="button" class="heart-link" data-tier="normal" data-amount="50" aria-label="Pulse tag, ₱50">
@@ -209,6 +209,7 @@
             <label class="field">
               <span>Your email</span>
               <input type="email" id="claimEmailNocode" placeholder="you@example.com" required />
+              <span class="field-hint">Only properly named @gmail.com addresses are accepted.</span>
             </label>
           </div>
 
@@ -224,6 +225,7 @@
             <label class="field">
               <span>Your email</span>
               <input type="email" id="claimEmailCoder" placeholder="you@example.com" required />
+              <span class="field-hint">Only properly named @gmail.com addresses are accepted.</span>
             </label>
           </div>
 
@@ -272,19 +274,25 @@
 
         <form id="donateForm" class="claim-form">
           <input type="hidden" id="donateTier" />
+          <div class="claim-tabs currency-tabs" id="donateCurrencyTabs" role="radiogroup" aria-label="Currency">
+            <button type="button" class="claim-tab active" data-currency="php">PHP (₱)</button>
+            <button type="button" class="claim-tab" data-currency="usd">USD ($)</button>
+          </div>
           <p class="username-status" id="donateTierHint">Pick a heart on the left to choose your tier.</p>
           <label class="field hidden" id="donateCustomTagField">
             <span>Your custom tag</span>
             <input type="text" id="donateCustomTag" placeholder="e.g. Future Senior Dev" maxlength="28" />
           </label>
-          <label class="field">
-            <span id="donateAmountLabel">Amount you sent</span>
-            <input type="number" id="donateAmount" step="0.01" min="0" placeholder="50" required />
-          </label>
-          <label class="field">
-            <span>Reference number</span>
-            <input type="text" id="donateRef" placeholder="From your payment app" required />
-          </label>
+          <div class="donate-amount-ref">
+            <label class="field">
+              <span id="donateAmountLabel">Amount you sent</span>
+              <input type="number" id="donateAmount" step="0.01" min="0" placeholder="50" required />
+            </label>
+            <label class="field">
+              <span>Reference number</span>
+              <input type="text" id="donateRef" placeholder="From your payment app" required />
+            </label>
+          </div>
           <label class="field">
             <span>Subdomain to boost</span>
             <div class="domain-input">

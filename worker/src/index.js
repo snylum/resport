@@ -32,6 +32,9 @@ const RESERVED = new Set([
 // 3–30 chars, lowercase letters/digits/hyphens, no leading/trailing hyphen.
 const USERNAME_RE = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])?$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Claims specifically require a properly formatted @gmail.com address
+// (letters/digits/dots only, no leading/trailing/double dots).
+const GMAIL_RE = /^[a-z0-9](?:\.?[a-z0-9]){5,29}@gmail\.com$/i;
 
 const CORS_HEADERS = {
   'access-control-allow-origin': '*', // tighten to `https://${APP_HOST}` once live
@@ -222,7 +225,7 @@ async function handleApi(request, env, url) {
       const target = String(body.target || '').trim();
       if (!repo || !target) return json({ ok: false, error: 'Repo URL and deployed site URL are both required.' }, 400);
       const email = String(body.email || '').trim();
-      if (!EMAIL_RE.test(email)) return json({ ok: false, error: 'A valid email is required.' }, 400);
+      if (!GMAIL_RE.test(email)) return json({ ok: false, error: 'Only properly named @gmail.com addresses are accepted.' }, 400);
       const check = await verifyPublicRepo(repo);
       if (!check.ok) return json({ ok: false, error: check.error }, 400);
       try { new URL(target); } catch { return json({ ok: false, error: 'Deployed site URL is not valid.' }, 400); }
@@ -237,7 +240,7 @@ async function handleApi(request, env, url) {
       const email = String(body.email || '').trim();
       if (!target) return json({ ok: false, error: 'A URL to point this domain at is required.' }, 400);
       try { new URL(target); } catch { return json({ ok: false, error: 'That URL is not valid.' }, 400); }
-      if (!EMAIL_RE.test(email)) return json({ ok: false, error: 'A valid email is required.' }, 400);
+      if (!GMAIL_RE.test(email)) return json({ ok: false, error: 'Only properly named @gmail.com addresses are accepted.' }, 400);
       record = {
         username, mode: 'nocode', target,
         email,
@@ -279,6 +282,8 @@ async function handleApi(request, env, url) {
 
     if (type === 'donation') {
       const tier = TIERS[body.tier] ? body.tier : null;
+      const currency = body.currency === 'usd' ? 'usd' : 'php';
+      const symbol = currency === 'usd' ? '$' : '₱';
       const referenceNumber = String(body.referenceNumber || '').trim();
       const username = String(body.username || '').toLowerCase().trim();
       const amount = Number(body.amount) || null;
@@ -290,25 +295,26 @@ async function handleApi(request, env, url) {
       if (!EMAIL_RE.test(donationEmail)) return json({ ok: false, error: 'A valid email is required.' }, 400);
 
       // Make sure what's actually submitted matches what that tier tag
-      // offers — fixed tiers must match exactly, Soul must exceed the
-      // Blood threshold, Breath must stay under it with an odd amount.
-      const diamondAmount = TIERS.diamond.php;
+      // offers in the chosen currency — fixed tiers must match exactly,
+      // Soul must exceed the Blood threshold, Breath must stay under it
+      // with an odd amount.
+      const diamondAmount = TIERS.diamond[currency];
       if (['normal', 'gold', 'diamond'].includes(tier)) {
-        const expected = TIERS[tier].php;
+        const expected = TIERS[tier][currency];
         if (Math.round(amount * 100) !== Math.round(expected * 100)) {
-          return json({ ok: false, error: `${TIERS[tier].label} is a fixed amount of ₱${expected}.` }, 400);
+          return json({ ok: false, error: `${TIERS[tier].label} is a fixed amount of ${symbol}${expected}.` }, 400);
         }
       } else if (tier === 'real') {
-        if (amount <= diamondAmount) return json({ ok: false, error: `Soul needs an amount above ₱${diamondAmount}.` }, 400);
+        if (amount <= diamondAmount) return json({ ok: false, error: `Soul needs an amount above ${symbol}${diamondAmount}.` }, 400);
       } else if (tier === 'ghost') {
-        if (amount >= diamondAmount) return json({ ok: false, error: `Breath needs an amount below ₱${diamondAmount}.` }, 400);
+        if (amount >= diamondAmount) return json({ ok: false, error: `Breath needs an amount below ${symbol}${diamondAmount}.` }, 400);
         if (!Number.isInteger(amount) || amount % 2 === 0) return json({ ok: false, error: 'Breath needs an odd whole-number amount.' }, 400);
       }
 
       const customTag = tier === 'real' ? String(body.customTag || '').trim().slice(0, 28) : null;
 
       const record = {
-        id: crypto.randomUUID(), type: 'donation', tier, amount, referenceNumber, username,
+        id: crypto.randomUUID(), type: 'donation', tier, currency, amount, referenceNumber, username,
         email: donationEmail, customTag,
         note: String(body.message || '').slice(0, 2000),
         confirmed: false, createdAt: now.toISOString()

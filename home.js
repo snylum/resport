@@ -43,6 +43,8 @@ claimTabs.forEach(tab => {
 const claimForm = document.getElementById('claimForm');
 const claimStatus = document.getElementById('claimStatus');
 
+const GMAIL_RE = /^[a-z0-9](?:\.?[a-z0-9]){5,29}@gmail\.com$/i;
+
 claimForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   claimStatus.textContent = 'Submitting…';
@@ -58,6 +60,12 @@ claimForm.addEventListener('submit', async (e) => {
   } else {
     body.target = document.getElementById('claimTargetNocode').value.trim();
     body.email = document.getElementById('claimEmailNocode').value.trim();
+  }
+
+  if (!GMAIL_RE.test(body.email)) {
+    claimStatus.textContent = 'Only properly named @gmail.com addresses are accepted.';
+    claimStatus.classList.add('error');
+    return;
   }
 
   try {
@@ -88,13 +96,63 @@ const donateAmountLabel = document.getElementById('donateAmountLabel');
 
 // Same per-tier rules as the heart popup — keeps the donate-section form
 // and the nav heart popup consistent about what each tag actually costs.
+// Each tier carries both a PHP and a USD version of its rule so the
+// person can donate in whichever currency they're actually paying in.
 const DONATE_TIER_RULES = {
-  normal:  { label: 'Pulse',  fixed: 50,   hint: 'Pulse is fixed at ₱50 / $1.' },
-  gold:    { label: 'Beat',   fixed: 250,  hint: 'Beat is fixed at ₱250 / $10.' },
-  diamond: { label: 'Blood',  fixed: 1000, hint: 'Blood is fixed at ₱1,000 / $50.' },
-  real:    { label: 'Soul',   min: 1000,   customTag: true, hint: 'Soul: enter any amount above ₱1,000 / $50 and pick your own tag.' },
-  ghost:   { label: 'Breath', max: 1000, odd: true, hint: 'Breath: enter an odd amount below ₱1,000 / $50 (e.g. ₱37).' }
+  normal:  { label: 'Pulse',
+    php: { fixed: 50,   symbol: '₱' }, usd: { fixed: 1,   symbol: '$' } },
+  gold:    { label: 'Beat',
+    php: { fixed: 250,  symbol: '₱' }, usd: { fixed: 10,  symbol: '$' } },
+  diamond: { label: 'Blood',
+    php: { fixed: 1000, symbol: '₱' }, usd: { fixed: 50,  symbol: '$' } },
+  real:    { label: 'Soul', customTag: true,
+    php: { min: 1000, symbol: '₱' }, usd: { min: 50, symbol: '$' } },
+  ghost:   { label: 'Breath',
+    php: { max: 1000, odd: true, symbol: '₱' }, usd: { max: 50, odd: true, symbol: '$' } }
 };
+
+let donateCurrency = 'php';
+const donateCurrencyTabs = document.querySelectorAll('#donateCurrencyTabs .claim-tab');
+
+function currentDonateRule() {
+  const tier = donateTierInput.value;
+  const rule = DONATE_TIER_RULES[tier];
+  if (!rule) return null;
+  return { label: rule.label, customTag: rule.customTag, ...rule[donateCurrency] };
+}
+
+function refreshDonateAmountUI() {
+  const rule = currentDonateRule();
+  if (!rule) return;
+  const { symbol } = rule;
+
+  if (rule.fixed != null) {
+    donateAmountInput.value = rule.fixed;
+    donateAmountInput.readOnly = true;
+    donateAmountLabel.textContent = `Amount (fixed at ${symbol}${rule.fixed})`;
+    donateTierHint.textContent = `${rule.label} is fixed at ${symbol}${rule.fixed}.`;
+  } else if (rule.min != null) {
+    donateAmountInput.value = '';
+    donateAmountInput.readOnly = false;
+    donateAmountLabel.textContent = `Amount you sent (above ${symbol}${rule.min})`;
+    donateTierHint.textContent = `${rule.label}: enter any amount above ${symbol}${rule.min} and pick your own tag.`;
+  } else if (rule.max != null) {
+    donateAmountInput.value = '';
+    donateAmountInput.readOnly = false;
+    donateAmountLabel.textContent = `Amount you sent (odd, below ${symbol}${rule.max})`;
+    donateTierHint.textContent = `${rule.label}: enter an odd amount below ${symbol}${rule.max} (e.g. ${symbol}37).`;
+  }
+  donateTierHint.className = 'username-status';
+}
+
+donateCurrencyTabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    donateCurrencyTabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    donateCurrency = tab.dataset.currency;
+    if (donateTierInput.value) refreshDonateAmountUI();
+  });
+});
 
 function selectDonateTier(tier) {
   const rule = DONATE_TIER_RULES[tier];
@@ -108,21 +166,10 @@ function selectDonateTier(tier) {
     btn.setAttribute('aria-checked', String(isActive));
   });
 
-  if (rule.fixed) {
-    donateAmountInput.value = rule.fixed;
-    donateAmountInput.readOnly = true;
-    donateAmountLabel.textContent = `Amount (fixed at ₱${rule.fixed})`;
-  } else {
-    donateAmountInput.value = '';
-    donateAmountInput.readOnly = false;
-    donateAmountLabel.textContent = rule.customTag ? 'Amount you sent (above ₱1,000)' : 'Amount you sent (odd, below ₱1,000)';
-  }
-
   donateCustomTagField.classList.toggle('hidden', !rule.customTag);
   donateCustomTagInput.required = !!rule.customTag;
 
-  donateTierHint.textContent = rule.hint;
-  donateTierHint.className = 'username-status';
+  refreshDonateAmountUI();
 }
 
 donateTierButtons.forEach(btn => {
@@ -130,16 +177,17 @@ donateTierButtons.forEach(btn => {
 });
 
 function validateDonateAmount(rule, amount) {
+  const symbol = rule.symbol;
   if (!Number.isFinite(amount) || amount <= 0) return 'Enter a valid amount.';
-  if (rule.fixed) {
+  if (rule.fixed != null) {
     if (Math.round(amount * 100) !== Math.round(rule.fixed * 100)) {
-      return `${rule.label} is exactly ₱${rule.fixed} — adjust the amount to match what you sent.`;
+      return `${rule.label} is exactly ${symbol}${rule.fixed} — adjust the amount to match what you sent.`;
     }
-  } else if (rule.min) {
-    if (amount <= rule.min) return `${rule.label} needs any amount above ₱${rule.min}.`;
-  } else if (rule.max) {
-    if (amount >= rule.max) return `${rule.label} needs an amount below ₱${rule.max}.`;
-    if (!Number.isInteger(amount) || amount % 2 === 0) return `${rule.label} needs an odd whole-number amount (e.g. ₱37).`;
+  } else if (rule.min != null) {
+    if (amount <= rule.min) return `${rule.label} needs any amount above ${symbol}${rule.min}.`;
+  } else if (rule.max != null) {
+    if (amount >= rule.max) return `${rule.label} needs an amount below ${symbol}${rule.max}.`;
+    if (!Number.isInteger(amount) || amount % 2 === 0) return `${rule.label} needs an odd whole-number amount (e.g. ${symbol}37).`;
   }
   return null;
 }
@@ -148,7 +196,7 @@ donateForm.addEventListener('submit', async (e) => {
   e.preventDefault();
 
   const tier = donateTierInput.value;
-  const rule = DONATE_TIER_RULES[tier];
+  const rule = currentDonateRule();
   if (!rule) {
     donateTierHint.textContent = 'Pick a heart above to choose your tier.';
     donateTierHint.className = 'username-status error';
@@ -169,6 +217,7 @@ donateForm.addEventListener('submit', async (e) => {
   const body = {
     type: 'donation',
     tier,
+    currency: donateCurrency,
     amount,
     referenceNumber: document.getElementById('donateRef').value.trim(),
     username: document.getElementById('donateUsername').value.trim().toLowerCase(),
@@ -193,6 +242,8 @@ donateForm.addEventListener('submit', async (e) => {
     donateAmountLabel.textContent = 'Amount you sent';
     donateCustomTagField.classList.add('hidden');
     donateTierHint.textContent = 'Pick a heart on the left to choose your tier.';
+    donateCurrencyTabs.forEach(t => t.classList.toggle('active', t.dataset.currency === 'php'));
+    donateCurrency = 'php';
   } catch (err) {
     donateStatus.textContent = err.message;
     donateStatus.classList.add('error');

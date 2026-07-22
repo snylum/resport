@@ -198,9 +198,15 @@ main { display: block; }
 /* Side-by-side fields on wider screens so the form takes less vertical
    space and the display's width is put to use. */
 @media (min-width: 760px) {
-  #nocodeFields, #coderFields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; align-items: start; }
+  #nocodeFields, #coderFields { display: grid; grid-template-columns: 1fr 1fr; gap: .85rem 1rem; align-items: start; }
   #coderFields .field-hint { grid-column: 1 / -1; }
 }
+
+.donate-amount-ref { display: grid; grid-template-columns: 1fr; gap: .85rem 1rem; }
+@media (min-width: 480px) {
+  .donate-amount-ref { grid-template-columns: 1fr 1fr; }
+}
+.currency-tabs { margin-bottom: .1rem; }
 
 /* ── Donate ───────────────────────────────────────────── */
 .donate-columns {
@@ -536,10 +542,16 @@ main { display: block; }
   font-size: clamp(1.6rem, 5vw, 3rem);
   line-height: 1;
   background: var(--gradient);
+  background-size: 300% 300%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   letter-spacing: -0.01em;
+  animation: logo-gradient-shift 6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .footer-wordmark { animation: none; }
 }
 
 .footer-scrolltop {

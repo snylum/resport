@@ -180,7 +180,7 @@ function renderDonations() {
     row.className = 'admin-card';
     row.innerHTML = `
       <div class="admin-card-title-row">
-        <h3 class="admin-card-title">${tierLabel(d.tier)}${d.customTag ? ` "${d.customTag}"` : ''} · ${d.amount ?? '?'} · ${d.username}.proves.work</h3>
+        <h3 class="admin-card-title">${tierLabel(d.tier)}${d.customTag ? ` "${d.customTag}"` : ''} · ${d.currency === 'usd' ? '$' : '₱'}${d.amount ?? '?'} · ${d.username}.proves.work</h3>
         <span class="admin-card-title-sub">${d.confirmed ? 'confirmed' : 'unconfirmed'}</span>
       </div>
       <p class="modal-sub" style="margin:0 0 .5rem;">
