@@ -110,10 +110,10 @@ Your donations will tremendously help.
 
 Also, this way of creating projects isn't sustainable for me too.
 I fear I'm becoming even more stupid than when I first started (haha).
-But I can't wait for my skills to catch up with my intention behind
+But I don't want to wait for my skills to catch up with my intention behind
 "proves.work" ---> a personalized subdomain that's straightforward,
 not overtly branded, and can help you face your virtual, professional life
-with a great domain. 
+with a great subdomain. 
 
 Just to clarify again: I don't know how to code so I won't know how to fix
 specific bugs unless I use Claude's free tier. It's why I made this one
@@ -123,4 +123,6 @@ so yeah, just treat this like a better "redirect link."
 
 At least, this is much better than having a "bit.ly" sa resume, no?
 
-That's all po. Thanks again?
+If you're an expert developer na may puso, I'm open for training.
+
+That's all po. Thanks again.
