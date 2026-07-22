@@ -86,11 +86,6 @@ limits), donations go toward exactly that: **paying for Cloudflare's
 Workers Paid plan and any KV overage** as traffic grows, rather than
 anything else.
 
-Also: I'm still human, and it's embarrassing for me to have no programming/technical know-how.
-I had this vision and I wanted to execute it, so unfortunately I had to use AI.
-Your donations will go to my college fund, and I assure you I'll do my best
-in outcoding AI hopefully in the next 5 years. 
-
 Ways to help:
 
 - **Donate** via the QR code on the [`/donate`](https://proves.work/#donate)
@@ -104,3 +99,28 @@ Ways to help:
   on Cloudflare's free tier for a smaller community the same way this
   one does.
 
+# Human here
+
+Yeah sorry for the AI post above. I didn't have enough time
+(it's my enrollment period now). Yes, behind this idea is a human.
+I'm sorry for using AI, even though I am aware of the environmental effects.
+I will only use AI to build open-source projects, and hopefully my ideas
+can hold on until I learn how to code on my own. Give or take 5 years.
+Your donations will tremendously help.
+
+Also, this way of creating projects isn't sustainable for me too.
+I fear I'm becoming even more stupid than when I first started (haha).
+But I can't wait for my skills to catch up with my intention behind
+"proves.work" ---> a personalized subdomain that's straightforward,
+not overtly branded, and can help you face your virtual, professional life
+with a great domain. 
+
+Just to clarify again: I don't know how to code so I won't know how to fix
+specific bugs unless I use Claude's free tier. It's why I made this one
+open-source; I don't want too assure anyone that they will be able to have a
+well-maintained experience (especially when this only uses Cloudflare's free tier too)
+so yeah, just treat this like a better "redirect link."
+
+At least, this is much better than having a "bit.ly" sa resume, no?
+
+That's all po. Thanks again?
