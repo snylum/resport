@@ -53,6 +53,7 @@
   font-family: var(--font-sans);
   font-size: 0.8rem;
   font-weight: 600;
+  line-height: 1;
   padding: 0.45rem 0.9rem;
   border: 2px solid var(--color-border);
   border-radius: 999px;
@@ -117,6 +118,7 @@
   width: 15px;
   height: 15px;
   opacity: 1;
+  display: block;
 }
 
 .showcase-search {
