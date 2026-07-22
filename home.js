@@ -509,6 +509,20 @@ donateForm.addEventListener('submit', async (e) => {
   });
 })();
 
+/* ── Clean-path routing: map each full-screen slide to a plain path
+   (e.g. /claim) instead of a #hash. Hashes stick around in the address
+   bar forever once set — this keeps the URL matching whatever slide is
+   actually in view, and clears back to "/" once you scroll past. ── */
+const SLIDE_PATHS = {
+  'top-slide': '/',
+  'how': '/how',
+  'claim': '/claim',
+  'donate': '/donate',
+  'showcase': '/showcase',
+  'contact': '/contact'
+};
+function pathForSlide(id) { return SLIDE_PATHS[id] || '/'; }
+
 /* ── Paginated slide scrolling: one slide per gesture, with a
    deliberate pause before the next scroll is accepted, so it feels
    like a controlled slide-to-slide transition instead of jittery
@@ -606,9 +620,17 @@ donateForm.addEventListener('submit', async (e) => {
 
   // In-app anchor links (nav, footer, hero CTA) should still land cleanly
   // on a slide and re-arm the cooldown so wheel input right after a click
-  // doesn't fight the animation.
+  // doesn't fight the animation — and should update the address bar to a
+  // clean path (e.g. /claim) instead of a #hash.
   document.querySelectorAll('a[href^="#"]').forEach(a => {
-    a.addEventListener('click', () => {
+    a.addEventListener('click', (e) => {
+      const id = a.getAttribute('href').slice(1);
+      const target = document.getElementById(id);
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        history.pushState(null, '', pathForSlide(id));
+      }
       locked = true;
       window.clearTimeout(goTo._t);
       goTo._t = window.setTimeout(() => { locked = false; }, COOLDOWN_MS);
@@ -641,6 +663,37 @@ donateForm.addEventListener('submit', async (e) => {
       const idx = slides.indexOf(entry.target);
       if (idx === -1) return;
       dots.forEach((d, di) => d.classList.toggle('active', di === idx));
+    });
+  }, { threshold: 0.55 });
+  slides.forEach(s => observer.observe(s));
+})();
+
+/* ── Clean-path URL sync: keep the address bar matching whichever slide
+   is actually in view (replaceState — no history spam, no reload), and
+   land on the right slide if the page was loaded at a clean path or an
+   old-style #hash link. ─────────────────────────────────────────── */
+(function initSlideUrlSync() {
+  const slides = Array.from(document.querySelectorAll('main .section, .site-footer'));
+  if (!slides.length) return;
+
+  const hashId = window.location.hash.replace(/^#/, '');
+  const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  const initialSlide = (hashId && document.getElementById(hashId))
+    || slides.find(s => pathForSlide(s.id) === path)
+    || null;
+  if (initialSlide) {
+    history.replaceState(null, '', pathForSlide(initialSlide.id));
+    requestAnimationFrame(() => initialSlide.scrollIntoView({ block: 'start' }));
+  }
+
+  let currentPath = pathForSlide(initialSlide ? initialSlide.id : 'top-slide');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const next = pathForSlide(entry.target.id);
+      if (next === currentPath) return;
+      currentPath = next;
+      history.replaceState(null, '', next);
     });
   }, { threshold: 0.55 });
   slides.forEach(s => observer.observe(s));
@@ -702,6 +755,7 @@ const showcaseScroll = document.getElementById('showcaseScroll');
 const showcaseStatus = document.getElementById('showcaseStatus');
 const showcaseSearch = document.getElementById('showcaseSearch');
 const showcaseArrowDown = document.getElementById('showcaseArrowDown');
+const showcaseHeartOrderBtn = document.getElementById('showcaseHeartOrderBtn');
 let showcaseCursor = null;
 let showcaseLoading = false;
 let showcaseDone = false;
@@ -709,25 +763,45 @@ let showcaseItems = [];
 let showcaseFilter = 'all';
 let showcaseQuery = '';
 
-// Larger/rarer donor tags read as "top donor" (starred); the rest just
-// carry their tag label. Untagged entries fall back to "Community".
 // `color` mirrors the pixel-heart tier colors in home.css — used to tint
-// each card's badge/shadow to match the heart the donor actually gave.
+// each card's border/shadow to match the heart the donor actually gave.
+// Only the top tier (Soul/"real") gets the extra pill on top of the
+// card; the others just get the tinted border/shadow.
 const TIER_META = {
-  diamond: { label: 'Blood',  starred: true,  color: '#00E5F0' },
-  real:    { label: 'Soul',   starred: true,  color: '#FF3366' },
-  gold:    { label: 'Beat',   starred: false, color: '#FFD400' },
-  normal:  { label: 'Pulse',  starred: false, color: '#FFFFFF' },
-  ghost:   { label: 'Breath', starred: false, color: '#B9A7FF' }
+  real:    { label: 'Soul',   pill: true,  color: '#FF3366' },
+  diamond: { label: 'Blood',  pill: false, color: '#00E5F0' },
+  gold:    { label: 'Beat',   pill: false, color: '#FFD400' },
+  normal:  { label: 'Pulse',  pill: false, color: '#FFFFFF' },
+  ghost:   { label: 'Breath', pill: false, color: '#B9A7FF' }
 };
+
+// Sort priority for the showcase grid — Soul donors first by default.
+// Clicking the heart pill rotates this: the current front tier moves to
+// the back and the next one takes its place, for both the card order
+// and the heart icons drawn inside the pill itself.
+let heartOrder = ['real', 'diamond', 'gold', 'normal', 'ghost'];
+
+function renderHeartOrderPill() {
+  if (!showcaseHeartOrderBtn) return;
+  showcaseHeartOrderBtn.innerHTML = heartOrder.map(tier =>
+    `<svg class="pixel-heart pixel-heart--${tier}" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>`
+  ).join('');
+}
+renderHeartOrderPill();
+
+showcaseHeartOrderBtn?.addEventListener('click', () => {
+  heartOrder.push(heartOrder.shift());
+  renderHeartOrderPill();
+  renderShowcaseGrid();
+});
 
 function showcaseInitials(username) {
   return (username || '?').slice(0, 2).toUpperCase();
 }
 
-// Minimal escaper for the bits of donor-supplied text (custom tag) we now
-// inject into card markup — the custom tag is admin-editable free text,
-// so it gets the same treatment as admin.js's esc().
+// Minimal escaper for the bits of donor/site-supplied text (custom tag,
+// description) we inject into card markup — both are admin-editable free
+// text, so they get the same treatment as admin.js's esc().
 function escHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -737,24 +811,24 @@ function escHtml(value) {
 function renderShowcaseItem(item) {
   const meta = item.tier ? TIER_META[item.tier] : null;
   const tag = item.customTag || meta?.label || 'Community';
-  const starred = !!meta?.starred;
+  const showPill = !!meta?.pill;
+  const description = (item.description || '').trim()
+    || (item.mode === 'coder'
+      ? `Open source${item.repoName ? ` — ${item.repoName}` : ''}. Live proof-of-work, not just a resume line.`
+      : 'Live proof-of-work published for everyone to see.');
 
   const card = document.createElement('a');
-  card.className = `showcase-card${starred ? ' is-starred' : ''}${meta ? ' has-donor-tag' : ''}`;
+  card.className = `showcase-card${showPill ? ' is-starred' : ''}${meta ? ' has-donor-tag' : ''}`;
   card.href = `https://${item.username}.proves.work`;
   card.target = '_blank';
   card.rel = 'noopener';
-  card.dataset.starred = starred ? '1' : '0';
+  card.dataset.starred = showPill ? '1' : '0';
   card.dataset.coder = item.mode === 'coder' ? '1' : '0';
   card.dataset.username = item.username;
   if (meta) card.style.setProperty('--donor-heart-color', meta.color);
 
   card.innerHTML = `
-    ${meta ? `
-      <span class="showcase-badge showcase-badge--heart">
-        <svg class="pixel-heart pixel-heart--${item.tier}" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
-        ${escHtml(tag)}
-      </span>` : ''}
+    ${showPill ? `<span class="showcase-badge">${escHtml(tag)}</span>` : ''}
     <div class="showcase-card-top">
       <div class="showcase-avatar">${showcaseInitials(item.username)}</div>
       <div>
@@ -762,24 +836,29 @@ function renderShowcaseItem(item) {
         <div class="showcase-card-handle">${item.username}.proves.work</div>
       </div>
     </div>
-    <p class="showcase-card-desc">
-      ${item.mode === 'coder'
-        ? `Open source${item.repoName ? ` — ${item.repoName}` : ''}. Live proof-of-work, not just a resume line.`
-        : `${escHtml(tag)} supporter — proof-of-work published for everyone to see.`}
-    </p>
+    <p class="showcase-card-desc">${escHtml(description)}</p>
     <span class="showcase-card-cta">View portfolio →</span>
   `;
   return card;
 }
 
+// Stable sort by current heart priority order; untagged/no-donation
+// entries always sink to the bottom, keeping their relative order.
+function sortShowcaseItems(list) {
+  const rank = new Map(heartOrder.map((tier, i) => [tier, i]));
+  return list
+    .map((item, i) => ({ item, i, r: item.tier && rank.has(item.tier) ? rank.get(item.tier) : heartOrder.length }))
+    .sort((a, b) => (a.r - b.r) || (a.i - b.i))
+    .map(x => x.item);
+}
+
 function renderShowcaseGrid() {
   const q = showcaseQuery.trim().toLowerCase();
-  const filtered = showcaseItems.filter(item => {
-    if (showcaseFilter === 'starred' && !TIER_META[item.tier]?.starred) return false;
+  const filtered = sortShowcaseItems(showcaseItems.filter(item => {
     if (showcaseFilter === 'coder' && item.mode !== 'coder') return false;
     if (q && !item.username.toLowerCase().includes(q)) return false;
     return true;
-  });
+  }));
 
   showcaseGrid.innerHTML = '';
   if (!filtered.length) {

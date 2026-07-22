@@ -70,12 +70,14 @@
   border-color: var(--color-primary);
 }
 
-/* "Top donor" filter — just the two top-tier hearts, no text label. */
+/* Heart-priority sort pill — same size as the other filter chips, no
+   text label, just the hearts in current sort-priority order. Clicking
+   it rotates the order (see home.js). */
 .chip-hearts {
   display: inline-flex;
   align-items: center;
-  gap: 0.15rem;
-  padding: 0.4rem 0.85rem;
+  gap: 0.2rem;
+  padding: 0.45rem 0.9rem;
 }
 
 .chip-hearts .pixel-heart {
@@ -109,7 +111,7 @@
 .showcase-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 1.5rem;
+  gap: 2.25rem;
 }
 
 .showcase-card {
@@ -153,37 +155,24 @@
   box-shadow: 14px 14px 0 0 var(--donor-heart-color, var(--color-primary));
 }
 
+/* Top pill — only shown for Soul-tier ("real") donors. Plain text tag
+   (custom tag if the admin set one, otherwise "Soul"), no icon — an
+   icon here previously got visually clipped against the card's rounded
+   top edge, so it's just a clean tinted pill now. */
 .showcase-badge {
   position: absolute;
-  top: -13px;
+  top: -12px;
   left: 1.25rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.32rem;
-  background: var(--color-primary);
-  color: #fff;
+  background: var(--donor-heart-color, var(--color-primary));
+  color: #0b0410;
   font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: 0.22rem 0.7rem;
+  padding: 0.28rem 0.75rem;
   border-radius: 999px;
   white-space: nowrap;
-}
-
-/* Heart-tier badge: pill tinted to the donor's actual heart color, with
-   the pixel heart icon for that tier and the donor's tag/title as text
-   (custom tag if the admin set one, otherwise the tier's default name). */
-.showcase-badge--heart {
-  background: var(--donor-heart-color, var(--color-primary));
-  color: #0b0410;
-}
-
-.showcase-badge--heart .pixel-heart {
-  width: 12px;
-  height: 12px;
-  color: #0b0410;
-  opacity: 1;
+  line-height: 1;
 }
 
 .showcase-card-top {
@@ -257,7 +246,7 @@
 /* ── Showcase grid (used inline in index.html) ───────────── */
 .showcase-grid {
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 1rem;
+  gap: 2.25rem;
   max-width: 980px;
   width: 100%;
   margin: 0 auto;

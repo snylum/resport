@@ -411,6 +411,7 @@ function renderSitesList() {
       <span class="admin-status-pill ${s.status}">${esc(s.status)}</span>
       <div class="admin-site-actions">
         <button class="btn btn-ghost btn-sm admin-view-btn" data-action="view" type="button">View</button>
+        <button class="btn btn-ghost btn-sm" data-action="edit" type="button">Edit</button>
         ${s.status === 'pending' ? `<button class="btn btn-secondary btn-sm" data-action="approve" type="button">Approve</button>
           <button class="btn btn-ghost btn-sm" data-action="reject" type="button">Reject</button>` : ''}
         ${s.status === 'live' ? `<button class="btn btn-ghost btn-sm" data-action="reject" type="button">Unpublish</button>` : ''}
@@ -460,6 +461,32 @@ function confirmHardDelete(username) {
 const PUBLISH_APEX = 'proves.work';
 function viewSite(username) { window.open(`https://${username}.${PUBLISH_APEX}`, '_blank', 'noopener'); }
 
+function editSiteModal(site) {
+  openModal(`
+    <h3 class="modal-title">Edit @${esc(site.username)}'s showcase card</h3>
+    <p class="modal-sub">This is the description shown on their card in the public showcase — it replaces the old auto-generated tier blurb, so write whatever fits them best.</p>
+    <div class="admin-form-grid">
+      <label class="admin-form-field admin-form-field-wide">
+        <span>Description</span>
+        <textarea id="editSiteDescription" rows="3" maxlength="280" placeholder="e.g. Frontend dev open to junior roles — full portfolio at the link.">${esc(site.description ?? '')}</textarea>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="cancelEditSiteBtn" type="button">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="saveEditSiteBtn" type="button">Save changes</button>
+    </div>
+  `, (root) => {
+    root.querySelector('#cancelEditSiteBtn').addEventListener('click', closeModal);
+    root.querySelector('#saveEditSiteBtn').addEventListener('click', async () => {
+      const description = root.querySelector('#editSiteDescription').value;
+      const data = await api('/api/admin/sites/edit', { username: site.username, description });
+      if (!data.ok) { alertModal(data.error || 'Something went wrong.'); return; }
+      closeModal();
+      loadSites();
+    });
+  });
+}
+
 el.adminSitesList.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-action]');
   if (!btn) return;
@@ -468,6 +495,7 @@ el.adminSitesList.addEventListener('click', (e) => {
   const site = allSites.find(s => s.username === username);
   const action = btn.dataset.action;
   if (action === 'view') viewSite(username);
+  else if (action === 'edit') { if (site) editSiteModal(site); }
   else if (action === 'approve') setStatus(username, 'live');
   else if (action === 'reject') setStatus(username, 'rejected');
   else if (action === 'restore') setStatus(username, 'live');

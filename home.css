@@ -465,10 +465,9 @@ main { display: block; }
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  padding: .25rem .25rem 1rem;
+  padding: 1.25rem .25rem 1rem;
 }
 
-.showcase-card.is-starred { border-color: var(--color-primary); }
 .showcase-card-tag {
   display: inline-block;
   margin-bottom: .35rem;

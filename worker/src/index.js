@@ -322,7 +322,8 @@ async function handleApi(request, env, url) {
         repo: r.repo || null, repoName: r.repoName || null,
         tier: r.showcaseTier || null,
         amount: r.showcaseAmount ?? null,
-        customTag: r.showcaseCustomTag || null
+        customTag: r.showcaseCustomTag || null,
+        description: r.description || null
       })),
       cursor: list.list_complete ? null : list.cursor
     });
@@ -462,6 +463,22 @@ async function handleApi(request, env, url) {
         .filter(r => r && r.username)
         .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
     });
+  }
+
+  // Admin-editable text shown on a site's showcase card (replaces the old
+  // auto-generated tier blurb — donors/claimants describe themselves,
+  // an admin can correct/set it here).
+  if (url.pathname === '/api/admin/sites/edit' && request.method === 'POST') {
+    const body = await request.json().catch(() => ({}));
+    const adminEmail = await verifyAdminCredential(body.googleCredential);
+    if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
+    const username = String(body.username || '').toLowerCase().trim();
+    const existing = await env.SITES.get(`site:${username}`, 'json');
+    if (!existing) return json({ ok: false, error: 'Not found.' }, 404);
+    const description = String(body.description ?? '').slice(0, 280).trim();
+    existing.description = description;
+    await env.SITES.put(`site:${username}`, JSON.stringify(existing));
+    return json({ ok: true });
   }
 
   if (url.pathname === '/api/admin/set-status' && request.method === 'POST') {

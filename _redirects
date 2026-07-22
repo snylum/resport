@@ -1,0 +1,3 @@
+# SPA fallback for the clean-path slide routing in home.js (e.g. /claim,
+# /showcase). Harmless no-op if this site isn't hosted on Cloudflare Pages.
+/*  /index.html  200
