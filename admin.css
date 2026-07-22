@@ -8,6 +8,25 @@
   --shadow-lg: 0 6px 16px rgba(0,0,0,0.16);
 }
 
+/* This page used to pull in a shared portfolio.css for these three —
+   that file doesn't exist anywhere in the project, so admin.html was
+   silently missing its "hidden" utility, status-text colors, and the
+   secondary button variant. Defined here instead, self-contained. */
+.hidden { display: none !important; }
+
+.username-status { text-align: left; font-size: 0.85rem; margin: 0; color: var(--color-text-muted); }
+.username-status:not(:empty) { margin: 0.4rem 0 0.8rem; }
+.username-status.warn { color: #a15c00; }
+.username-status.error { color: var(--color-danger); }
+.username-status.ok { color: var(--color-success); }
+
+.btn-secondary {
+  background: var(--color-secondary);
+  color: #fff;
+  border-color: var(--color-secondary);
+}
+.btn-secondary:hover { background: #6a3ce8; box-shadow: var(--shadow-lg); }
+
 .btn:hover,
 .btn:active {
   transform: none !important;
@@ -23,17 +42,28 @@
   font-family: var(--font-display);
   font-size: 1.6rem;
   font-weight: 800;
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.25rem;
+}
+
+.admin-subheading {
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+  margin: 0;
 }
 
 .admin-gate {
   max-width: 420px;
-  margin: 3rem auto 0;
+  margin: 4rem auto 0;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.75rem;
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 2.5rem 2rem;
 }
 
 .admin-panel.hidden,
@@ -41,27 +71,29 @@
   display: none;
 }
 
+.admin-heading-row { margin-bottom: 1.25rem; }
+
 .admin-toolbar {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-  margin-bottom: 1rem;
-}
-
-.admin-toolbar-actions {
-  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.75rem;
 }
 
-.admin-toolbar-actions input[type="search"] {
+.admin-toolbar input[type="search"] {
   border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
-  padding: 0.45rem 0.7rem;
+  padding: 0.5rem 0.85rem;
   font-family: var(--font-sans);
   font-size: 0.85rem;
-  min-width: 220px;
+  min-width: 240px;
+}
+.admin-toolbar input[type="search"]:focus {
+  outline: none;
+  border-color: var(--color-secondary);
 }
 
 .admin-tabs {
@@ -239,30 +271,56 @@
 /* ── Overview / Sites top-level switch ─────────────────────── */
 .admin-view-tabs {
   display: flex;
-  gap: 0.4rem;
-  margin-bottom: 1.1rem;
+  gap: 0.3rem;
+  margin-bottom: 1.5rem;
+  background: var(--color-surface-alt);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 0.3rem;
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .admin-view-tab {
-  border: 2px solid var(--color-border);
-  background: var(--color-surface);
+  border: none;
+  background: transparent;
   color: var(--color-text);
   font-size: 0.85rem;
   font-weight: 700;
   padding: 0.5rem 1rem;
   cursor: pointer;
   border-radius: var(--radius-lg);
+  white-space: nowrap;
 }
 
-.admin-view-tab:hover { background: var(--color-surface-alt); }
+.admin-view-tab:hover { background: rgba(0, 0, 0, 0.05); }
 
 .admin-view-tab.active {
   background: var(--color-secondary);
-  border-color: var(--color-secondary);
   color: #fff;
+  box-shadow: var(--shadow);
 }
 
 .admin-view.hidden { display: none; }
+
+.admin-view {
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+}
+
+/* Overview already builds its own card grid (stat cards, chart cards,
+   payments card) — wrapping that in another outer card would just be
+   a box around boxes, so it stays on the plain page background. */
+#adminOverviewView {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
 
 /* ── Stat cards ───────────────────────────────────────────────── */
 .admin-stats-grid {
@@ -435,4 +493,81 @@
     flex: 1 1 calc(50% - 0.35rem);
     text-align: center;
   }
+}
+
+/* ── Modal ─────────────────────────────────────────────────────
+   Undefined anywhere else in this project (the portfolio.css this
+   page used to share was never part of the export), so every modal
+   — mark-paid, confirm-delete, alerts — was rendering as unstyled,
+   un-hidden content sitting in normal document flow. Self-contained
+   here instead. ─────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 12, 24, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  z-index: 200;
+}
+
+.modal-box {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  max-height: calc(100vh - 2.5rem);
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 1.75rem 1.5rem 1.5rem;
+  box-sizing: border-box;
+}
+
+.modal-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 1.9rem;
+  height: 1.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 50%;
+}
+.modal-close:hover { background: var(--color-surface-alt); color: var(--color-text); }
+
+.modal-title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin: 0 0 0.5rem;
+  padding-right: 1.5rem;
+}
+
+.modal-sub {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  margin: 0 0 1rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 480px) {
+  .modal-actions { flex-direction: column-reverse; }
+  .modal-actions .btn { width: 100%; text-align: center; }
 }

@@ -14,7 +14,6 @@
   <link rel="manifest" href="/favicon/site.webmanifest" />
   <link rel="stylesheet" href="dazed.css" />
   <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="portfolio.css" />
   <link rel="stylesheet" href="admin.css" />
 </head>
 <body>
@@ -34,12 +33,13 @@
     </div>
 
     <div id="adminPanel" class="admin-panel hidden">
-      <div class="admin-toolbar">
+      <div class="admin-heading-row">
         <h1 class="admin-heading">Admin dashboard</h1>
-        <div class="admin-toolbar-actions">
-          <input type="search" id="adminSearch" placeholder="Filter by username or email…" autocomplete="off" spellcheck="false" />
-          <button class="btn btn-ghost btn-sm" id="adminRefreshBtn" type="button">↻ Refresh</button>
-        </div>
+        <p class="admin-subheading">Review claims, confirm donations, and keep an eye on the project.</p>
+      </div>
+      <div class="admin-toolbar">
+        <input type="search" id="adminSearch" placeholder="Filter by username or email…" autocomplete="off" spellcheck="false" />
+        <button class="btn btn-ghost btn-sm" id="adminRefreshBtn" type="button">↻ Refresh</button>
       </div>
 
       <div class="admin-view-tabs">
