@@ -28,7 +28,7 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
   top: 0;
   z-index: 100;
   background: var(--color-surface);
-  border-bottom: 2px solid var(--color-border);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
   display: flex;
   align-items: center;
   justify-content: space-between;

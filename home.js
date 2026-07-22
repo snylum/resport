@@ -27,17 +27,29 @@ const claimIntroNocode = document.getElementById('claimIntroNocode');
 const claimIntroCoder = document.getElementById('claimIntroCoder');
 let claimMode = 'nocode';
 
+function applyClaimMode() {
+  const isNocode = claimMode === 'nocode';
+  nocodeFields.classList.toggle('hidden', !isNocode);
+  coderFields.classList.toggle('hidden', isNocode);
+  claimIntroNocode?.classList.toggle('hidden', !isNocode);
+  claimIntroCoder?.classList.toggle('hidden', isNocode);
+
+  // Hidden fields must not stay `required`, or the browser blocks
+  // submission trying to focus an unfocusable (display:none) control.
+  document.getElementById('claimEmailNocode').required = isNocode;
+  document.getElementById('claimEmailCoder').required = !isNocode;
+}
+
 claimTabs.forEach(tab => {
   tab.addEventListener('click', () => {
     claimTabs.forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     claimMode = tab.dataset.mode;
-    nocodeFields.classList.toggle('hidden', claimMode !== 'nocode');
-    coderFields.classList.toggle('hidden', claimMode !== 'coder');
-    claimIntroNocode?.classList.toggle('hidden', claimMode !== 'nocode');
-    claimIntroCoder?.classList.toggle('hidden', claimMode !== 'coder');
+    applyClaimMode();
   });
 });
+
+applyClaimMode();
 
 /* ── Claim form submit ───────────────────────────────────── */
 const claimForm = document.getElementById('claimForm');

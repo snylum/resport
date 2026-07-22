@@ -160,7 +160,7 @@ main { display: block; }
   }
   .claim-intro { align-items: flex-start; text-align: left; flex: 1 1 380px; max-width: 440px; }
   .claim-intro .section-sub, .claim-intro .claim-tabs { text-align: left; justify-content: flex-start; }
-  .claim-form { flex: 1 1 420px; margin: 0; }
+  .claim-columns .claim-form { flex: 1 1 420px; margin: 0; }
 }
 
 /* ── Claim form ───────────────────────────────────────── */
@@ -174,7 +174,6 @@ main { display: block; }
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   gap: clamp(.35rem, 1.2vh, .85rem);
   background: var(--color-surface);
   border: 2px solid var(--color-border);
@@ -182,8 +181,8 @@ main { display: block; }
   box-shadow: var(--shadow);
   padding: clamp(1rem, 2.8vh, 1.75rem);
 }
-.field { display: flex; flex-direction: column; gap: .22rem; font-size: clamp(.74rem, 1.4vh, .85rem); font-weight: 600; }
-.field input, .field select, .field textarea { font: inherit; padding: clamp(.4rem, 1.1vh, .6rem) .8rem; border-radius: var(--radius); border: 2px solid var(--color-border); background: var(--color-background); resize: none; }
+.field { display: flex; flex-direction: column; gap: .22rem; font-size: clamp(.74rem, 1.4vh, .85rem); font-weight: 600; min-width: 0; }
+.field input, .field select, .field textarea { width: 100%; min-width: 0; font: inherit; padding: clamp(.4rem, 1.1vh, .6rem) .8rem; border-radius: var(--radius); border: 2px solid var(--color-border); background: var(--color-background); resize: none; }
 .domain-input { display: flex; align-items: center; border: 2px solid var(--color-border); border-radius: var(--radius); overflow: hidden; background: var(--color-background); }
 .domain-input input { border: none; flex: 1; background: transparent; }
 .domain-suffix { padding: 0 .8rem; color: var(--color-text-muted); font-size: .85rem; white-space: nowrap; }
@@ -202,7 +201,8 @@ main { display: block; }
   #coderFields .field-hint { grid-column: 1 / -1; }
 }
 
-.donate-amount-ref { display: grid; grid-template-columns: 1fr; gap: .85rem 1rem; }
+.donate-amount-ref { display: grid; grid-template-columns: 1fr; gap: .85rem 1rem; min-width: 0; }
+.donate-amount-ref .field { min-width: 0; }
 @media (min-width: 480px) {
   .donate-amount-ref { grid-template-columns: 1fr 1fr; }
 }
