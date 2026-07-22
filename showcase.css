@@ -96,16 +96,19 @@
   inset: -3px;
   border-radius: inherit;
   padding: 2px;
-  background: conic-gradient(from 0deg, #ff3366, #ffd400, #4dff88, #00e5f0, #7c4dff, #ff3366);
+  background: var(--gradient);
+  background-size: 300% 300%;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
           mask-composite: exclude;
-  animation: chip-hearts-spin 3s linear infinite;
+  animation: chip-hearts-gradient-shift 6s ease-in-out infinite;
   pointer-events: none;
 }
 
-@keyframes chip-hearts-spin {
-  to { transform: rotate(360deg); }
+@keyframes chip-hearts-gradient-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
