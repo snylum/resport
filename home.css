@@ -207,9 +207,29 @@ main { display: block; }
 .donate-grid { display: flex; gap: clamp(.75rem, 2.5vw, 2rem); align-items: flex-start; justify-content: center; flex-wrap: wrap; }
 .donate-qr { width: clamp(90px, 11vh, 150px); height: clamp(90px, 11vh, 150px); object-fit: contain; border: 2px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow); background: #fff; }
 .tier-list { display: flex; flex-direction: column; gap: clamp(.25rem, .8vh, .45rem); min-width: 240px; }
-.tier-card { display: flex; align-items: center; gap: .6rem; padding: clamp(.3rem, 1vh, .55rem) .8rem; border: 2px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
+.tier-card {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  width: 100%;
+  padding: clamp(.3rem, 1vh, .55rem) .8rem;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: border-color .15s ease, background .15s ease, transform .15s ease;
+}
+.tier-card:hover { transform: translateY(-1px); background: var(--color-surface-alt); }
+.tier-card:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.tier-card--selected { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
 .tier-card strong { display: block; font-size: clamp(.78rem, 1.5vh, .9rem); }
 .tier-card span { color: var(--color-text-muted); font-size: clamp(.68rem, 1.3vh, .78rem); }
+/* Heart colors stay fixed per tier regardless of hover/selection. */
+.tier-card .pixel-heart { opacity: 1; }
 .donate-section .claim-form { max-width: 400px; }
 
 /* Wide screens: QR/tiers on the left, donation form on the right, so
@@ -356,6 +376,31 @@ main { display: block; }
   flex-direction: column;
   align-items: center;
   gap: .5rem;
+}
+
+/* Wider screens: two columns (heart/QR/copy on the left, form on the
+   right), sized to fit without a scrollbar. Smaller screens keep the
+   original single-column, scrollable card. */
+@media (min-width: 720px) {
+  .tier-popup-card {
+    max-width: 680px;
+    max-height: none;
+    overflow-y: visible;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 1.75rem;
+    padding: 2rem;
+  }
+  .tier-popup-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    flex: 0 0 auto;
+    width: 190px;
+    gap: .4rem;
+  }
+  .tier-popup-form { flex: 1 1 auto; min-width: 0; text-align: left; }
 }
 
 .tier-popup-close {
