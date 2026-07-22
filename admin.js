@@ -269,7 +269,7 @@ async function loadSites() {
       renderSitesList();
       return;
     }
-    allSites = data.sites.filter(s => s && s.username && s.target);
+    allSites = data.sites.filter(s => s && s.username);
     el.adminListStatus.textContent = '';
     renderOverview();
     renderSitesList();
@@ -404,7 +404,7 @@ function renderSitesList() {
         <div class="admin-site-username">${esc(s.username)}.proves.work${s.showcase ? ` <span class="admin-owner-chip">showcased</span>` : ''}</div>
         <div class="admin-site-meta">
           ${s.mode === 'coder' ? `Coder · repo: <a href="${esc(s.repo)}" target="_blank" rel="noopener">${esc(s.repoName || s.repo)}</a>` : 'No-code'}
-          → <a href="${esc(s.target)}" target="_blank" rel="noopener">${esc(s.target)}</a>
+          → ${s.target ? `<a href="${esc(s.target)}" target="_blank" rel="noopener">${esc(s.target)}</a>` : `<span class="admin-owner-chip" style="color:var(--color-danger)">no target — malformed record</span>`}
         </div>
         <div class="admin-site-meta">${s.email ? esc(s.email) : 'anonymous'} · claimed ${formatDate(s.createdAt)}</div>
       </div>
