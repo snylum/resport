@@ -106,6 +106,16 @@
     </div>
   </div>
 
+  <!-- ── QR popup: shown when the "Show payment QR code" button is
+       clicked from the donate form. Just the code, nothing else. ── -->
+  <div id="qrPopup" class="qr-popup hidden" role="dialog" aria-modal="true" aria-label="Payment QR code">
+    <div class="qr-popup-card">
+      <button type="button" class="tier-popup-close" id="qrPopupClose" aria-label="Close">✕</button>
+      <img src="payment-qr.png" alt="Donation QR code" class="qr-popup-img" />
+      <p class="qr-popup-caption">Scan to pay, then submit your reference number below.</p>
+    </div>
+  </div>
+
   <!-- Pixel-art heart, reused via <use> and recolored per tier with CSS `color`. -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <symbol id="pixel-heart" viewBox="0 0 16 16">
@@ -252,8 +262,6 @@
 
       <div class="donate-columns">
         <div class="donate-grid">
-          <img src="payment-qr.png" alt="Donation QR code" class="donate-qr" />
-
           <div class="tier-list" id="donateTierList" role="radiogroup" aria-label="Choose a donation tier">
             <button type="button" class="tier-card" data-tier="normal" role="radio" aria-checked="false">
               <svg class="pixel-heart pixel-heart--normal" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
@@ -280,6 +288,13 @@
 
         <form id="donateForm" class="claim-form" novalidate>
           <input type="hidden" id="donateTier" />
+          <button type="button" class="btn btn-ghost btn-block qr-toggle-btn" id="donateQrBtn" aria-haspopup="dialog">
+            <svg class="qr-toggle-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+              <path d="M14 14h3v3h-3zM20 14v.01M14 20h3M20 20v.01M17 17h.01"/>
+            </svg>
+            Show payment QR code
+          </button>
           <div class="claim-tabs currency-tabs" id="donateCurrencyTabs" role="radiogroup" aria-label="Currency">
             <button type="button" class="claim-tab active" data-currency="php">PHP (₱)</button>
             <button type="button" class="claim-tab" data-currency="usd">USD ($)</button>
@@ -328,9 +343,8 @@
       </div>
 
       <div class="showcase-filters">
-        <button class="chip active" data-showcase-filter="all" type="button">All</button>
-        <button class="chip chip-hearts" id="showcaseHeartOrderBtn" type="button" aria-label="Sort by donor tier — click to cycle priority" title="Click to cycle sort priority"></button>
-        <button class="chip" data-showcase-filter="coder" type="button">Community</button>
+        <button class="chip chip-hearts active" id="showcaseHeartOrderBtn" data-showcase-filter="all" type="button" role="radio" aria-checked="true" aria-label="All profiles, sorted by donor tier — click to cycle priority" title="Click to cycle sort priority"></button>
+        <button class="chip" data-showcase-filter="coder" type="button" role="radio" aria-checked="false">Community</button>
         <input type="text" class="showcase-search" id="showcaseSearch" placeholder="Search subdomain…" />
       </div>
 

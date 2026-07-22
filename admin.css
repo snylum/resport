@@ -608,6 +608,12 @@
   outline: none;
   border-color: var(--color-primary, #7C4DFF);
 }
+.admin-form-field .field-hint {
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  opacity: 0.8;
+}
 
 @media (max-width: 480px) {
   .admin-form-grid { grid-template-columns: 1fr; }

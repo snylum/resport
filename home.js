@@ -371,6 +371,31 @@ donateForm.addEventListener('submit', async (e) => {
   }
 });
 
+/* ── Standalone QR popup: triggered by the "Show payment QR code"
+   button above the donate form's currency tabs. ─────────────────── */
+(function initQrPopup() {
+  const btn = document.getElementById('donateQrBtn');
+  const popup = document.getElementById('qrPopup');
+  const closeBtn = document.getElementById('qrPopupClose');
+  if (!btn || !popup || !closeBtn) return;
+
+  function open() {
+    popup.classList.remove('hidden');
+    closeBtn.focus();
+  }
+  function close() {
+    popup.classList.add('hidden');
+    btn.focus();
+  }
+
+  btn.addEventListener('click', open);
+  closeBtn.addEventListener('click', close);
+  popup.addEventListener('click', (e) => { if (e.target === popup) close(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !popup.classList.contains('hidden')) close();
+  });
+})();
+
 /* ── Heart tier popup: a self-contained donation form. Submits
    directly to the API — no redirect back to the page's donate form.
    The amount field is locked (or bounded) per tier so what's actually
@@ -896,8 +921,12 @@ async function loadShowcasePage() {
 
 document.querySelectorAll('[data-showcase-filter]').forEach(chip => {
   chip.addEventListener('click', () => {
-    document.querySelectorAll('[data-showcase-filter]').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('[data-showcase-filter]').forEach(c => {
+      c.classList.remove('active');
+      c.setAttribute('aria-checked', 'false');
+    });
     chip.classList.add('active');
+    chip.setAttribute('aria-checked', 'true');
     showcaseFilter = chip.dataset.showcaseFilter;
     renderShowcaseGrid();
   });

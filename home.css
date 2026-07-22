@@ -218,8 +218,58 @@ main { display: block; }
   align-items: center;
 }
 .donate-grid { display: flex; gap: clamp(.75rem, 2.5vw, 2rem); align-items: flex-start; justify-content: center; flex-wrap: wrap; }
-.donate-qr { width: clamp(90px, 11vh, 150px); height: clamp(90px, 11vh, 150px); object-fit: contain; border: 2px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow); background: #fff; }
 .tier-list { display: flex; flex-direction: column; gap: clamp(.25rem, .8vh, .45rem); min-width: 240px; }
+
+/* QR trigger button — sits above the PHP/USD currency tabs; opens the
+   standalone QR popup instead of showing the code inline. */
+.qr-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  margin-bottom: .6rem;
+}
+.qr-toggle-icon { flex: 0 0 auto; }
+
+/* Standalone QR popup — just the code + a caption, reuses the same
+   close-button styling as the tier popup. */
+.qr-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(26,26,26,0.45);
+  padding: 1.5rem;
+}
+.qr-popup.hidden { display: none; }
+.qr-popup-card {
+  position: relative;
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 2.5rem 2rem 2rem;
+  max-width: 320px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .75rem;
+}
+.qr-popup-img {
+  width: 100%;
+  max-width: 220px;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  background: #fff;
+}
+.qr-popup-caption { color: var(--color-text-muted); font-size: .85rem; margin: 0; }
 .tier-card {
   display: flex;
   align-items: center;
@@ -379,7 +429,7 @@ main { display: block; }
   border: 2px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  padding: 2rem 1.75rem;
+  padding: 2.5rem 2rem 2rem;
   max-width: 380px;
   width: 100%;
   max-height: calc(100vh - 3rem);
@@ -402,7 +452,7 @@ main { display: block; }
     flex-direction: row;
     align-items: center;
     gap: 1.75rem;
-    padding: 2rem;
+    padding: 2.25rem 2.25rem 2rem;
   }
   .tier-popup-left {
     display: flex;
@@ -418,8 +468,8 @@ main { display: block; }
 
 .tier-popup-close {
   position: absolute;
-  top: .6rem;
-  right: .6rem;
+  top: 1rem;
+  right: 1rem;
   width: 28px;
   height: 28px;
   border: none;

@@ -623,8 +623,9 @@ function editDonationModal(donation) {
         <input type="text" id="editDonationCustomTag" value="${esc(donation.customTag ?? '')}" maxlength="28" placeholder="${esc(tierLabel(donation.tier))}" />
       </label>
       <label class="admin-form-field admin-form-field-wide">
-        <span>Note</span>
-        <textarea id="editDonationNote" rows="2">${esc(donation.note ?? '')}</textarea>
+        <span>Internal note (admin-only — not shown publicly)</span>
+        <textarea id="editDonationNote" rows="2" placeholder="e.g. paid via GCash, confirmed by screenshot">${esc(donation.note ?? '')}</textarea>
+        <span class="field-hint">To change what's shown on their showcase card, use "Edit" on the Sites tab instead — that's the Description field.</span>
       </label>
     </div>
     <div class="modal-actions">
