@@ -288,13 +288,6 @@
 
         <form id="donateForm" class="claim-form" novalidate>
           <input type="hidden" id="donateTier" />
-          <button type="button" class="btn btn-ghost btn-block qr-toggle-btn" id="donateQrBtn" aria-haspopup="dialog">
-            <svg class="qr-toggle-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-              <path d="M14 14h3v3h-3zM20 14v.01M14 20h3M20 20v.01M17 17h.01"/>
-            </svg>
-            Show payment QR code
-          </button>
           <div class="claim-tabs currency-tabs" id="donateCurrencyTabs" role="radiogroup" aria-label="Currency">
             <button type="button" class="claim-tab active" data-currency="php">PHP (₱)</button>
             <button type="button" class="claim-tab" data-currency="usd">USD ($)</button>
@@ -325,6 +318,13 @@
             <span>Email</span>
             <input type="email" id="donateEmail" placeholder="you@example.com" required />
           </label>
+          <button type="button" class="btn btn-ghost btn-block qr-toggle-btn" id="donateQrBtn" aria-haspopup="dialog">
+            <svg class="qr-toggle-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+              <path d="M14 14h3v3h-3zM20 14v.01M14 20h3M20 20v.01M17 17h.01"/>
+            </svg>
+            Show payment QR code
+          </button>
           <button type="submit" class="btn btn-primary btn-block">Submit donation</button>
           <p class="username-status" id="donateStatus"></p>
         </form>
