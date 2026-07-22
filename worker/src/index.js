@@ -438,11 +438,28 @@ async function handleApi(request, env, url) {
     const adminEmail = await verifyAdminCredential(body.googleCredential);
     if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
     const list = await env.SITES.list({ prefix: 'site:' });
-    const records = await Promise.all(list.keys.map(k => env.SITES.get(k.name, 'json')));
+    // Parse each record independently — a single corrupt/malformed value
+    // (e.g. from a partial write) must not crash the whole listing with
+    // an uncaught exception (which Cloudflare turns into a bare 503).
+    // Malformed entries are still surfaced (flagged) so an admin can see
+    // and delete them instead of them becoming invisible, unremovable
+    // ghosts that keep blocking a username forever.
+    const records = await Promise.all(list.keys.map(async (k) => {
+      const fallbackUsername = k.name.replace(/^site:/, '');
+      try {
+        const parsed = await env.SITES.get(k.name, 'json');
+        if (!parsed || typeof parsed !== 'object') {
+          return { username: fallbackUsername, status: 'malformed', malformed: true, createdAt: '' };
+        }
+        return { ...parsed, username: parsed.username || fallbackUsername };
+      } catch {
+        return { username: fallbackUsername, status: 'malformed', malformed: true, createdAt: '' };
+      }
+    }));
     return json({
       ok: true,
       sites: records
-        .filter(r => r && r.username && r.target)
+        .filter(r => r && r.username)
         .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
     });
   }
