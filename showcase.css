@@ -66,47 +66,39 @@
 
 .chip:hover { background: var(--color-surface-alt); }
 
-/* Selected state, shared by every filter chip: black fill with a
-   slow-shifting gradient outline (the same gradient as the proves.work
-   logo). The outline sits exactly where the plain 2px border used to
-   be (inset: 0, 2px ring), so switching a chip between unselected and
-   selected only changes color, never size. */
+/* Selected state, shared by every filter chip: the same 2px border
+   the chip already has, just repainted black + a slow-shifting
+   gradient (the same gradient as the proves.work logo) instead of
+   solid pink. Using the background double-layer technique (rather
+   than an overlay pseudo-element) means the gradient is painted
+   directly into the existing border box — same thickness, same
+   position, nothing resizes when a chip toggles selected. */
 .chip.active {
-  background: #000;
   color: var(--color-text);
-  border-color: transparent;
-}
-
-.chip.active::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 2px;
-  background: var(--gradient);
-  background-size: 300% 300%;
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-          mask-composite: exclude;
+  border: 2px solid transparent;
+  background-image: linear-gradient(#000, #000), var(--gradient);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  background-size: 100% 100%, 300% 300%;
+  background-position: 0 0, 0% 50%;
   animation: chip-gradient-shift 6s ease-in-out infinite;
-  pointer-events: none;
 }
 
 @keyframes chip-gradient-shift {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0%   { background-position: 0 0, 0% 50%; }
+  50%  { background-position: 0 0, 100% 50%; }
+  100% { background-position: 0 0, 0% 50%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .chip.active::before { animation: none; }
+  .chip.active { animation: none; }
 }
 
 /* Heart-priority sort pill — same size as the other filter chips, no
    text label, just the hearts in current sort-priority order. Clicking
    it rotates the order (see home.js). Doubles as the "all profiles"
-   filter, so its selected state is the same shared black/gradient
-   look defined above. */
+   filter: unselected it looks like any other chip (plain pink border),
+   selected it gets the same shared black/gradient look defined above. */
 .chip-hearts {
   display: inline-flex;
   align-items: center;
