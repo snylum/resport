@@ -228,9 +228,10 @@ async function handleApi(request, env, url) {
       if (!GMAIL_RE.test(email)) return json({ ok: false, error: 'Only properly named @gmail.com addresses are accepted.' }, 400);
       const check = await verifyPublicRepo(repo);
       if (!check.ok) return json({ ok: false, error: check.error }, 400);
-      try { new URL(target); } catch { return json({ ok: false, error: 'Deployed site URL is not valid.' }, 400); }
+      let normalizedTarget;
+      try { normalizedTarget = new URL(target).href; } catch { return json({ ok: false, error: 'Deployed site URL is not valid.' }, 400); }
       record = {
-        username, mode: 'coder', target,
+        username, mode: 'coder', target: normalizedTarget,
         repo: check.htmlUrl, repoName: check.fullName,
         email,
         status: 'pending', showcase: false, createdAt: new Date().toISOString()
@@ -239,10 +240,11 @@ async function handleApi(request, env, url) {
       const target = String(body.target || '').trim();
       const email = String(body.email || '').trim();
       if (!target) return json({ ok: false, error: 'A URL to point this domain at is required.' }, 400);
-      try { new URL(target); } catch { return json({ ok: false, error: 'That URL is not valid.' }, 400); }
+      let normalizedTarget;
+      try { normalizedTarget = new URL(target).href; } catch { return json({ ok: false, error: 'That URL is not valid.' }, 400); }
       if (!GMAIL_RE.test(email)) return json({ ok: false, error: 'Only properly named @gmail.com addresses are accepted.' }, 400);
       record = {
-        username, mode: 'nocode', target,
+        username, mode: 'nocode', target: normalizedTarget,
         email,
         status: 'pending', showcase: false, createdAt: new Date().toISOString()
       };

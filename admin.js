@@ -22,6 +22,18 @@ const el = {
 const TIER_NAMES = { normal: 'Pulse', gold: 'Beat', diamond: 'Blood', real: 'Soul', ghost: 'Breath' };
 function tierLabel(tier) { return TIER_NAMES[tier] || tier || 'Untagged'; }
 
+// Claim fields like `target` are only checked with `new URL()` server-side —
+// that validates the string *parses*, not that it's free of quotes/angle
+// brackets, and the raw (non-normalized) string is what gets stored. Escape
+// everything user-supplied before it goes into innerHTML, or a stray `"` in
+// a target/email/note can break out of an attribute and mangle the card (or
+// everything rendered after it).
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
 let credential = null;
 let claimFilter = 'pending';
 let allSites = [];
@@ -102,13 +114,13 @@ function renderClaims() {
     row.className = 'admin-card';
     row.innerHTML = `
       <div class="admin-card-title-row">
-        <h3 class="admin-card-title">${site.username}.proves.work</h3>
-        <span class="admin-card-title-sub">${site.status}${site.showcase ? ' · showcased' : ''}</span>
+        <h3 class="admin-card-title">${escapeHtml(site.username)}.proves.work</h3>
+        <span class="admin-card-title-sub">${escapeHtml(site.status)}${site.showcase ? ' · showcased' : ''}</span>
       </div>
       <p class="modal-sub" style="margin:0 0 .5rem;">
-        ${site.mode === 'coder' ? `Coder · repo: <a href="${site.repo}" target="_blank" rel="noopener">${site.repoName || site.repo}</a>` : 'No-code'}
-        → <a href="${site.target}" target="_blank" rel="noopener">${site.target}</a>
-        ${site.email ? ` · ${site.email}` : ''}
+        ${site.mode === 'coder' ? `Coder · repo: <a href="${escapeHtml(site.repo)}" target="_blank" rel="noopener">${escapeHtml(site.repoName || site.repo)}</a>` : 'No-code'}
+        → <a href="${escapeHtml(site.target)}" target="_blank" rel="noopener">${escapeHtml(site.target)}</a>
+        ${site.email ? ` · ${escapeHtml(site.email)}` : ''}
       </p>
       <div class="admin-card-actions">
         <button class="btn btn-ghost btn-sm" data-act="live">Approve / live</button>
@@ -180,11 +192,11 @@ function renderDonations() {
     row.className = 'admin-card';
     row.innerHTML = `
       <div class="admin-card-title-row">
-        <h3 class="admin-card-title">${tierLabel(d.tier)}${d.customTag ? ` "${d.customTag}"` : ''} · ${d.currency === 'usd' ? '$' : '₱'}${d.amount ?? '?'} · ${d.username}.proves.work</h3>
+        <h3 class="admin-card-title">${escapeHtml(tierLabel(d.tier))}${d.customTag ? ` "${escapeHtml(d.customTag)}"` : ''} · ${d.currency === 'usd' ? '$' : '₱'}${escapeHtml(d.amount ?? '?')} · ${escapeHtml(d.username)}.proves.work</h3>
         <span class="admin-card-title-sub">${d.confirmed ? 'confirmed' : 'unconfirmed'}</span>
       </div>
       <p class="modal-sub" style="margin:0 0 .5rem;">
-        Ref: <code>${d.referenceNumber}</code>${d.email ? ` · ${d.email}` : ''}${d.note ? ` · "${d.note}"` : ''}
+        Ref: <code>${escapeHtml(d.referenceNumber)}</code>${d.email ? ` · ${escapeHtml(d.email)}` : ''}${d.note ? ` · "${escapeHtml(d.note)}"` : ''}
       </p>
       ${!d.confirmed ? `
       <div class="admin-card-actions">
