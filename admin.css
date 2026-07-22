@@ -184,6 +184,26 @@
   vertical-align: middle;
 }
 
+/* Inline "display tier" picker on each donation row — lets an admin
+   change which tier a donor shows as (and, if already showcased, syncs
+   the public card) without opening the full Edit modal. */
+.admin-tier-select {
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: var(--color-text);
+  background: var(--color-surface-alt);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm, 6px);
+  padding: 0.15rem 0.4rem;
+  margin-right: 0.3rem;
+  cursor: pointer;
+}
+.admin-tier-select:focus {
+  outline: none;
+  border-color: var(--color-primary, #7C4DFF);
+}
+
 .admin-kind-badge {
   font-size: 0.72rem;
   font-weight: 700;
@@ -250,6 +270,75 @@
   gap: 0.4rem;
   flex-shrink: 0;
   flex-wrap: wrap;
+}
+
+/* Donor donation stack — groups a donor's multiple donations under one
+   collapsible header instead of scattering them as separate rows. */
+.admin-donor-stack {
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+}
+.admin-donor-stack.expanded {
+  border-color: var(--color-primary, #7C4DFF);
+}
+
+.admin-donor-stack-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  width: 100%;
+  border: none;
+  background: none;
+  font: inherit;
+  text-align: left;
+  padding: 0.75rem 0.9rem;
+  cursor: pointer;
+}
+.admin-donor-stack-header:hover { background: var(--color-surface-alt); }
+
+.admin-donor-stack-caret {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  width: 0.9rem;
+}
+
+.admin-donor-stack-count {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.admin-donor-stack-chips {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.admin-tier-chip {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  padding: 0.1rem 0.4rem;
+}
+.admin-tier-chip.showcased {
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 12%, transparent);
+  border-color: var(--color-success);
+}
+
+.admin-donor-stack-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 0.6rem 0.6rem;
+}
+.admin-donor-stack-body .admin-site-row {
+  border-style: dashed;
 }
 
 .admin-empty {

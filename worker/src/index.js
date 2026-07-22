@@ -591,6 +591,7 @@ async function handleApi(request, env, url) {
         site.showcaseTier = donation.tier;
         site.showcaseAmount = donation.amount ?? null;
         site.showcaseCustomTag = donation.customTag || null;
+        site.showcaseDonationId = donation.id;
         site.showcaseAddedAt = new Date().toISOString();
         await env.SITES.put(`site:${donation.username}`, JSON.stringify(site));
       }
@@ -639,6 +640,25 @@ async function handleApi(request, env, url) {
     donation.editedBy = adminEmail;
     donation.editedAt = new Date().toISOString();
     await env.SITES.put(`donation:${id}`, JSON.stringify(donation));
+
+    // If this donor is already showcased, keep the displayed badge in
+    // sync with whatever tier/tag an admin just picked here — otherwise
+    // changing a donation's tier after it was tagged into the showcase
+    // would silently do nothing to the public card.
+    if (body.tier !== undefined || body.customTag !== undefined) {
+      const site = await env.SITES.get(`site:${donation.username}`, 'json');
+      // Only resync the public badge if this is the donation currently
+      // driving it (or the site predates per-donation tracking, in which
+      // case there's no other candidate) — otherwise editing donation A
+      // could silently overwrite a badge an admin deliberately set to
+      // show donation B, on a donor with multiple donations.
+      if (site && site.showcase && (!site.showcaseDonationId || site.showcaseDonationId === donation.id)) {
+        if (body.tier !== undefined) site.showcaseTier = donation.tier;
+        if (body.customTag !== undefined) site.showcaseCustomTag = donation.customTag || null;
+        await env.SITES.put(`site:${donation.username}`, JSON.stringify(site));
+      }
+    }
+
     return json({ ok: true, donation });
   }
 
@@ -658,6 +678,32 @@ async function handleApi(request, env, url) {
     donation.unconfirmedAt = new Date().toISOString();
     await env.SITES.put(`donation:${id}`, JSON.stringify(donation));
     return json({ ok: true });
+  }
+
+  // A donor who gave on more than one tier still only shows one badge on
+  // the public showcase. This lets an admin pick *which* of that donor's
+  // confirmed donations supplies the tier/amount/tag shown, without
+  // touching the donation records themselves (unlike donations/edit,
+  // which rewrites the donation's own tier).
+  if (url.pathname === '/api/admin/showcase/set-tier' && request.method === 'POST') {
+    const body = await request.json().catch(() => ({}));
+    const adminEmail = await verifyAdminCredential(body.googleCredential);
+    if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
+    const username = String(body.username || '').toLowerCase().trim();
+    const donationId = String(body.donationId || '');
+    const donation = await env.SITES.get(`donation:${donationId}`, 'json');
+    if (!donation || donation.username !== username) return json({ ok: false, error: 'Donation not found.' }, 404);
+    if (!donation.confirmed) return json({ ok: false, error: 'Confirm this donation before showcasing it.' }, 400);
+    const site = await env.SITES.get(`site:${username}`, 'json');
+    if (!site) return json({ ok: false, error: 'Site not found.' }, 404);
+    site.showcase = true;
+    site.showcaseTier = donation.tier;
+    site.showcaseAmount = donation.amount ?? null;
+    site.showcaseCustomTag = donation.customTag || null;
+    site.showcaseDonationId = donation.id;
+    if (!site.showcaseAddedAt) site.showcaseAddedAt = new Date().toISOString();
+    await env.SITES.put(`site:${username}`, JSON.stringify(site));
+    return json({ ok: true, site });
   }
 
   if (url.pathname === '/api/admin/showcase/tag' && request.method === 'POST') {

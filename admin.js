@@ -255,6 +255,9 @@ let allDonations = [];
 let donationsLoaded = false;
 let activeFilter = 'all';
 let donationFilter = 'unconfirmed';
+// Usernames whose donation stack is currently expanded in the Donations
+// tab (only relevant for donors with more than one donation).
+const expandedDonors = new Set();
 
 async function loadSites() {
   el.adminListStatus.textContent = 'Loading sites…';
@@ -537,20 +540,31 @@ async function loadDonations({ silent = false } = {}) {
   }
 }
 
-function renderDonationsList() {
-  const filtered = allDonations.filter(d => {
-    if (donationFilter === 'confirmed') return d.confirmed;
-    if (donationFilter === 'unconfirmed') return !d.confirmed;
-    return true;
-  });
-  if (!filtered.length) {
-    el.adminDonationsList.innerHTML = `<p class="admin-empty">Nothing here.</p>`;
-    return;
-  }
-  el.adminDonationsList.innerHTML = filtered.map(d => `
+function tierSelectOptions(selected) {
+  return Object.keys(TIER_NAMES).map(t =>
+    `<option value="${t}" ${selected === t ? 'selected' : ''}>${TIER_NAMES[t]}</option>`
+  ).join('');
+}
+
+// A donor is "showcasing" a given donation when that donation is the one
+// whose tier/amount/tag currently drives their public card. Older sites
+// (from before per-donation tracking) fall back to matching on tier alone.
+function isShowcasedDonation(site, d) {
+  if (!site || !site.showcase) return false;
+  if (site.showcaseDonationId) return site.showcaseDonationId === d.id;
+  return site.showcaseTier === d.tier;
+}
+
+function donationRowHtml(d, { showShowcaseAction = false } = {}) {
+  const site = allSites.find(s => s.username === d.username);
+  const isShowcased = showShowcaseAction && isShowcasedDonation(site, d);
+  return `
     <div class="admin-site-row" data-id="${esc(d.id)}">
       <div class="admin-site-main">
-        <div class="admin-site-username">${esc(tierLabel(d.tier))}${d.customTag ? ` "${esc(d.customTag)}"` : ''} · ${money(d.amount, d.currency)} · ${esc(d.username)}.proves.work</div>
+        <div class="admin-site-username">
+          <select class="admin-tier-select" data-tier-select aria-label="Display tier for ${esc(d.username)}">${tierSelectOptions(d.tier)}</select>
+          ${d.customTag ? ` "${esc(d.customTag)}"` : ''} · ${money(d.amount, d.currency)} · ${esc(d.username)}.proves.work
+        </div>
         <div class="admin-site-meta">Ref: ${esc(d.referenceNumber)}${d.email ? ` · ${esc(d.email)}` : ''}</div>
         ${d.note ? `<div class="admin-site-meta">"${esc(d.note)}"</div>` : ''}
         <div class="admin-site-meta">${formatDate(d.createdAt)}</div>
@@ -563,11 +577,75 @@ function renderDonationsList() {
         ` : `
         <button class="btn btn-secondary btn-sm" data-donation-action="unconfirm" type="button">Unconfirm</button>
         `}
+        ${showShowcaseAction && d.confirmed ? `
+        <button class="btn btn-sm ${isShowcased ? 'btn-primary' : 'btn-ghost'}" data-donation-action="set-showcase" type="button" ${isShowcased ? 'disabled' : ''}>${isShowcased ? '★ Showcasing this tier' : 'Show this tier on showcase'}</button>
+        ` : ''}
         <button class="btn btn-ghost btn-sm" data-donation-action="edit" type="button">Edit</button>
       </div>
     </div>
-  `).join('');
+  `;
 }
+
+function donorStackHtml(username, donations) {
+  const site = allSites.find(s => s.username === username);
+  const expanded = expandedDonors.has(username);
+  const tierChips = donations
+    .map(d => ({ d, showcased: isShowcasedDonation(site, d) }))
+    .sort((a, b) => new Date(a.d.createdAt || 0) - new Date(b.d.createdAt || 0))
+    .map(({ d, showcased }) => `<span class="admin-tier-chip ${showcased ? 'showcased' : ''}">${esc(tierLabel(d.tier))}${showcased ? ' ★' : ''}</span>`)
+    .join('');
+  return `
+    <div class="admin-donor-stack ${expanded ? 'expanded' : ''}" data-username="${esc(username)}">
+      <button class="admin-donor-stack-header" data-action="toggle-stack" type="button" aria-expanded="${expanded}">
+        <span class="admin-donor-stack-caret">${expanded ? '▾' : '▸'}</span>
+        <span class="admin-site-username">${esc(username)}.proves.work${site && site.showcase ? ` <span class="admin-owner-chip">showcased</span>` : ''}</span>
+        <span class="admin-donor-stack-count">${donations.length} donations</span>
+        <span class="admin-donor-stack-chips">${tierChips}</span>
+      </button>
+      ${expanded ? `<div class="admin-donor-stack-body">${donations.map(d => donationRowHtml(d, { showShowcaseAction: true })).join('')}</div>` : ''}
+    </div>
+  `;
+}
+
+function renderDonationsList() {
+  const filtered = allDonations.filter(d => {
+    if (donationFilter === 'confirmed') return d.confirmed;
+    if (donationFilter === 'unconfirmed') return !d.confirmed;
+    return true;
+  });
+  if (!filtered.length) {
+    el.adminDonationsList.innerHTML = `<p class="admin-empty">Nothing here.</p>`;
+    return;
+  }
+
+  // Group by donor so someone who gave on multiple tiers shows as one
+  // stack instead of scattered rows — easier to find, and lets us offer
+  // a "which tier should showcase?" choice right where the donations live.
+  const byUsername = new Map();
+  filtered.forEach(d => {
+    if (!byUsername.has(d.username)) byUsername.set(d.username, []);
+    byUsername.get(d.username).push(d);
+  });
+
+  el.adminDonationsList.innerHTML = Array.from(byUsername.entries()).map(([username, donations]) => {
+    if (donations.length === 1) return donationRowHtml(donations[0]);
+    return donorStackHtml(username, donations);
+  }).join('');
+}
+
+async function updateDonationTier(id, tier) {
+  const data = await api('/api/admin/donations/edit', { id, tier });
+  if (!data.ok) { alertModal(data.error || 'Something went wrong.'); return; }
+  await loadDonations();
+  loadSites();
+}
+
+el.adminDonationsList.addEventListener('change', (e) => {
+  const select = e.target.closest('[data-tier-select]');
+  if (!select) return;
+  const row = e.target.closest('.admin-site-row');
+  updateDonationTier(row.dataset.id, select.value);
+});
 
 async function confirmDonation(id, tagShowcase) {
   const data = await api('/api/admin/donations/confirm', { id, tagShowcase });
@@ -584,9 +662,7 @@ async function unconfirmDonation(id) {
 }
 
 function editDonationModal(donation) {
-  const tierOptions = Object.keys(TIER_NAMES).map(t =>
-    `<option value="${t}" ${donation.tier === t ? 'selected' : ''}>${TIER_NAMES[t]}</option>`
-  ).join('');
+  const tierOptions = tierSelectOptions(donation.tier);
   openModal(`
     <h3 class="modal-title">Edit donation</h3>
     <p class="modal-sub">Manually correct any field on this donation record.</p>
@@ -655,7 +731,23 @@ function editDonationModal(donation) {
   });
 }
 
+async function setShowcaseTier(username, id) {
+  const data = await api('/api/admin/showcase/set-tier', { username, donationId: id });
+  if (!data.ok) { alertModal(data.error || 'Something went wrong.'); return; }
+  await loadDonations();
+  loadSites();
+}
+
 el.adminDonationsList.addEventListener('click', (e) => {
+  const stackToggle = e.target.closest('[data-action="toggle-stack"]');
+  if (stackToggle) {
+    const username = stackToggle.closest('.admin-donor-stack').dataset.username;
+    if (expandedDonors.has(username)) expandedDonors.delete(username);
+    else expandedDonors.add(username);
+    renderDonationsList();
+    return;
+  }
+
   const btn = e.target.closest('[data-donation-action]');
   if (!btn) return;
   const row = e.target.closest('.admin-site-row');
@@ -663,7 +755,10 @@ el.adminDonationsList.addEventListener('click', (e) => {
   if (btn.dataset.donationAction === 'confirm') confirmDonation(id, false);
   else if (btn.dataset.donationAction === 'confirm-showcase') confirmDonation(id, true);
   else if (btn.dataset.donationAction === 'unconfirm') unconfirmDonation(id);
-  else if (btn.dataset.donationAction === 'edit') {
+  else if (btn.dataset.donationAction === 'set-showcase') {
+    const donation = allDonations.find(d => d.id === id);
+    if (donation) setShowcaseTier(donation.username, id);
+  } else if (btn.dataset.donationAction === 'edit') {
     const donation = allDonations.find(d => d.id === id);
     if (donation) editDonationModal(donation);
   }
