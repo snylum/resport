@@ -448,48 +448,27 @@ main { display: block; }
 .showcase-section {
   justify-content: flex-start;
   align-items: stretch;
+  position: relative;
 }
 .showcase-hero { flex: 0 0 auto; }
-#showcaseGrid { flex: 1 1 auto; min-height: 0; }
+.showcase-filters { flex: 0 0 auto; }
+.showcase-scroll { flex: 1 1 auto; min-height: 0; }
 #showcaseStatus { flex: 0 0 auto; }
 
-/* ── Showcase, grouped by tag: one scrollable column, one colored
-   section per tier, larger donors rendered first within each. ──── */
-.showcase-tiers {
+/* ── Showcase: flat, filterable card grid, scrollable within the
+   slide. A down arrow appears whenever the grid has more content
+   below the fold; scrolling inside is native until the bottom is
+   reached, at which point the page-level paginator takes back over
+   and moves to the next full-screen slide. ──────────────────────── */
+.showcase-scroll {
   height: 100%;
   overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-width: thin;
   padding: .25rem .25rem 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
 }
 
-.showcase-tier-section {
-  border-left: 3px solid var(--tier-color, var(--color-border));
-  padding-left: .9rem;
-}
-
-.showcase-tier-heading {
-  display: flex;
-  align-items: center;
-  gap: .45rem;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: .95rem;
-  margin: 0 0 .6rem;
-  color: var(--tier-color, var(--color-text));
-}
-.showcase-tier-heading .pixel-heart { width: 1.1rem; height: 1.1rem; }
-.showcase-tier-count { font-weight: 500; color: var(--color-text-muted); font-size: .78rem; }
-
-.showcase-tier-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: .75rem;
-}
-
-.showcase-card { border-color: var(--tier-color, var(--color-border)); }
+.showcase-card.is-starred { border-color: var(--color-primary); }
 .showcase-card-tag {
   display: inline-block;
   margin-bottom: .35rem;
@@ -497,7 +476,34 @@ main { display: block; }
   font-weight: 700;
   letter-spacing: .03em;
   text-transform: uppercase;
-  color: var(--tier-color, var(--color-primary));
+  color: var(--color-primary);
+}
+
+.showcase-arrow-down {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(.75rem, 2.5vh, 1.5rem);
+  transform: translateX(-50%);
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  animation: showcase-bounce 1.6s ease-in-out infinite;
+  z-index: 5;
+}
+.showcase-arrow-down:hover { background: var(--color-surface-alt); }
+.showcase-arrow-down.hidden { display: none; }
+
+@keyframes showcase-bounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(6px); }
 }
 
 /* ── Contact (now lives in the footer, see .footer-contact) ─────── */
@@ -653,3 +659,64 @@ main { display: block; }
   .tier-list { gap: .25rem; }
   .tier-card { padding: .35rem .6rem; }
 }
+
+/* ── Friendly validation tooltip (replaces the native browser
+   "Please fill out this field" bubble) ──────────────────────── */
+.field-invalid {
+  border-color: #FF3366 !important;
+  box-shadow: 0 0 0 3px rgba(255, 51, 102, 0.18) !important;
+}
+
+.field-tip {
+  position: absolute;
+  z-index: 500;
+  min-width: var(--tip-width, 220px);
+  max-width: 320px;
+  display: flex;
+  align-items: flex-start;
+  gap: .55rem;
+  background: #211826;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.7rem;
+  padding: .65rem .85rem;
+  font-family: var(--font-sans);
+  font-size: .85rem;
+  line-height: 1.4;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity .15s ease, transform .15s ease;
+}
+.field-tip.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.field-tip::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 1.1rem;
+  width: 12px;
+  height: 12px;
+  background: #211826;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  transform: rotate(45deg);
+}
+.field-tip-icon {
+  flex: 0 0 auto;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 0.35rem;
+  background: #FF8A00;
+  color: #fff;
+  font-weight: 800;
+  font-size: .82rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.field-tip-msg { padding-top: .1rem; }

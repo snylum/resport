@@ -76,7 +76,7 @@
         <img src="payment-qr.png" alt="Donation QR code" class="tier-popup-qr" />
       </div>
 
-      <form id="tierPopupForm" class="claim-form tier-popup-form">
+      <form id="tierPopupForm" class="claim-form tier-popup-form" novalidate>
         <label class="field">
           <span id="tierPopupAmountLabel">Amount you sent (₱)</span>
           <input type="number" id="tierPopupAmount" step="0.01" min="0" required />
@@ -197,7 +197,7 @@
           </p>
         </div>
 
-        <form id="claimForm" class="claim-form">
+        <form id="claimForm" class="claim-form" novalidate>
           <label class="field">
             <span>Subdomain</span>
             <div class="domain-input">
@@ -278,7 +278,7 @@
           </div>
         </div>
 
-        <form id="donateForm" class="claim-form">
+        <form id="donateForm" class="claim-form" novalidate>
           <input type="hidden" id="donateTier" />
           <div class="claim-tabs currency-tabs" id="donateCurrencyTabs" role="radiogroup" aria-label="Currency">
             <button type="button" class="claim-tab active" data-currency="php">PHP (₱)</button>
@@ -319,19 +319,29 @@
     <!-- ── SHOWCASE (infinite scroll) ───────────────────── -->
     <section class="section showcase-section" id="showcase">
       <div class="showcase-hero">
-        <span class="eyebrow">Community</span>
-        <h2>everybody.proves.work</h2>
+        <span class="eyebrow">Showcase</span>
+        <h2>Real people. Real proof.</h2>
         <p class="showcase-sub">
-          Browse through the best proof-of-work here, grouped by tag —
-          <span class="showcase-legend-inline">Blood</span>,
-          <span class="showcase-legend-inline">Soul</span>,
-          <span class="showcase-legend-inline">Beat</span>,
-          <span class="showcase-legend-inline">Pulse</span> and
-          <span class="showcase-legend-inline">Breath</span> — larger donors first.
+          Every profile below is a live <strong>.proves.work</strong> portfolio, published by someone actually job hunting.
+          <span class="showcase-legend-inline">★ Top donor</span> profiles get a starred, front-of-line spot.
         </p>
       </div>
-      <div id="showcaseGrid" class="showcase-tiers"></div>
-      <p class="username-status" id="showcaseStatus"></p>
+
+      <div class="showcase-filters">
+        <button class="chip active" data-showcase-filter="all" type="button">All</button>
+        <button class="chip" data-showcase-filter="starred" type="button">★ Top donor</button>
+        <button class="chip" data-showcase-filter="coder" type="button">Open source</button>
+        <input type="text" class="showcase-search" id="showcaseSearch" placeholder="Search subdomain…" />
+      </div>
+
+      <div class="showcase-scroll" id="showcaseScroll">
+        <div id="showcaseGrid" class="showcase-grid"></div>
+        <p class="username-status" id="showcaseStatus"></p>
+      </div>
+
+      <button class="showcase-arrow-down hidden" id="showcaseArrowDown" type="button" aria-label="Scroll for more">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M5 13l7 7 7-7"/></svg>
+      </button>
     </section>
 
     <footer class="section site-footer" id="contact">
@@ -340,7 +350,7 @@
           <h2>Get in touch</h2>
           <p class="section-sub">Questions, bug reports, partnership ideas — send a note and we'll reply by email.</p>
 
-          <form id="contactForm" class="claim-form">
+          <form id="contactForm" class="claim-form" novalidate>
             <label class="field">
               <span>Name</span>
               <input type="text" id="contactName" placeholder="Your name" required />

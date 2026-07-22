@@ -6,6 +6,90 @@ window.addEventListener('load', () => {
   document.body.classList.remove('is-loading');
 });
 
+/* ── Friendly validation tooltip (replaces the native browser
+   "Please fill out this field" bubble on every form marked
+   novalidate) ─────────────────────────────────────────────── */
+(function initFriendlyValidation() {
+  let tip = null;
+  let hideTimer = null;
+  let attachedField = null;
+
+  function ensureTip() {
+    if (tip) return tip;
+    tip = document.createElement('div');
+    tip.className = 'field-tip';
+    tip.innerHTML = `<span class="field-tip-icon">!</span><span class="field-tip-msg"></span>`;
+    document.body.appendChild(tip);
+    return tip;
+  }
+
+  function messageFor(field) {
+    if (field.validity.valueMissing) {
+      return field.dataset.tipMissing || 'Please fill out this field.';
+    }
+    if (field.validity.typeMismatch && field.type === 'email') {
+      return 'Please enter a valid email address.';
+    }
+    if (field.validity.rangeUnderflow) {
+      return `Please enter a value of at least ${field.min}.`;
+    }
+    if (field.validity.tooShort) {
+      return `Please use at least ${field.minLength} characters.`;
+    }
+    return field.validationMessage || 'Please check this field.';
+  }
+
+  function positionTip(field) {
+    const t = ensureTip();
+    const rect = field.getBoundingClientRect();
+    t.style.left = `${rect.left + window.scrollX}px`;
+    t.style.top = `${rect.bottom + window.scrollY + 10}px`;
+    t.style.setProperty('--tip-width', `${Math.max(rect.width, 220)}px`);
+  }
+
+  function hideTip() {
+    if (!tip) return;
+    tip.classList.remove('visible');
+    window.clearTimeout(hideTimer);
+    if (attachedField) {
+      attachedField.removeEventListener('input', hideTip);
+      attachedField.classList.remove('field-invalid');
+      attachedField = null;
+    }
+  }
+
+  function showTip(field) {
+    const t = ensureTip();
+    t.querySelector('.field-tip-msg').textContent = messageFor(field);
+    positionTip(field);
+    t.classList.add('visible');
+    field.classList.add('field-invalid');
+    field.focus();
+    attachedField = field;
+    field.addEventListener('input', hideTip, { once: true });
+    window.clearTimeout(hideTimer);
+    hideTimer = window.setTimeout(hideTip, 5000);
+  }
+
+  window.addEventListener('scroll', () => { if (attachedField) positionTip(attachedField); }, { passive: true });
+  window.addEventListener('resize', () => { if (attachedField) positionTip(attachedField); });
+  document.addEventListener('click', (e) => {
+    if (attachedField && e.target !== attachedField && !e.target.closest('.field-tip')) hideTip();
+  });
+
+  document.querySelectorAll('form[novalidate]').forEach(form => {
+    form.addEventListener('submit', (e) => {
+      hideTip();
+      if (form.checkValidity()) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      const invalidField = Array.from(form.elements).find(el => el.willValidate && !el.checkValidity());
+      if (invalidField) showTip(invalidField);
+    }, true); // capture: run before the app's own submit handler
+  });
+})();
+
+
 /* ── Live visitor counter ─────────────────────────────────── */
 (function initVisitCounter() {
   const el = document.getElementById('visitCount');
@@ -456,12 +540,39 @@ donateForm.addEventListener('submit', async (e) => {
     goTo._t = window.setTimeout(() => { locked = false; }, COOLDOWN_MS);
   }
 
+  // The showcase slide has its own internally-scrolling card grid (it
+  // can hold far more content than fits one screen). While that inner
+  // container still has room to scroll in the wheel's direction, let
+  // the browser scroll it natively instead of hijacking to the next
+  // full-page slide — only once it's scrolled all the way to its own
+  // top/bottom does normal slide-pagination kick back in.
+  function findInnerScroller(index) {
+    const slide = slides[index];
+    if (!slide || slide.id !== 'showcase') return null;
+    return document.getElementById('showcaseScroll');
+  }
+
+  function innerScrollerBlocksWheel(scroller, deltaY) {
+    if (!scroller) return false;
+    const atTop = scroller.scrollTop <= 0;
+    const atBottom = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1;
+    if (deltaY > 0 && !atBottom) return true;  // scrolling down, more content below
+    if (deltaY < 0 && !atTop) return true;     // scrolling up, more content above
+    return false;
+  }
+
   window.addEventListener('wheel', (e) => {
     // Let pinch-zoom / modifier scrolling through untouched.
     if (e.ctrlKey) return;
+    if (locked) { e.preventDefault(); return; }
+
+    const scroller = findInnerScroller(currentIndex());
+    if (innerScrollerBlocksWheel(scroller, e.deltaY)) {
+      // Let the browser handle this natively inside the showcase grid.
+      return;
+    }
 
     e.preventDefault();
-    if (locked) return;
 
     wheelAccum += e.deltaY;
     window.clearTimeout(wheelResetTimer);
@@ -585,83 +696,92 @@ document.getElementById('scrollTopBtn')?.addEventListener('click', () => {
   document.getElementById('top')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
-/* ── Infinite showcase, grouped by tag ───────────────────── */
+/* ── Infinite showcase: flat, filterable card grid ───────── */
 const showcaseGrid = document.getElementById('showcaseGrid');
+const showcaseScroll = document.getElementById('showcaseScroll');
 const showcaseStatus = document.getElementById('showcaseStatus');
+const showcaseSearch = document.getElementById('showcaseSearch');
+const showcaseArrowDown = document.getElementById('showcaseArrowDown');
 let showcaseCursor = null;
 let showcaseLoading = false;
 let showcaseDone = false;
 let showcaseItems = [];
+let showcaseFilter = 'all';
+let showcaseQuery = '';
 
-// Priority order: larger/rarer donor tags first. "diamond" (Blood) and
-// "real" (Soul, custom tag above ₱1,000) lead, then "gold" (Beat),
-// "normal" (Pulse), then "ghost" (Breath). Untagged entries go last.
+// Larger/rarer donor tags read as "top donor" (starred); the rest just
+// carry their tag label. Untagged entries fall back to "Community".
 const TIER_META = {
-  diamond: { label: 'Blood',  color: '#00E5F0', order: 0 },
-  real:    { label: 'Soul',   color: '#FF3366', order: 1 },
-  gold:    { label: 'Beat',   color: '#FFD400', order: 2 },
-  normal:  { label: 'Pulse',  color: '#FFFFFF', order: 3 },
-  ghost:   { label: 'Breath', color: '#B9A7FF', order: 4 },
-  none:    { label: 'Community', color: null, order: 5 }
+  diamond: { label: 'Blood',  starred: true },
+  real:    { label: 'Soul',   starred: true },
+  gold:    { label: 'Beat',   starred: false },
+  normal:  { label: 'Pulse',  starred: false },
+  ghost:   { label: 'Breath', starred: false }
 };
 
+function showcaseInitials(username) {
+  return (username || '?').slice(0, 2).toUpperCase();
+}
+
 function renderShowcaseItem(item) {
+  const meta = item.tier ? TIER_META[item.tier] : null;
+  const tag = item.customTag || meta?.label || 'Community';
+  const starred = !!meta?.starred;
+
   const card = document.createElement('a');
-  card.className = 'showcase-card';
+  card.className = `showcase-card${starred ? ' is-starred' : ''}`;
   card.href = `https://${item.username}.proves.work`;
   card.target = '_blank';
   card.rel = 'noopener';
-  const tag = item.customTag || (item.tier ? TIER_META[item.tier]?.label : null);
+  card.dataset.starred = starred ? '1' : '0';
+  card.dataset.coder = item.mode === 'coder' ? '1' : '0';
+  card.dataset.username = item.username;
+
   card.innerHTML = `
-    ${tag ? `<span class="showcase-card-tag">${tag}</span>` : ''}
-    <div class="showcase-card-name">${item.username}.proves.work</div>
-    ${item.mode === 'coder' ? `<div class="showcase-card-badge">⚡ open source${item.repoName ? ' · ' + item.repoName : ''}</div>` : ''}
+    ${starred ? `<span class="showcase-badge">★ Top donor</span>` : ''}
+    <div class="showcase-card-top">
+      <div class="showcase-avatar">${showcaseInitials(item.username)}</div>
+      <div>
+        <div class="showcase-card-title">${item.username}</div>
+        <div class="showcase-card-handle">${item.username}.proves.work</div>
+      </div>
+    </div>
+    <p class="showcase-card-desc">
+      ${item.mode === 'coder'
+        ? `Open source${item.repoName ? ` — ${item.repoName}` : ''}. Live proof-of-work, not just a resume line.`
+        : `${tag} supporter — proof-of-work published for everyone to see.`}
+    </p>
+    <span class="showcase-card-cta">View portfolio →</span>
   `;
   return card;
 }
 
-function renderShowcaseGroups() {
-  showcaseGrid.innerHTML = '';
-  if (!showcaseItems.length) return;
-
-  const buckets = new Map();
-  showcaseItems.forEach(item => {
-    const key = item.tier && TIER_META[item.tier] ? item.tier : 'none';
-    if (!buckets.has(key)) buckets.set(key, []);
-    buckets.get(key).push(item);
+function renderShowcaseGrid() {
+  const q = showcaseQuery.trim().toLowerCase();
+  const filtered = showcaseItems.filter(item => {
+    if (showcaseFilter === 'starred' && !TIER_META[item.tier]?.starred) return false;
+    if (showcaseFilter === 'coder' && item.mode !== 'coder') return false;
+    if (q && !item.username.toLowerCase().includes(q)) return false;
+    return true;
   });
 
-  Array.from(buckets.keys())
-    .sort((a, b) => TIER_META[a].order - TIER_META[b].order)
-    .forEach(key => {
-      const meta = TIER_META[key];
-      const items = buckets.get(key).sort((a, b) => (b.amount || 0) - (a.amount || 0));
-
-      const section = document.createElement('div');
-      section.className = 'showcase-tier-section';
-      if (meta.color) section.style.setProperty('--tier-color', meta.color);
-
-      const heading = document.createElement('h3');
-      heading.className = 'showcase-tier-heading';
-      heading.innerHTML = `
-        ${key !== 'none' ? `<svg class="pixel-heart pixel-heart--${key}" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>` : ''}
-        ${meta.label} <span class="showcase-tier-count">· ${items.length}</span>
-      `;
-
-      const grid = document.createElement('div');
-      grid.className = 'showcase-tier-grid';
-      items.forEach(item => grid.appendChild(renderShowcaseItem(item)));
-
-      section.appendChild(heading);
-      section.appendChild(grid);
-      showcaseGrid.appendChild(section);
-    });
+  showcaseGrid.innerHTML = '';
+  if (!filtered.length) {
+    showcaseStatus.textContent = showcaseItems.length
+      ? 'No profiles match that filter.'
+      : (showcaseDone ? 'No showcased sites yet — donate to be featured!' : '');
+    updateShowcaseArrow();
+    return;
+  }
+  showcaseStatus.textContent = '';
+  filtered.forEach(item => showcaseGrid.appendChild(renderShowcaseItem(item)));
+  updateShowcaseArrow();
 }
 
 async function loadShowcasePage() {
   if (showcaseLoading || showcaseDone) return;
   showcaseLoading = true;
-  showcaseStatus.textContent = 'Loading…';
+  if (!showcaseItems.length) showcaseStatus.textContent = 'Loading…';
   try {
     const url = new URL('/api/showcase', window.location.origin);
     if (showcaseCursor) url.searchParams.set('cursor', showcaseCursor);
@@ -669,14 +789,9 @@ async function loadShowcasePage() {
     const data = await res.json();
     if (!data.ok) throw new Error();
     showcaseItems = showcaseItems.concat(data.items);
-    renderShowcaseGroups();
     showcaseCursor = data.cursor;
-    if (!showcaseCursor) {
-      showcaseDone = true;
-      showcaseStatus.textContent = showcaseItems.length ? '' : 'No showcased sites yet — donate to be featured!';
-    } else {
-      showcaseStatus.textContent = '';
-    }
+    if (!showcaseCursor) showcaseDone = true;
+    renderShowcaseGrid();
   } catch {
     showcaseStatus.textContent = 'Could not load the showcase right now.';
   } finally {
@@ -684,8 +799,49 @@ async function loadShowcasePage() {
   }
 }
 
+document.querySelectorAll('[data-showcase-filter]').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('[data-showcase-filter]').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    showcaseFilter = chip.dataset.showcaseFilter;
+    renderShowcaseGrid();
+  });
+});
+
+showcaseSearch?.addEventListener('input', () => {
+  showcaseQuery = showcaseSearch.value;
+  renderShowcaseGrid();
+});
+
+// Load more as the visitor nears the bottom of the showcase's own
+// scroll container (not the page — this container scrolls internally
+// while the showcase slide is active).
+showcaseScroll?.addEventListener('scroll', () => {
+  updateShowcaseArrow();
+  if (showcaseLoading || showcaseDone) return;
+  const { scrollTop, scrollHeight, clientHeight } = showcaseScroll;
+  if (scrollHeight - (scrollTop + clientHeight) < 300) loadShowcasePage();
+});
+
+// Down arrow: nudges the showcase's own content down by one screenful.
+function updateShowcaseArrow() {
+  if (!showcaseScroll || !showcaseArrowDown) return;
+  const { scrollTop, scrollHeight, clientHeight } = showcaseScroll;
+  const hasMore = scrollHeight - (scrollTop + clientHeight) > 24;
+  showcaseArrowDown.classList.toggle('hidden', !hasMore);
+}
+
+showcaseArrowDown?.addEventListener('click', () => {
+  showcaseScroll.scrollBy({ top: showcaseScroll.clientHeight * 0.85, behavior: 'smooth' });
+});
+
+if (showcaseGrid) new ResizeObserver(updateShowcaseArrow).observe(showcaseGrid);
+
 const showcaseObserver = new IntersectionObserver(entries => {
-  if (entries.some(e => e.isIntersecting)) loadShowcasePage();
+  if (entries.some(e => e.isIntersecting)) {
+    loadShowcasePage();
+    updateShowcaseArrow();
+  }
 }, { rootMargin: '300px' });
 
 showcaseObserver.observe(document.getElementById('showcase'));

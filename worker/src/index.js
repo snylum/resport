@@ -581,6 +581,68 @@ async function handleApi(request, env, url) {
     return json({ ok: true });
   }
 
+  // Manually edit a donation's fields (reference number, amount, tier,
+  // currency, username, email, custom tag, note). Admin-only, used when a
+  // donor's submission needs correcting after the fact.
+  if (url.pathname === '/api/admin/donations/edit' && request.method === 'POST') {
+    const body = await request.json().catch(() => ({}));
+    const adminEmail = await verifyAdminCredential(body.googleCredential);
+    if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
+    const id = String(body.id || '');
+    const donation = await env.SITES.get(`donation:${id}`, 'json');
+    if (!donation) return json({ ok: false, error: 'Donation not found.' }, 404);
+
+    if (body.tier !== undefined) {
+      if (!TIERS[body.tier]) return json({ ok: false, error: 'Invalid tier.' }, 400);
+      donation.tier = body.tier;
+    }
+    if (body.currency !== undefined) {
+      donation.currency = body.currency === 'usd' ? 'usd' : 'php';
+    }
+    if (body.amount !== undefined) {
+      const amount = Number(body.amount);
+      if (!amount || amount <= 0) return json({ ok: false, error: 'Enter a valid amount.' }, 400);
+      donation.amount = amount;
+    }
+    if (body.referenceNumber !== undefined) {
+      donation.referenceNumber = String(body.referenceNumber || '').trim();
+    }
+    if (body.username !== undefined) {
+      donation.username = String(body.username || '').toLowerCase().trim();
+    }
+    if (body.email !== undefined) {
+      donation.email = String(body.email || '').trim();
+    }
+    if (body.customTag !== undefined) {
+      donation.customTag = String(body.customTag || '').trim().slice(0, 28) || null;
+    }
+    if (body.note !== undefined) {
+      donation.note = String(body.note || '').slice(0, 2000);
+    }
+    donation.editedBy = adminEmail;
+    donation.editedAt = new Date().toISOString();
+    await env.SITES.put(`donation:${id}`, JSON.stringify(donation));
+    return json({ ok: true, donation });
+  }
+
+  // Reverse a confirmation — flips the donation back to unconfirmed. Does
+  // not automatically un-showcase the site (an admin may still want the
+  // profile featured even if the donation record needs re-checking); use
+  // the showcase toggle separately for that.
+  if (url.pathname === '/api/admin/donations/unconfirm' && request.method === 'POST') {
+    const body = await request.json().catch(() => ({}));
+    const adminEmail = await verifyAdminCredential(body.googleCredential);
+    if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
+    const id = String(body.id || '');
+    const donation = await env.SITES.get(`donation:${id}`, 'json');
+    if (!donation) return json({ ok: false, error: 'Donation not found.' }, 404);
+    donation.confirmed = false;
+    donation.unconfirmedBy = adminEmail;
+    donation.unconfirmedAt = new Date().toISOString();
+    await env.SITES.put(`donation:${id}`, JSON.stringify(donation));
+    return json({ ok: true });
+  }
+
   if (url.pathname === '/api/admin/showcase/tag' && request.method === 'POST') {
     const body = await request.json().catch(() => ({}));
     const adminEmail = await verifyAdminCredential(body.googleCredential);

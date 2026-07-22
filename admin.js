@@ -528,11 +528,15 @@ function renderDonationsList() {
         <div class="admin-site-meta">${formatDate(d.createdAt)}</div>
       </div>
       <span class="admin-status-pill ${d.confirmed ? 'live' : 'pending'}">${d.confirmed ? 'confirmed' : 'unconfirmed'}</span>
-      ${!d.confirmed ? `
       <div class="admin-site-actions">
+        ${!d.confirmed ? `
         <button class="btn btn-secondary btn-sm" data-donation-action="confirm" type="button">Confirm</button>
         <button class="btn btn-secondary btn-sm" data-donation-action="confirm-showcase" type="button">Confirm + showcase</button>
-      </div>` : ''}
+        ` : `
+        <button class="btn btn-secondary btn-sm" data-donation-action="unconfirm" type="button">Unconfirm</button>
+        `}
+        <button class="btn btn-ghost btn-sm" data-donation-action="edit" type="button">Edit</button>
+      </div>
     </div>
   `).join('');
 }
@@ -544,6 +548,84 @@ async function confirmDonation(id, tagShowcase) {
   loadSites();
 }
 
+async function unconfirmDonation(id) {
+  const data = await api('/api/admin/donations/unconfirm', { id });
+  if (!data.ok) { alertModal(data.error || 'Something went wrong.'); return; }
+  await loadDonations();
+  loadSites();
+}
+
+function editDonationModal(donation) {
+  const tierOptions = Object.keys(TIER_NAMES).map(t =>
+    `<option value="${t}" ${donation.tier === t ? 'selected' : ''}>${TIER_NAMES[t]}</option>`
+  ).join('');
+  openModal(`
+    <h3 class="modal-title">Edit donation</h3>
+    <p class="modal-sub">Manually correct any field on this donation record.</p>
+    <div class="admin-form-grid">
+      <label class="admin-form-field">
+        <span>Tier</span>
+        <select id="editDonationTier">${tierOptions}</select>
+      </label>
+      <label class="admin-form-field">
+        <span>Currency</span>
+        <select id="editDonationCurrency">
+          <option value="php" ${donation.currency === 'php' ? 'selected' : ''}>PHP</option>
+          <option value="usd" ${donation.currency === 'usd' ? 'selected' : ''}>USD</option>
+        </select>
+      </label>
+      <label class="admin-form-field">
+        <span>Amount</span>
+        <input type="number" id="editDonationAmount" value="${esc(donation.amount ?? '')}" min="0" step="0.01" />
+      </label>
+      <label class="admin-form-field">
+        <span>Reference number</span>
+        <input type="text" id="editDonationRef" value="${esc(donation.referenceNumber ?? '')}" />
+      </label>
+      <label class="admin-form-field">
+        <span>Username</span>
+        <input type="text" id="editDonationUsername" value="${esc(donation.username ?? '')}" />
+      </label>
+      <label class="admin-form-field">
+        <span>Email</span>
+        <input type="text" id="editDonationEmail" value="${esc(donation.email ?? '')}" />
+      </label>
+      <label class="admin-form-field admin-form-field-wide">
+        <span>Custom tag</span>
+        <input type="text" id="editDonationCustomTag" value="${esc(donation.customTag ?? '')}" maxlength="28" />
+      </label>
+      <label class="admin-form-field admin-form-field-wide">
+        <span>Note</span>
+        <textarea id="editDonationNote" rows="2">${esc(donation.note ?? '')}</textarea>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="cancelEditDonationBtn" type="button">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="saveEditDonationBtn" type="button">Save changes</button>
+    </div>
+  `, (root) => {
+    root.querySelector('#cancelEditDonationBtn').addEventListener('click', closeModal);
+    root.querySelector('#saveEditDonationBtn').addEventListener('click', async () => {
+      const payload = {
+        id: donation.id,
+        tier: root.querySelector('#editDonationTier').value,
+        currency: root.querySelector('#editDonationCurrency').value,
+        amount: root.querySelector('#editDonationAmount').value,
+        referenceNumber: root.querySelector('#editDonationRef').value,
+        username: root.querySelector('#editDonationUsername').value,
+        email: root.querySelector('#editDonationEmail').value,
+        customTag: root.querySelector('#editDonationCustomTag').value,
+        note: root.querySelector('#editDonationNote').value
+      };
+      const data = await api('/api/admin/donations/edit', payload);
+      if (!data.ok) { alertModal(data.error || 'Something went wrong.'); return; }
+      closeModal();
+      await loadDonations();
+      loadSites();
+    });
+  });
+}
+
 el.adminDonationsList.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-donation-action]');
   if (!btn) return;
@@ -551,6 +633,11 @@ el.adminDonationsList.addEventListener('click', (e) => {
   const id = row.dataset.id;
   if (btn.dataset.donationAction === 'confirm') confirmDonation(id, false);
   else if (btn.dataset.donationAction === 'confirm-showcase') confirmDonation(id, true);
+  else if (btn.dataset.donationAction === 'unconfirm') unconfirmDonation(id);
+  else if (btn.dataset.donationAction === 'edit') {
+    const donation = allDonations.find(d => d.id === id);
+    if (donation) editDonationModal(donation);
+  }
 });
 
 document.querySelectorAll('.admin-tabs [data-donation-filter]').forEach(tab => {
