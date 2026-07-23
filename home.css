@@ -495,7 +495,18 @@ main { display: block; }
 .tier-popup-heart { width: 3rem; height: 3rem; margin-bottom: .25rem; }
 .tier-popup-card h3 { font-size: 1.15rem; }
 .tier-popup-copy { color: var(--color-text-muted); font-size: .85rem; }
-.tier-popup-qr { width: 150px; height: 150px; object-fit: contain; border: 2px solid var(--color-border); border-radius: var(--radius-lg); background: #fff; margin: .25rem 0 .5rem; }
+
+/* Compact currency tabs for the header popup — same PHP/USD toggle as the
+   donate form, just sized to fit the narrower 190px column without
+   wrapping or overlapping the close button/QR. */
+#tierPopupCurrencyTabs.currency-tabs { margin: 0 0 .1rem; gap: .4rem; }
+#tierPopupCurrencyTabs .claim-tab {
+  padding: .4rem .7rem;
+  font-size: .75rem;
+  white-space: nowrap;
+}
+
+.tier-popup-qr { width: 130px; height: 130px; object-fit: contain; border: 2px solid var(--color-border); border-radius: var(--radius-lg); background: #fff; margin: .1rem 0 .4rem; }
 
 .tier-popup-form { width: 100%; text-align: left; }
 .tier-popup-form input[readonly] {

@@ -73,7 +73,11 @@
         <svg id="tierPopupHeart" class="pixel-heart tier-popup-heart" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
         <h3 id="tierPopupTitle">Pulse</h3>
         <p class="tier-popup-copy" id="tierPopupCopy">Scan the QR code, send exactly this amount, then fill in the details below.</p>
-        <img src="payment-qr-php.png" alt="Donation QR code" class="tier-popup-qr" />
+        <div class="claim-tabs currency-tabs" id="tierPopupCurrencyTabs" role="radiogroup" aria-label="Currency">
+          <button type="button" class="claim-tab active" data-currency="php">₱ PHP</button>
+          <button type="button" class="claim-tab" data-currency="usd">$ USD</button>
+        </div>
+        <img src="payment-qr-php.png" alt="Donation QR code" class="tier-popup-qr" id="tierPopupQrImg" data-qr-php="payment-qr-php.png" data-qr-usd="payment-qr-usd.png" />
       </div>
 
       <form id="tierPopupForm" class="claim-form tier-popup-form" novalidate>

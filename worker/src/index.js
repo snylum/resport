@@ -33,7 +33,9 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const GMAIL_RE = /^[a-z0-9](?:\.?[a-z0-9]){5,29}@gmail\.com$/i;
 
 const CORS_HEADERS = {
-  'access-control-allow-origin': '*', // tighten to `https://${APP_HOST}` once live
+  // Locked to the real site so other sites can't drive browser traffic at
+  // these endpoints (which was previously wide open with '*').
+  'access-control-allow-origin': `https://${APP_HOST}`,
   'access-control-allow-methods': 'GET,POST,OPTIONS',
   'access-control-allow-headers': 'content-type'
 };
@@ -91,6 +93,12 @@ async function checkAndBumpRateLimit(env, key, max, windowSeconds) {
 // set, verification is skipped entirely (so local/dev setups don't break) —
 // set it before going live if bot spam is a concern.
 async function verifyTurnstile(token, ip, env) {
+  // ⚠️ Fails OPEN when unconfigured: with no TURNSTILE_SECRET_KEY set, every
+  // claim submission is treated as verified. Fine for local dev, but make
+  // sure this secret is actually set (`npx wrangler secret put
+  // TURNSTILE_SECRET_KEY`) before relying on it in production — otherwise
+  // the only thing standing between you and scripted claim spam is the
+  // 10/hour/IP rate limit below, which is trivial to route around.
   if (!env.TURNSTILE_SECRET_KEY) return true; // not configured — skip
   if (!token) return false;
   try {
@@ -239,7 +247,22 @@ function pendingPage(username) {
 
 // ── Proxy: fetches the owner's real page and serves it back so the
 // address bar keeps showing username.proves.work. ────────────────
-async function proxyRedirectTarget(redirectUrl, pathAndQuery) {
+// Cap how long we'll wait on the claimant's origin, and how much of its
+// response body we'll buffer — an uncapped proxy is an easy way to burn
+// through the free-tier CPU/subrequest budget (a slow or huge upstream
+// page turns into a slow/huge amount of *our* Worker's time on every
+// single visitor hit).
+const PROXY_FETCH_TIMEOUT_MS = 8000;
+const PROXY_MAX_BODY_BYTES = 5 * 1024 * 1024; // 5 MB
+
+// How long we're willing to serve a cached copy of a proxied page before
+// re-fetching the origin. This is the single biggest lever for keeping
+// free-tier consumption down: without it, every visitor to every proxied
+// subdomain triggers a fresh KV read *and* a fresh outbound fetch, with no
+// cap on how often that can happen.
+const PROXY_CACHE_TTL_SECONDS = 120;
+
+async function proxyRedirectTarget(redirectUrl, pathAndQuery, request) {
   let targetOrigin;
   try {
     targetOrigin = new URL(redirectUrl).origin;
@@ -253,11 +276,31 @@ async function proxyRedirectTarget(redirectUrl, pathAndQuery) {
     ? redirectUrl
     : targetOrigin + pathAndQuery;
 
+  // Only ever proxy plain http/https targets — anything else (e.g. a
+  // claimant later editing the record to something exotic) just fails
+  // cleanly instead of being handed to fetch().
+  if (!/^https?:$/i.test(new URL(targetPageUrl).protocol)) {
+    return new Response('This address is not configured correctly.', {
+      status: 502, headers: { 'content-type': 'text/plain;charset=UTF-8' }
+    });
+  }
+
+  // Serve from cache when we can — this is what keeps a popular (or
+  // hostile/scripted) subdomain from re-fetching the origin on every hit.
+  const cache = caches.default;
+  const cacheKey = new Request(targetPageUrl, { method: 'GET' });
+  if (request && request.method === 'GET') {
+    const cached = await cache.match(cacheKey);
+    if (cached) return cached;
+  }
+
   let upstream;
   try {
     upstream = await fetch(targetPageUrl, {
       redirect: 'follow',
-      headers: { 'user-agent': 'Mozilla/5.0 (compatible; proves.work-proxy/1.0)' }
+      headers: { 'user-agent': 'Mozilla/5.0 (compatible; proves.work-proxy/1.0)' },
+      signal: AbortSignal.timeout(PROXY_FETCH_TIMEOUT_MS),
+      cf: { cacheTtl: PROXY_CACHE_TTL_SECONDS, cacheEverything: false }
     });
   } catch {
     return new Response('The connected page could not be reached right now.', {
@@ -265,19 +308,42 @@ async function proxyRedirectTarget(redirectUrl, pathAndQuery) {
     });
   }
 
+  // Bail out on huge responses before we buffer the whole thing.
+  const declaredLength = Number(upstream.headers.get('content-length') || 0);
+  if (declaredLength && declaredLength > PROXY_MAX_BODY_BYTES) {
+    return new Response('The connected page is too large to display here.', {
+      status: 502, headers: { 'content-type': 'text/plain;charset=UTF-8' }
+    });
+  }
+
   const contentType = upstream.headers.get('content-type') || '';
   if (!contentType.includes('text/html')) {
-    return new Response(upstream.body, { status: upstream.status, headers: { 'content-type': contentType } });
+    const response = new Response(upstream.body, { status: upstream.status, headers: { 'content-type': contentType } });
+    return response;
   }
 
   let html = await upstream.text();
+  if (html.length > PROXY_MAX_BODY_BYTES) html = html.slice(0, PROXY_MAX_BODY_BYTES);
   const originEsc = targetOrigin.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   html = html.replace(new RegExp(`(href|action)="${originEsc}(/[^"]*)?"`, 'g'), (m, attr, path) => `${attr}="${path || '/'}"`);
 
-  return new Response(html, {
+  const response = new Response(html, {
     status: upstream.status,
-    headers: { 'content-type': 'text/html;charset=UTF-8' }
+    headers: {
+      'content-type': 'text/html;charset=UTF-8',
+      // Let Cloudflare's edge + our own Cache API hold onto this for a
+      // couple of minutes instead of hitting the origin on every visitor.
+      'cache-control': `public, max-age=${PROXY_CACHE_TTL_SECONDS}`
+    }
   });
+
+  if (request && request.method === 'GET' && upstream.status === 200) {
+    // Don't await — populate the cache in the background so we don't
+    // add extra latency to this response.
+    await cache.put(cacheKey, response.clone());
+  }
+
+  return response;
 }
 
 // ── Redirect mode: send the browser straight to the target instead of
@@ -296,13 +362,30 @@ function redirectToTarget(redirectUrl, pathAndQuery) {
   return Response.redirect(dest, 302);
 }
 
-async function serveSite(username, env, pathAndQuery) {
+// Generous per-IP cap on how many times a single visitor can hit the
+// site-serving path per minute. This is separate from the /api/claim and
+// /api/contact limits — it protects the path that actually sees the most
+// traffic (every visit to any *.proves.work subdomain), which previously
+// had no limit at all.
+const SERVE_RATE_LIMIT_MAX = 120;
+const SERVE_RATE_LIMIT_WINDOW_SECONDS = 60;
+
+async function serveSite(username, env, pathAndQuery, request) {
   username = username.toLowerCase();
+
+  const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+  const ok = await checkAndBumpRateLimit(env, `rl:serve:${ip}`, SERVE_RATE_LIMIT_MAX, SERVE_RATE_LIMIT_WINDOW_SECONDS);
+  if (!ok) {
+    return new Response('Too many requests. Please slow down.', {
+      status: 429, headers: { 'content-type': 'text/plain;charset=UTF-8', 'retry-after': '60' }
+    });
+  }
+
   const record = await env.SITES.get(`site:${username}`, 'json');
   if (!record) return new Response(notFoundPage(username), { status: 404, headers: { 'content-type': 'text/html;charset=UTF-8' } });
   if (record.status !== 'live') return new Response(pendingPage(username), { status: 200, headers: { 'content-type': 'text/html;charset=UTF-8' } });
   if (record.linkMode === 'redirect') return redirectToTarget(record.target, pathAndQuery);
-  return proxyRedirectTarget(record.target, pathAndQuery);
+  return proxyRedirectTarget(record.target, pathAndQuery, request);
 }
 
 async function handleApi(request, env, url) {
@@ -355,6 +438,13 @@ async function handleApi(request, env, url) {
 
   // ── Public showcase feed (paginated, for infinite scroll) ──────────
   if (url.pathname === '/api/showcase' && request.method === 'GET') {
+    // Each call here can fan out into ~30 extra KV reads (one list + one
+    // get per item), so it needs its own, tighter cap — a plain per-IP
+    // request-count limit undercounts how much quota this endpoint
+    // actually spends.
+    const ok = await checkAndBumpRateLimit(env, `rl:showcase:${ip}`, 30, 60);
+    if (!ok) return json({ ok: false, error: 'Too many requests. Try again shortly.' }, 429);
+
     const cursor = url.searchParams.get('cursor') || undefined;
     const list = await env.SITES.list({ prefix: 'site:', cursor, limit: 30 });
     const records = (await Promise.all(list.keys.map(k => env.SITES.get(k.name, 'json'))))
@@ -473,6 +563,8 @@ async function handleApi(request, env, url) {
     return json({ ok: true, count: current });
   }
   if (url.pathname === '/api/visits' && request.method === 'GET') {
+    const ok = await checkAndBumpRateLimit(env, `rl:visitsread:${ip}`, 60, 60);
+    if (!ok) return json({ ok: false, error: 'Too many requests. Try again shortly.' }, 429);
     const current = parseInt((await env.SITES.get('meta:visit-count')) || '0', 10) || 0;
     return json({ ok: true, count: current });
   }
@@ -932,7 +1024,7 @@ export default {
 
     if (!isApex) {
       const username = host.split('.')[0];
-      return serveSite(username, env, url.pathname + url.search);
+      return serveSite(username, env, url.pathname + url.search, request);
     }
 
     return new Response('Not found', { status: 404 });
