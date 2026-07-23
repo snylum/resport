@@ -2,14 +2,10 @@
    proves-work-router — Cloudflare Worker
    ============================================================
    Free subdomains on proves.work. No portfolio builder, no
-   sign-ups. Two ways to claim a name:
+   sign-ups. One way to claim a name:
 
-   1. "no-code" — give a username + your name/email + a URL.
-      <username>.proves.work proxies to that URL.
-   2. "coder"   — give a username + a public GitHub repo (must be
-      open source) + the URL it deploys to (GitHub Pages, Vercel,
-      etc). Same proxy, plus we show an "open source" badge and
-      link back to the repo, like is-a.dev does for its domains.
+   "no-code" — give a username + your name/email + a URL.
+      <username>.proves.work proxies (or redirects) to that URL.
 
    Every claim is reviewed by hand at /admin before it goes live
    (same idea is-a.dev uses via PRs — here it's just a click).
@@ -309,25 +305,6 @@ async function serveSite(username, env, pathAndQuery) {
   return proxyRedirectTarget(record.target, pathAndQuery);
 }
 
-// ── GitHub check: repo must exist and be public ────────────────────
-async function verifyPublicRepo(repoUrl) {
-  try {
-    const u = new URL(repoUrl);
-    if (u.hostname !== 'github.com') return { ok: false, error: 'Repo must be a github.com URL.' };
-    const [, owner, repo] = u.pathname.split('/');
-    if (!owner || !repo) return { ok: false, error: 'Could not parse owner/repo from that URL.' };
-    const res = await fetch(`https://api.github.com/repos/${owner}/${repo.replace(/\.git$/, '')}`, {
-      headers: { 'user-agent': 'proves-work-worker', 'accept': 'application/vnd.github+json' }
-    });
-    if (!res.ok) return { ok: false, error: 'Repo not found on GitHub.' };
-    const data = await res.json();
-    if (data.private) return { ok: false, error: 'Repo must be public/open-source.' };
-    return { ok: true, fullName: data.full_name, htmlUrl: data.html_url };
-  } catch {
-    return { ok: false, error: 'Could not verify that repo.' };
-  }
-}
-
 async function handleApi(request, env, url) {
   const ip = request.headers.get('cf-connecting-ip') || 'unknown';
 
@@ -342,7 +319,7 @@ async function handleApi(request, env, url) {
     if (!turnstileOk) return json({ ok: false, error: 'Verification failed. Please retry the challenge and submit again.' }, 400);
 
     const username = String(body.username || '').toLowerCase().trim();
-    const mode = body.mode === 'coder' ? 'coder' : 'nocode';
+    const mode = 'nocode';
     // How the subdomain actually serves visitors: 'proxy' fetches the
     // target and serves it back so the address bar stays on proves.work
     // (the original/default behavior); 'redirect' just sends the browser
@@ -357,36 +334,17 @@ async function handleApi(request, env, url) {
     const existing = await env.SITES.get(`site:${username}`, 'json');
     if (existing && existing.status !== 'rejected') return json({ ok: false, error: 'That name is already taken.' }, 409);
 
-    let record;
-    if (mode === 'coder') {
-      const repo = String(body.repo || '').trim();
-      const target = String(body.target || '').trim();
-      if (!repo || !target) return json({ ok: false, error: 'Repo URL and deployed site URL are both required.' }, 400);
-      const email = String(body.email || '').trim();
-      if (!GMAIL_RE.test(email)) return json({ ok: false, error: 'Only properly named @gmail.com addresses are accepted.' }, 400);
-      const check = await verifyPublicRepo(repo);
-      if (!check.ok) return json({ ok: false, error: check.error }, 400);
-      let normalizedTarget;
-      try { normalizedTarget = new URL(target).href; } catch { return json({ ok: false, error: 'Deployed site URL is not valid.' }, 400); }
-      record = {
-        username, mode: 'coder', target: normalizedTarget, linkMode,
-        repo: check.htmlUrl, repoName: check.fullName,
-        email,
-        status: 'pending', showcase: false, createdAt: new Date().toISOString()
-      };
-    } else {
-      const target = String(body.target || '').trim();
-      const email = String(body.email || '').trim();
-      if (!target) return json({ ok: false, error: 'A URL to point this domain at is required.' }, 400);
-      let normalizedTarget;
-      try { normalizedTarget = new URL(target).href; } catch { return json({ ok: false, error: 'That URL is not valid.' }, 400); }
-      if (!GMAIL_RE.test(email)) return json({ ok: false, error: 'Only properly named @gmail.com addresses are accepted.' }, 400);
-      record = {
-        username, mode: 'nocode', target: normalizedTarget, linkMode,
-        email,
-        status: 'pending', showcase: false, createdAt: new Date().toISOString()
-      };
-    }
+    const target = String(body.target || '').trim();
+    const email = String(body.email || '').trim();
+    if (!target) return json({ ok: false, error: 'A URL to point this domain at is required.' }, 400);
+    let normalizedTarget;
+    try { normalizedTarget = new URL(target).href; } catch { return json({ ok: false, error: 'That URL is not valid.' }, 400); }
+    if (!GMAIL_RE.test(email)) return json({ ok: false, error: 'Only properly named @gmail.com addresses are accepted.' }, 400);
+    const record = {
+      username, mode: 'nocode', target: normalizedTarget, linkMode,
+      email,
+      status: 'pending', showcase: false, createdAt: new Date().toISOString()
+    };
 
     const slotOk = await addEmailSlot(env, record.email, username, MAX_CLAIMS_PER_EMAIL);
     if (!slotOk) return json({ ok: false, error: `That email already has ${MAX_CLAIMS_PER_EMAIL} active claims — the limit per email.` }, 429);
@@ -729,7 +687,7 @@ async function handleApi(request, env, url) {
     await releaseEmailSlot(env, existing.email, username);
     await env.SITES.delete(`site:${username}`);
     const auditEntry = {
-      username, deletedBy: adminEmail, deletedAt: new Date().toISOString(),
+      type: 'site', username, deletedBy: adminEmail, deletedAt: new Date().toISOString(),
       snapshot: {
         status: existing.status, mode: existing.mode, email: existing.email,
         showcase: !!existing.showcase, target: existing.target
@@ -812,6 +770,29 @@ async function handleApi(request, env, url) {
         await env.SITES.put(`site:${donation.username}`, JSON.stringify(site));
       }
     }
+    return json({ ok: true });
+  }
+
+  // Hard delete a donation record — permanently erases it. Keeps a
+  // snapshot in the same audit log used for site deletions first, since
+  // this can't be undone and admins want to know what was deleted.
+  if (url.pathname === '/api/admin/donations/delete' && request.method === 'POST') {
+    const body = await request.json().catch(() => ({}));
+    const adminEmail = await verifyAdminCredential(body.googleCredential);
+    if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
+    const id = String(body.id || '');
+    const donation = await env.SITES.get(`donation:${id}`, 'json');
+    if (!donation) return json({ ok: false, error: 'Donation not found.' }, 404);
+    await env.SITES.delete(`donation:${id}`);
+    const auditEntry = {
+      type: 'donation', id, deletedBy: adminEmail, deletedAt: new Date().toISOString(),
+      snapshot: {
+        username: donation.username, tier: donation.tier, currency: donation.currency,
+        amount: donation.amount, referenceNumber: donation.referenceNumber,
+        email: donation.email, confirmed: !!donation.confirmed
+      }
+    };
+    await env.SITES.put(`auditlog:${Date.now()}:${crypto.randomUUID()}`, JSON.stringify(auditEntry));
     return json({ ok: true });
   }
 

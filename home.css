@@ -164,8 +164,7 @@ main { display: block; }
 /* Side-by-side fields on wider screens so the form takes less vertical
    space and the display's width is put to use. */
 @media (min-width: 760px) {
-  #nocodeFields, #coderFields { display: grid; grid-template-columns: 1fr 1fr; gap: .85rem 1rem; align-items: start; }
-  #coderFields .field-hint { grid-column: 1 / -1; }
+  #nocodeFields { display: grid; grid-template-columns: 1fr 1fr; gap: .85rem 1rem; align-items: start; }
 }
 
 .donate-amount-ref { display: grid; grid-template-columns: 1fr; gap: .85rem 1rem; min-width: 0; }
@@ -486,7 +485,7 @@ main { display: block; }
   overflow-y: hidden;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
-  padding: .75rem 0;
+  padding: 1.5rem 1rem;
   cursor: grab;
   /* No mask by default — a leftmost/rightmost card sitting flush against
      the edge must render at full opacity, never faded into the

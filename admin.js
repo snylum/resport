@@ -448,7 +448,7 @@ function siteRowHtml(s) {
       <div class="admin-site-main">
         <div class="admin-site-username">${esc(s.username)}.proves.work${s.showcase ? ` <span class="admin-owner-chip">showcased</span>` : ''}${s.sample ? ` <span class="admin-owner-chip admin-sample-chip">SAMPLE</span>` : ''}</div>
         <div class="admin-site-meta">
-          ${s.mode === 'coder' ? `Coder · repo: <a href="${esc(s.repo)}" target="_blank" rel="noopener">${esc(s.repoName || s.repo)}</a>` : 'No-code'}
+          No-code${s.repo ? ` · repo: <a href="${esc(s.repo)}" target="_blank" rel="noopener">${esc(s.repoName || s.repo)}</a>` : ''}
           → ${s.target ? `<a href="${esc(s.target)}" target="_blank" rel="noopener">${esc(s.target)}</a>` : `<span class="admin-owner-chip" style="color:var(--color-danger)">no target — malformed record</span>`}
         </div>
         <div class="admin-site-meta">${s.email ? esc(s.email) : 'anonymous'} · claimed ${formatDate(s.createdAt)}</div>
@@ -545,6 +545,29 @@ function confirmHardDelete(username) {
     root.querySelector('#cancelHardDeleteBtn').addEventListener('click', closeModal);
     root.querySelector('#confirmHardDeleteBtn').addEventListener('click', () => {
       hardDeleteSite(username);
+      closeModal();
+    });
+  });
+}
+
+async function hardDeleteDonation(id) {
+  const data = await api('/api/admin/donations/delete', { id });
+  if (!data.ok) { alertModal(data.error || 'Something went wrong.'); return; }
+  loadDonations();
+}
+
+function confirmHardDeleteDonation(donation) {
+  openModal(`
+    <h3 class="modal-title" id="modalTitle">Permanently delete this donation?</h3>
+    <p class="modal-sub">Erases the ${esc(money(donation.amount, donation.currency))} donation record from ${esc(donation.username)}.proves.work entirely. This can't be undone. A snapshot is kept in the audit log.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="cancelHardDeleteDonationBtn" type="button">Cancel</button>
+      <button class="btn btn-danger btn-sm" id="confirmHardDeleteDonationBtn" type="button">Delete permanently</button>
+    </div>
+  `, (root) => {
+    root.querySelector('#cancelHardDeleteDonationBtn').addEventListener('click', closeModal);
+    root.querySelector('#confirmHardDeleteDonationBtn').addEventListener('click', () => {
+      hardDeleteDonation(donation.id);
       closeModal();
     });
   });
@@ -737,6 +760,7 @@ function donationRowHtml(d, { showShowcaseAction = false } = {}) {
         <button class="btn btn-sm ${isShowcased ? 'btn-primary' : 'btn-ghost'}" data-donation-action="set-showcase" type="button" ${isShowcased ? 'disabled' : ''}>${isShowcased ? '★ Showcasing this tier' : 'Show this tier on showcase'}</button>
         ` : ''}
         <button class="btn btn-ghost btn-sm" data-donation-action="edit" type="button">Edit</button>
+        <button class="btn btn-ghost btn-sm" data-donation-action="delete" type="button">Delete</button>
       </div>
     </div>
   `;
@@ -917,6 +941,9 @@ el.adminDonationsList.addEventListener('click', (e) => {
   } else if (btn.dataset.donationAction === 'edit') {
     const donation = allDonations.find(d => d.id === id);
     if (donation) editDonationModal(donation);
+  } else if (btn.dataset.donationAction === 'delete') {
+    const donation = allDonations.find(d => d.id === id);
+    if (donation) confirmHardDeleteDonation(donation);
   }
 });
 
@@ -947,15 +974,26 @@ function renderAuditLog(entries) {
   }
   el.adminAuditList.innerHTML = entries.map(e => {
     const snap = e.snapshot;
-    const details = snap ? [
-      `was ${esc(snap.status)}`,
-      snap.email ? esc(snap.email) : 'anonymous',
-      snap.showcase ? 'was showcased' : null
-    ].filter(Boolean).join(' · ') : 'no record snapshot available';
+    const isDonation = e.type === 'donation';
+    const title = isDonation
+      ? `donation · ${snap ? money(snap.amount, snap.currency) : ''} · ${esc(snap?.username || 'unknown')}.proves.work`
+      : `${esc(e.username)}.proves.work`;
+    const details = !snap ? 'no record snapshot available'
+      : isDonation
+        ? [
+            snap.referenceNumber ? `ref ${esc(snap.referenceNumber)}` : null,
+            snap.email ? esc(snap.email) : 'anonymous',
+            snap.confirmed ? 'was confirmed' : 'was unconfirmed'
+          ].filter(Boolean).join(' · ')
+        : [
+            `was ${esc(snap.status)}`,
+            snap.email ? esc(snap.email) : 'anonymous',
+            snap.showcase ? 'was showcased' : null
+          ].filter(Boolean).join(' · ');
     return `
     <div class="admin-site-row">
       <div class="admin-site-main">
-        <div class="admin-site-username">${esc(e.username)}.proves.work</div>
+        <div class="admin-site-username">${title}</div>
         <div class="admin-site-meta">${details}</div>
         <div class="admin-site-meta">deleted ${formatDate(e.deletedAt)} by ${esc(e.deletedBy)}</div>
       </div>

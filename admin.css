@@ -673,7 +673,7 @@
 }
 
 /* ── Donation edit form ───────────────────────────────────────── */
-.modal-box:has(.admin-form-grid) { max-width: 560px; }
+.modal-box:has(.admin-form-grid) { max-width: 720px; max-height: calc(100vh - 1.5rem); }
 
 .admin-form-grid {
   display: grid;

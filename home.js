@@ -121,39 +121,8 @@ function setBtnLoading(btn, loading, loadingLabel = 'Submitting…') {
   }
 }
 
-/* ── Claim tabs (no-code / coder) ────────────────────────── */
-const claimTabs = document.querySelectorAll('.claim-tab');
-const nocodeFields = document.getElementById('nocodeFields');
-const coderFields = document.getElementById('coderFields');
-const claimIntroNocode = document.getElementById('claimIntroNocode');
-const claimIntroCoder = document.getElementById('claimIntroCoder');
-let claimMode = 'nocode';
-
-function applyClaimMode() {
-  const isNocode = claimMode === 'nocode';
-  nocodeFields.classList.toggle('hidden', !isNocode);
-  coderFields.classList.toggle('hidden', isNocode);
-  claimIntroNocode?.classList.toggle('hidden', !isNocode);
-  claimIntroCoder?.classList.toggle('hidden', isNocode);
-
-  // Hidden fields must not stay `required`, or the browser blocks
-  // submission trying to focus an unfocusable (display:none) control.
-  document.getElementById('claimEmailNocode').required = isNocode;
-  document.getElementById('claimEmailCoder').required = !isNocode;
-}
-
-claimTabs.forEach(tab => {
-  tab.addEventListener('click', () => {
-    claimTabs.forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    claimMode = tab.dataset.mode;
-    applyClaimMode();
-  });
-});
-
-applyClaimMode();
-
-/* ── Claim form submit ───────────────────────────────────── */
+/* ── Claim form submit (no-code only) ────────────────────── */
+const claimMode = 'nocode';
 const claimForm = document.getElementById('claimForm');
 const claimStatus = document.getElementById('claimStatus');
 
@@ -180,14 +149,8 @@ claimForm.addEventListener('submit', async (e) => {
   const username = document.getElementById('claimUsername').value.trim().toLowerCase();
   const body = { mode: claimMode, username, linkMode: document.getElementById('claimLinkMode').value };
 
-  if (claimMode === 'coder') {
-    body.repo = document.getElementById('claimRepo').value.trim();
-    body.target = document.getElementById('claimTargetCoder').value.trim();
-    body.email = document.getElementById('claimEmailCoder').value.trim();
-  } else {
-    body.target = document.getElementById('claimTargetNocode').value.trim();
-    body.email = document.getElementById('claimEmailNocode').value.trim();
-  }
+  body.target = document.getElementById('claimTargetNocode').value.trim();
+  body.email = document.getElementById('claimEmailNocode').value.trim();
 
   if (!GMAIL_RE.test(body.email)) {
     claimStatus.textContent = 'Only properly named @gmail.com addresses are accepted.';
@@ -848,9 +811,7 @@ function renderShowcaseItem(item) {
   const tag = item.customTag || meta?.label || 'Community';
   const showPill = !!meta?.pill;
   const description = (item.description || '').trim()
-    || (item.mode === 'coder'
-      ? `Open source${item.repoName ? ` — ${item.repoName}` : ''}. Live proof-of-work, not just a resume line.`
-      : 'Live proof-of-work published for everyone to see.');
+    || 'Live proof-of-work published for everyone to see.';
 
   const card = document.createElement('a');
   card.className = `showcase-card${showPill ? ' is-starred' : ''}${meta ? ' has-donor-tag' : ''}`;
@@ -858,7 +819,6 @@ function renderShowcaseItem(item) {
   card.target = '_blank';
   card.rel = 'noopener';
   card.dataset.starred = showPill ? '1' : '0';
-  card.dataset.coder = item.mode === 'coder' ? '1' : '0';
   card.dataset.username = item.username;
   if (meta) card.style.setProperty('--donor-heart-color', meta.color);
 

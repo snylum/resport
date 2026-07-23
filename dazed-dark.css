@@ -62,7 +62,11 @@
   color: var(--color-text);
 }
 
-/* Borders read as thin neon hairlines instead of solid black on dark. */
+/* Borders read as thin neon hairlines instead of solid black on dark.
+   .showcase-card is intentionally excluded — its border is tier-colored
+   per-card in showcase.css (donor color, or the default pink for plain/
+   community cards), and this override would flatten every card back to
+   the same pink regardless of tier. */
 :root[data-theme="dazed-dark"] .site-nav,
 :root[data-theme="dazed-dark"] .how-card,
 :root[data-theme="dazed-dark"] .claim-form,
@@ -73,7 +77,6 @@
 :root[data-theme="dazed-dark"] .domain-input,
 :root[data-theme="dazed-dark"] .claim-tab,
 :root[data-theme="dazed-dark"] .btn,
-:root[data-theme="dazed-dark"] .showcase-card,
 :root[data-theme="dazed-dark"] .tier-popup-card,
 :root[data-theme="dazed-dark"] .tier-popup-close,
 :root[data-theme="dazed-dark"] .showcase-avatar {

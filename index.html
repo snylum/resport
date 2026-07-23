@@ -27,15 +27,9 @@
     <a class="nav-logo" href="#top"><img class="logo-dot" src="favicon.png" alt="" /> <span class="nav-logo-text">proves.work</span></a>
     <ul class="nav-links nav-hearts" id="navHearts">
       <li>
-        <button type="button" class="heart-link" data-tier="normal" data-amount="50" aria-label="Pulse tag, ₱50">
-          <svg class="pixel-heart pixel-heart--normal" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
-          <span class="heart-tip">Pulse</span>
-        </button>
-      </li>
-      <li>
-        <button type="button" class="heart-link" data-tier="gold" data-amount="250" aria-label="Beat tag, ₱250">
-          <svg class="pixel-heart pixel-heart--gold" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
-          <span class="heart-tip">Beat</span>
+        <button type="button" class="heart-link" data-tier="real" data-amount="1500" aria-label="Soul tag, above ₱1,000">
+          <svg class="pixel-heart pixel-heart--real" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
+          <span class="heart-tip">Soul</span>
         </button>
       </li>
       <li>
@@ -45,9 +39,15 @@
         </button>
       </li>
       <li>
-        <button type="button" class="heart-link" data-tier="real" data-amount="1500" aria-label="Soul tag, above ₱1,000">
-          <svg class="pixel-heart pixel-heart--real" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
-          <span class="heart-tip">Soul</span>
+        <button type="button" class="heart-link" data-tier="gold" data-amount="250" aria-label="Beat tag, ₱250">
+          <svg class="pixel-heart pixel-heart--gold" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
+          <span class="heart-tip">Beat</span>
+        </button>
+      </li>
+      <li>
+        <button type="button" class="heart-link" data-tier="normal" data-amount="50" aria-label="Pulse tag, ₱50">
+          <svg class="pixel-heart pixel-heart--normal" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
+          <span class="heart-tip">Pulse</span>
         </button>
       </li>
       <li>
@@ -162,7 +162,7 @@
         <div class="how-card">
           <span class="how-num">2</span>
           <h3>Point it somewhere</h3>
-          <p>Give a URL (no-code) or a public GitHub repo + deployed URL (coders).</p>
+          <p>Give a URL to point your subdomain at — a link-in-bio, résumé, portfolio, anything.</p>
         </div>
         <div class="how-card">
           <span class="how-num">3</span>
@@ -184,19 +184,9 @@
           <h2>Claim your subdomain</h2>
           <p class="section-sub">Personalize your proof-of-work</p>
 
-          <div class="claim-tabs">
-            <button class="claim-tab active" data-mode="nocode" type="button">No-code</button>
-            <button class="claim-tab" data-mode="coder" type="button" id="coders">Coder</button>
-          </div>
-
           <p class="claim-intro-copy" id="claimIntroNocode">
             Point <strong>yourname.proves.work</strong> at any URL — a link-in-bio page, a résumé,
             a portfolio, anything. Carrd, Canva, and GDrive links work. 
-          </p>
-          <p class="claim-intro-copy hidden" id="claimIntroCoder">
-            Like <a href="https://www.is-a.dev" target="_blank" rel="noopener">is-a.dev</a>, but simpler —
-            no PR/YAML file to write. We verify your repo is public via the GitHub API, then I approve the claim. 
-            Once live, your showcase card links straight back to the repo.
           </p>
         </div>
 
@@ -226,22 +216,6 @@
             <label class="field">
               <span>Your email</span>
               <input type="email" id="claimEmailNocode" placeholder="firstlastname@gmail.com" required />
-              <span class="field-hint">Only formal emails are accepted.</span>
-            </label>
-          </div>
-
-          <div id="coderFields" class="hidden">
-            <label class="field">
-              <span>Public GitHub repo (must be open source)</span>
-              <input type="url" id="claimRepo" placeholder="https://github.com/you/your-site" />
-            </label>
-            <label class="field">
-              <span>Deployed site URL</span>
-              <input type="url" id="claimTargetCoder" placeholder="https://you.github.io/your-site" />
-            </label>
-            <label class="field">
-              <span>Your email</span>
-              <input type="email" id="claimEmailCoder" placeholder="firstlastname@gmail.com" />
               <span class="field-hint">Only formal emails are accepted.</span>
             </label>
           </div>
