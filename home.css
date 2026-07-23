@@ -73,10 +73,50 @@ main { display: block; }
 .hero-section { text-align: center; }
 .hero-inner { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: clamp(.6rem, 2vh, 1.25rem); }
 .eyebrow { font-size: .7rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--color-primary); }
-.hero-section h1 { font-size: clamp(1.8rem, 4.5vh, 3.4rem); line-height: 1.1; }
 .hero-sub { color: var(--color-text-muted); font-size: clamp(.85rem, 2vh, 1.05rem); max-width: 620px; }
-.hero-actions { display: flex; gap: .75rem; flex-wrap: wrap; justify-content: center; margin-top: .5rem; }
 .user-count-tag { font-size: .8rem; color: var(--color-text-muted); margin-top: .5rem; }
+
+/* Rapid-succession name ticker ("luca.proves.work" → "lebron.proves.work"
+   → … → "<you>.proves.work") that runs once on load, see home.js. Fixed
+   nowrap + monospace-ish display font so the swapping names don't reflow
+   the line as their length changes. */
+.dynamic-subdomain {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4.5vh, 3.4rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin: 0;
+  white-space: nowrap;
+}
+.dynamic-subdomain em { font-style: normal; }
+.tld-accent { color: var(--color-primary); }
+
+/* Buttons + visitor count stay collapsed and invisible while the ticker
+   is still cycling through names, then fade/expand in together once it
+   settles on the visitor's own name (home.js adds .visible). */
+.hero-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0;
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transform: translateY(12px);
+  transition: opacity .5s ease, transform .5s ease, max-height .5s ease;
+}
+.hero-actions.visible {
+  opacity: 1;
+  max-height: 200px;
+  transform: translateY(0);
+}
+.button-group { display: flex; gap: .75rem; flex-wrap: wrap; justify-content: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-actions { transition: none; }
+}
 
 .btn { display: inline-block; padding: .75rem 1.5rem; border-radius: var(--radius); font-weight: 600; border: 2px solid var(--color-border); text-decoration: none; cursor: pointer; font-family: var(--font-sans); font-size: .95rem; }
 .btn-primary { background: var(--color-primary); color: var(--color-primary-contrast); box-shadow: var(--shadow); }

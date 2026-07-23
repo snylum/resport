@@ -6,6 +6,54 @@ window.addEventListener('load', () => {
   document.body.classList.remove('is-loading');
 });
 
+/* ── Hero name ticker ─────────────────────────────────────
+   Rapidly cycles the subdomain in the hero heading through a list of
+   sample names, then settles on the visitor's own name (from a ?name=
+   URL param or a name remembered from a previous claim) — or
+   "everyone" if neither is set — before revealing the CTA buttons and
+   visitor count underneath. Runs once per page load. ─────────────── */
+(function initHeroTicker() {
+  const tickerTarget = document.getElementById('tickerTarget');
+  const heroActions = document.getElementById('heroActions');
+  if (!tickerTarget) return;
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const customName = urlParams.get('name');
+  const storedName = localStorage.getItem('user_first_name');
+  const finalTargetPrefix = customName || storedName || 'everyone';
+
+  const basePrefixes = [
+    'luca', 'lebron', 'leni', 'juan', 'yuki',
+    'mei', 'aarav', 'sofia', 'kwame', 'amélie',
+    'nikolai', 'tariq', 'chloe', 'mateo', 'soraya',
+    'sven', 'ji-woo', 'kenji', 'anya', 'oxana'
+  ];
+  const prefixes = [...basePrefixes, finalTargetPrefix];
+  const stepSpeedTime = 110;
+  let currentIndex = 0;
+
+  function cyclePrefix() {
+    if (currentIndex >= prefixes.length) return;
+    const currentPrefix = prefixes[currentIndex];
+    if (currentPrefix === finalTargetPrefix) {
+      tickerTarget.innerHTML = `<em>${currentPrefix}</em><span class="tld-accent">.proves.work</span>`;
+      currentIndex++;
+      setTimeout(() => heroActions?.classList.add('visible'), 1000);
+    } else {
+      tickerTarget.innerHTML = `${currentPrefix}<span class="tld-accent">.proves.work</span>`;
+      currentIndex++;
+      setTimeout(cyclePrefix, stepSpeedTime);
+    }
+  }
+
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    tickerTarget.innerHTML = `<em>${finalTargetPrefix}</em><span class="tld-accent">.proves.work</span>`;
+    heroActions?.classList.add('visible');
+  } else {
+    cyclePrefix();
+  }
+})();
+
 /* ── Friendly validation tooltip (replaces the native browser
    "Please fill out this field" bubble on every form marked
    novalidate) ─────────────────────────────────────────────── */
