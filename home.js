@@ -862,13 +862,23 @@ function renderShowcaseItem(item) {
   card.dataset.username = item.username;
   if (meta) card.style.setProperty('--donor-heart-color', meta.color);
 
+  // Size the card to its own handle (the actual link text, e.g.
+  // "canva-free.proves.work") so it never has to wrap mid-word — longer
+  // subdomains get a longer card, short ones stay compact. This is a
+  // deliberately simple monospace-char estimate (the handle uses
+  // --font-mono) rather than a full text measurement, clamped by the
+  // CSS min/max-width on .showcase-card as a safety net either way.
+  const handle = `${item.username}.proves.work`;
+  const estimatedWidth = Math.round(handle.length * 7.4) + 44; // char width + card padding
+  card.style.width = `${estimatedWidth}px`;
+
   card.innerHTML = `
     ${showPill ? `<span class="showcase-badge">${escHtml(tag)}</span>` : ''}
     <div class="showcase-card-top">
       <div class="showcase-avatar">${showcaseInitials(item.username)}</div>
       <div>
         <div class="showcase-card-title">${item.username}</div>
-        <div class="showcase-card-handle">${item.username}.proves.work</div>
+        <div class="showcase-card-handle" title="${escHtml(handle)}">${handle}</div>
       </div>
     </div>
     <p class="showcase-card-desc">${escHtml(description)}</p>
@@ -991,6 +1001,20 @@ showcaseScroll?.addEventListener('wheel', (e) => {
     showcaseScroll.scrollLeft = startScroll - (e.pageX - startX);
   });
 })();
+
+// Only fade the edge(s) that actually have more cards to scroll to —
+// a card sitting flush at the start/end of the belt should never look
+// dimmed. Re-checked on scroll and whenever the grid is re-rendered
+// (filtering/searching/loading more can change scrollWidth).
+function updateShowcaseFade() {
+  if (!showcaseScroll) return;
+  const { scrollLeft, scrollWidth, clientWidth } = showcaseScroll;
+  showcaseScroll.classList.toggle('fade-left', scrollLeft > 1);
+  showcaseScroll.classList.toggle('fade-right', scrollLeft + clientWidth < scrollWidth - 1);
+}
+showcaseScroll?.addEventListener('scroll', updateShowcaseFade, { passive: true });
+new ResizeObserver(updateShowcaseFade).observe(showcaseGrid ?? showcaseScroll ?? document.body);
+updateShowcaseFade();
 
 const showcaseObserver = new IntersectionObserver(entries => {
   if (entries.some(e => e.isIntersecting)) loadAllShowcase();

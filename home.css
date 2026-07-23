@@ -488,10 +488,26 @@ main { display: block; }
   scrollbar-width: none;
   padding: .75rem 0;
   cursor: grab;
-  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 4%, #000 96%, transparent 100%);
-  mask-image: linear-gradient(to right, transparent 0, #000 4%, #000 96%, transparent 100%);
+  /* No mask by default — a leftmost/rightmost card sitting flush against
+     the edge must render at full opacity, never faded into the
+     background. home.js toggles .fade-left/.fade-right only once
+     there's actually more content to scroll to on that side, and the
+     fade itself is a fixed pixel sliver (not a %) so it never eats into
+     a card that's fully in view. */
 }
 .showcase-scroll::-webkit-scrollbar { display: none; }
+.showcase-scroll.fade-left {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 28px);
+  mask-image: linear-gradient(to right, transparent 0, #000 28px);
+}
+.showcase-scroll.fade-right {
+  -webkit-mask-image: linear-gradient(to left, transparent 0, #000 28px);
+  mask-image: linear-gradient(to left, transparent 0, #000 28px);
+}
+.showcase-scroll.fade-left.fade-right {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+}
 .showcase-scroll.is-grabbing { cursor: grabbing; }
 
 .showcase-card-tag {

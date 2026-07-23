@@ -184,6 +184,12 @@
   vertical-align: middle;
 }
 
+.admin-sample-chip {
+  color: var(--color-secondary);
+  background: color-mix(in srgb, var(--color-secondary) 12%, transparent);
+  border-color: var(--color-secondary);
+}
+
 /* Inline "display tier" picker on each donation row — lets an admin
    change which tier a donor shows as (and, if already showcased, syncs
    the public card) without opening the full Edit modal. */
@@ -226,6 +232,11 @@
 .admin-site-paid {
   color: var(--color-success);
   font-weight: 700;
+}
+
+.admin-reject-reason {
+  color: var(--color-danger);
+  font-style: italic;
 }
 
 .admin-site-proof {

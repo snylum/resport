@@ -118,7 +118,9 @@ async function addEmailSlot(env, email, username, max) {
   const key = `emailclaims:${email}`;
   const current = (await env.SITES.get(key, 'json')) || [];
   if (current.includes(username)) return true;
-  if (current.length >= max) return false;
+  // Admin's own email is exempt from the per-email cap — everyone else
+  // is still limited to `max` active claims.
+  if (!ADMIN_EMAILS.has(email) && current.length >= max) return false;
   current.push(username);
   await env.SITES.put(key, JSON.stringify(current));
   return true;
@@ -130,6 +132,37 @@ async function releaseEmailSlot(env, email, username) {
   const next = current.filter(u => u !== username);
   if (next.length) await env.SITES.put(key, JSON.stringify(next));
   else await env.SITES.delete(key);
+}
+
+// Fires the "your subdomain is live" email to a claimant the moment an
+// admin approves their claim. Best-effort only — a failed send here must
+// never block the approval itself, so every error is swallowed.
+async function sendLiveEmail(env, record) {
+  if (!env.RESEND_API_KEY || !record || !record.email) return;
+  const username = record.username;
+  const target = record.target || '';
+  const subject = `🎉 ${username}.${APP_HOST} is live`;
+  const text = `Hey — your subdomain is live. Thanks for being a part of this project.
+
+It's pointed at the site you gave us: ${target}
+
+Give it a spin, share it on your resume or LinkedIn, and if you want to open in a new tab to double check it's working right: https://${username}.${APP_HOST}
+
+Want it featured in the public showcase? Donations get you a spot (and a colored tag matching what you gave): https://${APP_HOST}/#donate
+
+— SNYLUM`;
+  try {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'Authorization': `Bearer ${env.RESEND_API_KEY}` },
+      body: JSON.stringify({
+        from: `${APP_HOST} <noreply@${APP_HOST}>`,
+        to: [record.email],
+        subject,
+        text
+      })
+    });
+  } catch { /* best-effort — approval already succeeded, don't fail the request */ }
 }
 
 // ── Donation tiers ──────────────────────────────────────────────────
@@ -321,10 +354,11 @@ async function handleApi(request, env, url) {
         username: r.username, target: r.target, mode: r.mode,
         repo: r.repo || null, repoName: r.repoName || null,
         tier: r.showcaseTier || null,
-        amount: r.showcaseAmount ?? null,
+        amount: r.sample ? 0 : (r.showcaseAmount ?? null),
         customTag: r.showcaseCustomTag || null,
         description: r.description || null,
-        addedAt: r.showcaseAddedAt || null
+        addedAt: r.showcaseAddedAt || null,
+        sample: !!r.sample
       })),
       cursor: list.list_complete ? null : list.cursor
     });
@@ -476,10 +510,70 @@ async function handleApi(request, env, url) {
     const username = String(body.username || '').toLowerCase().trim();
     const existing = await env.SITES.get(`site:${username}`, 'json');
     if (!existing) return json({ ok: false, error: 'Not found.' }, 404);
-    const description = String(body.description ?? '').slice(0, 280).trim();
-    existing.description = description;
+    if (body.description !== undefined) {
+      existing.description = String(body.description ?? '').slice(0, 280).trim();
+    }
+    // "Sample" sites are demo/placeholder entries (e.g. shown for design
+    // purposes) — they should read as $0/₱0 and drop out of admin stats
+    // entirely rather than skewing real revenue/claim counts.
+    if (body.sample !== undefined) {
+      existing.sample = !!body.sample;
+    }
     await env.SITES.put(`site:${username}`, JSON.stringify(existing));
-    return json({ ok: true });
+    return json({ ok: true, site: existing });
+  }
+
+  // Rename a claimed subdomain's username (admin-only — never exposed to
+  // donors/claimants). Moves the KV record from the old key to the new
+  // one, keeps that email's active-claim slot list in sync, and repoints
+  // any donation records tied to the old username so donation history and
+  // showcase linkage keep working under the new name.
+  if (url.pathname === '/api/admin/sites/rename' && request.method === 'POST') {
+    const body = await request.json().catch(() => ({}));
+    const adminEmail = await verifyAdminCredential(body.googleCredential);
+    if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
+    const oldUsername = String(body.username || '').toLowerCase().trim();
+    const newUsername = String(body.newUsername || '').toLowerCase().trim();
+    if (!USERNAME_RE.test(newUsername)) return json({ ok: false, error: 'Username must be 3–30 lowercase letters, numbers, or hyphens.' }, 400);
+    if (RESERVED.has(newUsername)) return json({ ok: false, error: 'That name is reserved.' }, 400);
+
+    const existing = await env.SITES.get(`site:${oldUsername}`, 'json');
+    if (!existing) return json({ ok: false, error: 'Not found.' }, 404);
+
+    if (newUsername === oldUsername) return json({ ok: true, site: existing });
+
+    const taken = await env.SITES.get(`site:${newUsername}`, 'json');
+    if (taken) return json({ ok: false, error: 'That username is already in use.' }, 409);
+
+    existing.username = newUsername;
+    existing.renamedFrom = existing.renamedFrom || [];
+    existing.renamedFrom.push(oldUsername);
+    existing.renamedBy = adminEmail;
+    existing.renamedAt = new Date().toISOString();
+
+    await env.SITES.put(`site:${newUsername}`, JSON.stringify(existing));
+    await env.SITES.delete(`site:${oldUsername}`);
+
+    // Keep this email's active-claim slot list pointed at the new name.
+    if (existing.email) {
+      const key = `emailclaims:${existing.email}`;
+      const current = (await env.SITES.get(key, 'json')) || [];
+      const next = current.map(u => (u === oldUsername ? newUsername : u));
+      await env.SITES.put(key, JSON.stringify(next));
+    }
+
+    // Repoint any donation records tied to the old username so donation
+    // history, revenue stats, and showcase linkage still resolve.
+    const list = await env.SITES.list({ prefix: 'donation:' });
+    await Promise.all(list.keys.map(async (k) => {
+      const donation = await env.SITES.get(k.name, 'json');
+      if (donation && donation.username === oldUsername) {
+        donation.username = newUsername;
+        await env.SITES.put(k.name, JSON.stringify(donation));
+      }
+    }));
+
+    return json({ ok: true, site: existing });
   }
 
   if (url.pathname === '/api/admin/set-status' && request.method === 'POST') {
@@ -491,12 +585,34 @@ async function handleApi(request, env, url) {
     if (!['live', 'pending', 'rejected'].includes(status)) return json({ ok: false, error: 'Invalid status.' }, 400);
     const existing = await env.SITES.get(`site:${username}`, 'json');
     if (!existing) return json({ ok: false, error: 'Not found.' }, 404);
+    const wasLive = existing.status === 'live';
+    const wasRejected = existing.status === 'rejected';
     existing.status = status;
     existing.reviewedBy = adminEmail;
     existing.reviewedAt = new Date().toISOString();
+    if (status === 'rejected') {
+      existing.rejectionReason = String(body.reason || '').slice(0, 1000).trim();
+    } else if (status === 'live') {
+      // Clear any stale rejection reason once (re-)approved.
+      existing.rejectionReason = '';
+    }
     await env.SITES.put(`site:${username}`, JSON.stringify(existing));
     // Rejected claims free up that email's slot so they (or someone else) can claim again.
     if (status === 'rejected') await releaseEmailSlot(env, existing.email, username);
+    // Restoring a previously-rejected claim back to active (live/pending)
+    // re-occupies that email's slot — otherwise a reject→restore cycle
+    // would let an email hold more active claims than the cap allows
+    // without ever re-registering the slot. This is an admin action, so
+    // it bypasses the cap itself (force-add) rather than failing the restore.
+    if (wasRejected && status !== 'rejected' && existing.email) {
+      await addEmailSlot(env, existing.email, username, Infinity);
+    }
+    // Only fire the "your subdomain is live" email the moment a claim first
+    // goes live (approval) — not on every subsequent status touch, and not
+    // when it was already live (e.g. an unrelated field being re-saved).
+    if (status === 'live' && !wasLive) {
+      await sendLiveEmail(env, existing);
+    }
     return json({ ok: true });
   }
 

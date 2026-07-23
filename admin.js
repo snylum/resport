@@ -258,6 +258,9 @@ let donationFilter = 'unconfirmed';
 // Usernames whose donation stack is currently expanded in the Donations
 // tab (only relevant for donors with more than one donation).
 const expandedDonors = new Set();
+// Emails whose site stack is currently expanded in the Sites tab (only
+// relevant for emails holding more than one subdomain).
+const expandedSiteEmails = new Set();
 
 async function loadSites() {
   el.adminListStatus.textContent = 'Loading sites…';
@@ -313,17 +316,22 @@ function confirmedDonations() {
 
 function renderOverview() {
   const now = new Date();
-  const total = allSites.length;
+  // SAMPLE sites are demo/placeholder entries — they never count toward
+  // real stats (site totals, statuses, revenue), and always read as
+  // ₱0/$0 regardless of what any linked donation record says.
+  const realSites = allSites.filter(s => !s.sample);
+  const sampleUsernames = new Set(allSites.filter(s => s.sample).map(s => s.username));
+  const total = realSites.length;
   const byStatus = { live: 0, pending: 0, rejected: 0 };
   let showcased = 0;
-  allSites.forEach(s => {
+  realSites.forEach(s => {
     if (byStatus[s.status] != null) byStatus[s.status]++;
     if (s.showcase) showcased++;
   });
 
   // Donations mix PHP and USD, so total revenue is reported per-currency
   // rather than force-converted at a made-up exchange rate.
-  const confirmed = confirmedDonations();
+  const confirmed = confirmedDonations().filter(d => !sampleUsernames.has(d.username));
   const revenueByCurrency = { php: 0, usd: 0 };
   confirmed.forEach(d => { revenueByCurrency[d.currency === 'usd' ? 'usd' : 'php'] += Number(d.amount) || 0; });
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -339,7 +347,7 @@ function renderOverview() {
     { label: 'Showcased', value: showcased, tone: 'ok' },
     { label: 'Donations this month', value: `${money(monthRevenue.php)} / ${money(monthRevenue.usd, 'usd')}` },
     { label: 'Donations total', value: `${money(revenueByCurrency.php)} / ${money(revenueByCurrency.usd, 'usd')}` },
-    { label: 'Unconfirmed donations', value: allDonations.filter(d => !d.confirmed).length, tone: allDonations.some(d => !d.confirmed) ? 'warn' : '' },
+    { label: 'Unconfirmed donations', value: allDonations.filter(d => !d.confirmed && !sampleUsernames.has(d.username)).length, tone: allDonations.some(d => !d.confirmed && !sampleUsernames.has(d.username)) ? 'warn' : '' },
   ];
   el.adminStatsGrid.innerHTML = cards.map(c => `
     <div class="admin-stat-card">
@@ -401,15 +409,50 @@ function renderSitesList() {
     return;
   }
 
-  el.adminSitesList.innerHTML = filtered.map(s => `
+  el.adminSitesList.innerHTML = groupSitesByEmail(filtered).map(group => {
+    if (group.sites.length === 1) return siteRowHtml(group.sites[0]);
+    return siteEmailStackHtml(group.email, group.sites);
+  }).join('');
+}
+
+// Group sites by email so one person/entity holding multiple subdomains
+// shows as a single collapsible stack (mirrors donorStackHtml on the
+// Donations tab). Sites with no email (or a blank one) never stack —
+// each stays its own row, since "anonymous" isn't a real grouping key.
+function groupSitesByEmail(sites) {
+  const byEmail = new Map();
+  const solo = [];
+  sites.forEach(s => {
+    const email = (s.email || '').trim().toLowerCase();
+    if (!email) { solo.push(s); return; }
+    if (!byEmail.has(email)) byEmail.set(email, []);
+    byEmail.get(email).push(s);
+  });
+  const groups = [];
+  byEmail.forEach((list, email) => {
+    if (list.length === 1) solo.push(list[0]);
+    else groups.push({ email, sites: list });
+  });
+  solo.forEach(s => groups.push({ email: (s.email || ''), sites: [s] }));
+  // Keep stacks and solo rows interleaved by most-recent claim, newest first.
+  return groups.sort((a, b) => {
+    const at = Math.max(...a.sites.map(s => new Date(s.createdAt || 0).getTime()));
+    const bt = Math.max(...b.sites.map(s => new Date(s.createdAt || 0).getTime()));
+    return bt - at;
+  });
+}
+
+function siteRowHtml(s) {
+  return `
     <div class="admin-site-row" data-username="${esc(s.username)}">
       <div class="admin-site-main">
-        <div class="admin-site-username">${esc(s.username)}.proves.work${s.showcase ? ` <span class="admin-owner-chip">showcased</span>` : ''}</div>
+        <div class="admin-site-username">${esc(s.username)}.proves.work${s.showcase ? ` <span class="admin-owner-chip">showcased</span>` : ''}${s.sample ? ` <span class="admin-owner-chip admin-sample-chip">SAMPLE</span>` : ''}</div>
         <div class="admin-site-meta">
           ${s.mode === 'coder' ? `Coder · repo: <a href="${esc(s.repo)}" target="_blank" rel="noopener">${esc(s.repoName || s.repo)}</a>` : 'No-code'}
           → ${s.target ? `<a href="${esc(s.target)}" target="_blank" rel="noopener">${esc(s.target)}</a>` : `<span class="admin-owner-chip" style="color:var(--color-danger)">no target — malformed record</span>`}
         </div>
         <div class="admin-site-meta">${s.email ? esc(s.email) : 'anonymous'} · claimed ${formatDate(s.createdAt)}</div>
+        ${s.status === 'rejected' && s.rejectionReason ? `<div class="admin-site-meta admin-reject-reason">Reason: ${esc(s.rejectionReason)}</div>` : ''}
       </div>
       <span class="admin-status-pill ${s.status}">${esc(s.status)}</span>
       <div class="admin-site-actions">
@@ -423,13 +466,59 @@ function renderSitesList() {
         <button class="btn btn-danger btn-sm" data-action="hard-delete" type="button">Delete</button>
       </div>
     </div>
-  `).join('');
+  `;
 }
 
-async function setStatus(username, status) {
-  const data = await api('/api/admin/set-status', { username, status });
+function siteEmailStackHtml(email, sites) {
+  const expanded = expandedSiteEmails.has(email);
+  const statusChips = sites
+    .slice()
+    .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
+    .map(s => `<span class="admin-tier-chip">${esc(s.username)} · ${esc(s.status)}</span>`)
+    .join('');
+  return `
+    <div class="admin-donor-stack ${expanded ? 'expanded' : ''}" data-email="${esc(email)}">
+      <button class="admin-donor-stack-header" data-action="toggle-site-stack" type="button" aria-expanded="${expanded}">
+        <span class="admin-donor-stack-caret">${expanded ? '▾' : '▸'}</span>
+        <span class="admin-site-username">${esc(email)}</span>
+        <span class="admin-donor-stack-count">${sites.length} subdomains</span>
+        <span class="admin-donor-stack-chips">${statusChips}</span>
+      </button>
+      ${expanded ? `<div class="admin-donor-stack-body">${sites.map(s => siteRowHtml(s)).join('')}</div>` : ''}
+    </div>
+  `;
+}
+
+async function setStatus(username, status, reason) {
+  const payload = { username, status };
+  if (status === 'rejected') payload.reason = reason || '';
+  const data = await api('/api/admin/set-status', payload);
   if (!data.ok) { alertModal(data.error || 'Something went wrong.'); return; }
   loadSites();
+}
+
+function confirmReject(username, isUnpublish) {
+  openModal(`
+    <h3 class="modal-title" id="modalTitle">${isUnpublish ? 'Unpublish' : 'Reject'} @${esc(username)}?</h3>
+    <p class="modal-sub">Optionally leave a reason. This is stored on the record so you (or a teammate) can see why later — it isn't emailed to the claimant.</p>
+    <div class="admin-form-grid">
+      <label class="admin-form-field admin-form-field-wide">
+        <span>Reason (optional)</span>
+        <textarea id="rejectReasonInput" rows="3" maxlength="1000" placeholder="e.g. broken link, not actually deployed, duplicate claim..."></textarea>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="cancelRejectBtn" type="button">Cancel</button>
+      <button class="btn btn-danger btn-sm" id="confirmRejectBtn" type="button">${isUnpublish ? 'Unpublish' : 'Reject'}</button>
+    </div>
+  `, (root) => {
+    root.querySelector('#cancelRejectBtn').addEventListener('click', closeModal);
+    root.querySelector('#confirmRejectBtn').addEventListener('click', () => {
+      const reason = root.querySelector('#rejectReasonInput').value;
+      setStatus(username, 'rejected', reason);
+      closeModal();
+    });
+  });
 }
 
 async function toggleShowcase(username, showcase) {
@@ -466,9 +555,18 @@ function viewSite(username) { window.open(`https://${username}.${PUBLISH_APEX}`,
 
 function editSiteModal(site) {
   openModal(`
-    <h3 class="modal-title">Edit @${esc(site.username)}'s showcase card</h3>
-    <p class="modal-sub">This is the description shown on their card in the public showcase — it replaces the old auto-generated tier blurb, so write whatever fits them best.</p>
+    <h3 class="modal-title">Edit @${esc(site.username)}</h3>
+    <p class="modal-sub">Username is admin-only — claimants/donors never see or set this field. Description is shown on their public showcase card, replacing the old auto-generated tier blurb.</p>
     <div class="admin-form-grid">
+      <label class="admin-form-field">
+        <span>Username</span>
+        <input type="text" id="editSiteUsername" value="${esc(site.username)}" maxlength="30" />
+        <span class="field-hint">Renames ${esc(site.username)}.proves.work — donations and the active-claim slot move with it.</span>
+      </label>
+      <label class="admin-form-field-wide" style="display:flex;align-items:center;gap:0.5rem;">
+        <input type="checkbox" id="editSiteSample" ${site.sample ? 'checked' : ''} style="width:auto;" />
+        <span>Mark as SAMPLE site (shows ₱0/$0, excluded from admin stats)</span>
+      </label>
       <label class="admin-form-field admin-form-field-wide">
         <span>Description</span>
         <textarea id="editSiteDescription" rows="3" maxlength="280" placeholder="e.g. Frontend dev open to junior roles — full portfolio at the link.">${esc(site.description ?? '')}</textarea>
@@ -481,8 +579,16 @@ function editSiteModal(site) {
   `, (root) => {
     root.querySelector('#cancelEditSiteBtn').addEventListener('click', closeModal);
     root.querySelector('#saveEditSiteBtn').addEventListener('click', async () => {
+      const newUsername = root.querySelector('#editSiteUsername').value.trim().toLowerCase();
       const description = root.querySelector('#editSiteDescription').value;
-      const data = await api('/api/admin/sites/edit', { username: site.username, description });
+      const sample = root.querySelector('#editSiteSample').checked;
+
+      if (newUsername && newUsername !== site.username) {
+        const renameData = await api('/api/admin/sites/rename', { username: site.username, newUsername });
+        if (!renameData.ok) { alertModal(renameData.error || 'Could not rename that subdomain.'); return; }
+      }
+
+      const data = await api('/api/admin/sites/edit', { username: newUsername || site.username, description, sample });
       if (!data.ok) { alertModal(data.error || 'Something went wrong.'); return; }
       closeModal();
       loadSites();
@@ -491,6 +597,15 @@ function editSiteModal(site) {
 }
 
 el.adminSitesList.addEventListener('click', (e) => {
+  const stackToggle = e.target.closest('[data-action="toggle-site-stack"]');
+  if (stackToggle) {
+    const email = stackToggle.closest('.admin-donor-stack').dataset.email;
+    if (expandedSiteEmails.has(email)) expandedSiteEmails.delete(email);
+    else expandedSiteEmails.add(email);
+    renderSitesList();
+    return;
+  }
+
   const btn = e.target.closest('[data-action]');
   if (!btn) return;
   const row = e.target.closest('.admin-site-row');
@@ -500,7 +615,7 @@ el.adminSitesList.addEventListener('click', (e) => {
   if (action === 'view') viewSite(username);
   else if (action === 'edit') { if (site) editSiteModal(site); }
   else if (action === 'approve') setStatus(username, 'live');
-  else if (action === 'reject') setStatus(username, 'rejected');
+  else if (action === 'reject') confirmReject(username, site && site.status === 'live');
   else if (action === 'restore') setStatus(username, 'live');
   else if (action === 'toggle-showcase') toggleShowcase(username, !(site && site.showcase));
   else if (action === 'hard-delete') confirmHardDelete(username);
