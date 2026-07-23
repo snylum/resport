@@ -169,6 +169,32 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
 
 .btn-sm { font-size: 0.75rem; padding: 0.4rem 0.875rem; }
 
+/* ── Loading state: swaps the label for a spinner + "Submitting…"
+   so pending requests are obvious at a glance, not just implied by a
+   status line underneath. ───────────────────────────────────────── */
+.btn-loading {
+  pointer-events: none;
+  opacity: 0.85;
+  cursor: default;
+}
+.btn-loading::before {
+  content: "";
+  width: 0.95em;
+  height: 0.95em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  animation: btn-spin 0.6s linear infinite;
+  flex-shrink: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-loading::before { animation-duration: 1.4s; }
+}
+@keyframes btn-spin {
+  to { transform: rotate(360deg); }
+}
+
 .btn-gradient {
   background: var(--gradient);
   color: #fff;

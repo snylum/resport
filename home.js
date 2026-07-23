@@ -103,6 +103,24 @@ window.addEventListener('load', () => {
     });
 })();
 
+/* ── Shared "submitting…" button spinner ─────────────────── */
+function setBtnLoading(btn, loading, loadingLabel = 'Submitting…') {
+  if (!btn) return;
+  if (loading) {
+    if (btn.dataset.idleLabel === undefined) btn.dataset.idleLabel = btn.textContent;
+    btn.textContent = loadingLabel;
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+  } else {
+    btn.classList.remove('btn-loading');
+    btn.disabled = false;
+    if (btn.dataset.idleLabel !== undefined) {
+      btn.textContent = btn.dataset.idleLabel;
+      delete btn.dataset.idleLabel;
+    }
+  }
+}
+
 /* ── Claim tabs (no-code / coder) ────────────────────────── */
 const claimTabs = document.querySelectorAll('.claim-tab');
 const nocodeFields = document.getElementById('nocodeFields');
@@ -152,9 +170,11 @@ window.onClaimTurnstileVerified = (token) => { claimTurnstileToken = token; };
 window.onClaimTurnstileExpired = () => { claimTurnstileToken = ''; };
 window.onClaimTurnstileError = () => { claimTurnstileToken = ''; };
 
+const claimSubmitBtn = claimForm.querySelector('button[type="submit"]');
+
 claimForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  claimStatus.textContent = 'Submitting…';
+  claimStatus.textContent = '';
   claimStatus.className = 'username-status';
 
   const username = document.getElementById('claimUsername').value.trim().toLowerCase();
@@ -186,6 +206,7 @@ claimForm.addEventListener('submit', async (e) => {
     return;
   }
 
+  setBtnLoading(claimSubmitBtn, true);
   try {
     const res = await fetch('/api/claim', {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body)
@@ -199,6 +220,7 @@ claimForm.addEventListener('submit', async (e) => {
     claimStatus.textContent = err.message;
     claimStatus.classList.add('error');
   } finally {
+    setBtnLoading(claimSubmitBtn, false);
     claimTurnstileToken = '';
     try { window.turnstile?.reset('claimTurnstile'); } catch { /* widget never mounted */ }
   }
@@ -214,6 +236,7 @@ const donateCustomTagField = document.getElementById('donateCustomTagField');
 const donateCustomTagInput = document.getElementById('donateCustomTag');
 const donateAmountInput = document.getElementById('donateAmount');
 const donateAmountLabel = document.getElementById('donateAmountLabel');
+const donateSubmitBtn = donateForm.querySelector('button[type="submit"]');
 
 // Same per-tier rules as the heart popup — keeps the donate-section form
 // and the nav heart popup consistent about what each tag actually costs.
@@ -229,7 +252,7 @@ const DONATE_TIER_RULES = {
   real:    { label: 'Soul', customTag: true,
     php: { min: 1000, symbol: '₱' }, usd: { min: 50, symbol: '$' } },
   ghost:   { label: 'Breath',
-    php: { max: 1000, odd: true, symbol: '₱' }, usd: { max: 50, odd: true, symbol: '$' } }
+    php: { max: 1000, symbol: '₱' }, usd: { max: 50, symbol: '$' } }
 };
 
 let donateCurrency = 'php';
@@ -260,8 +283,8 @@ function refreshDonateAmountUI() {
   } else if (rule.max != null) {
     donateAmountInput.value = '';
     donateAmountInput.readOnly = false;
-    donateAmountLabel.textContent = `Amount you sent (odd, below ${symbol}${rule.max})`;
-    donateTierHint.textContent = `${rule.label}: enter an odd amount below ${symbol}${rule.max} (e.g. ${symbol}37).`;
+    donateAmountLabel.textContent = `Amount you sent (any < ${symbol}${rule.max})`;
+    donateTierHint.textContent = `${rule.label}: enter any amount below ${symbol}${rule.max}.`;
   }
   donateTierHint.className = 'username-status';
 }
@@ -272,8 +295,19 @@ donateCurrencyTabs.forEach(tab => {
     tab.classList.add('active');
     donateCurrency = tab.dataset.currency;
     if (donateTierInput.value) refreshDonateAmountUI();
+    updateDonateQrImage();
   });
 });
+
+// Keeps the "Show payment QR code" popup image in sync with whichever
+// currency tab is currently selected — PHP and USD pay to different
+// accounts, so they need distinct codes.
+function updateDonateQrImage() {
+  const img = document.getElementById('qrPopupImg');
+  if (!img) return;
+  const src = donateCurrency === 'usd' ? img.dataset.qrUsd : img.dataset.qrPhp;
+  if (src) img.src = src;
+}
 
 function selectDonateTier(tier) {
   const rule = DONATE_TIER_RULES[tier];
@@ -308,7 +342,6 @@ function validateDonateAmount(rule, amount) {
     if (amount <= rule.min) return `${rule.label} needs any amount above ${symbol}${rule.min}.`;
   } else if (rule.max != null) {
     if (amount >= rule.max) return `${rule.label} needs an amount below ${symbol}${rule.max}.`;
-    if (!Number.isInteger(amount) || amount % 2 === 0) return `${rule.label} needs an odd whole-number amount (e.g. ${symbol}37).`;
   }
   return null;
 }
@@ -332,7 +365,7 @@ donateForm.addEventListener('submit', async (e) => {
     return;
   }
 
-  donateStatus.textContent = 'Submitting…';
+  donateStatus.textContent = '';
   donateStatus.className = 'username-status';
 
   const body = {
@@ -348,6 +381,7 @@ donateForm.addEventListener('submit', async (e) => {
     body.customTag = donateCustomTagInput.value.trim();
   }
 
+  setBtnLoading(donateSubmitBtn, true);
   try {
     const res = await fetch('/api/contact', {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body)
@@ -365,9 +399,12 @@ donateForm.addEventListener('submit', async (e) => {
     donateTierHint.textContent = 'Pick a heart on the left to choose your tier.';
     donateCurrencyTabs.forEach(t => t.classList.toggle('active', t.dataset.currency === 'php'));
     donateCurrency = 'php';
+    updateDonateQrImage();
   } catch (err) {
     donateStatus.textContent = err.message;
     donateStatus.classList.add('error');
+  } finally {
+    setBtnLoading(donateSubmitBtn, false);
   }
 });
 
@@ -380,6 +417,7 @@ donateForm.addEventListener('submit', async (e) => {
   if (!btn || !popup || !closeBtn) return;
 
   function open() {
+    updateDonateQrImage();
     popup.classList.remove('hidden');
     closeBtn.focus();
   }
@@ -499,10 +537,9 @@ donateForm.addEventListener('submit', async (e) => {
       return;
     }
 
-    statusEl.textContent = 'Submitting…';
+    statusEl.textContent = '';
     statusEl.className = 'username-status';
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Submitting…';
+    setBtnLoading(submitBtn, true);
 
     const body = {
       type: 'donation',
@@ -522,14 +559,14 @@ donateForm.addEventListener('submit', async (e) => {
       if (!res.ok || !data.ok) throw new Error(data.error || 'Something went wrong.');
       statusEl.textContent = 'Thank you! We\'ll confirm your reference number shortly.';
       statusEl.classList.add('ok');
+      setBtnLoading(submitBtn, false);
       submitBtn.textContent = 'Submitted ✓';
       form.reset();
       setTimeout(closePopup, 2200);
     } catch (err) {
       statusEl.textContent = err.message;
       statusEl.classList.add('error');
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Submit donation';
+      setBtnLoading(submitBtn, false);
     }
   });
 })();
@@ -667,10 +704,11 @@ function pathForSlide(id) { return SLIDE_PATHS[id] || '/'; }
 (function initPageDots() {
   const slides = Array.from(document.querySelectorAll('main .section, .site-footer'));
   const dotsWrap = document.getElementById('pageDots');
-  if (!slides.length || !dotsWrap) return;
+  const track = document.getElementById('pageProgressTrack') || dotsWrap;
+  if (!slides.length || !dotsWrap || !track) return;
 
   dotsWrap.classList.remove('hidden');
-  dotsWrap.innerHTML = '';
+  track.innerHTML = '';
 
   slides.forEach((slide, i) => {
     const dot = document.createElement('button');
@@ -678,10 +716,10 @@ function pathForSlide(id) { return SLIDE_PATHS[id] || '/'; }
     dot.className = 'page-dot';
     dot.setAttribute('aria-label', `Go to section ${i + 1} of ${slides.length}`);
     dot.addEventListener('click', () => slide.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-    dotsWrap.appendChild(dot);
+    track.appendChild(dot);
   });
 
-  const dots = Array.from(dotsWrap.querySelectorAll('.page-dot'));
+  const dots = Array.from(track.querySelectorAll('.page-dot'));
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (!entry.isIntersecting) return;
@@ -741,10 +779,11 @@ function pathForSlide(id) { return SLIDE_PATHS[id] || '/'; }
 /* ── Contact form submit ──────────────────────────────────── */
 const contactForm = document.getElementById('contactForm');
 const contactStatus = document.getElementById('contactStatus');
+const contactSubmitBtn = contactForm?.querySelector('button[type="submit"]');
 
 contactForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  contactStatus.textContent = 'Sending…';
+  contactStatus.textContent = '';
   contactStatus.className = 'username-status';
 
   const body = {
@@ -754,6 +793,7 @@ contactForm?.addEventListener('submit', async (e) => {
     message: document.getElementById('contactMessage').value.trim()
   };
 
+  setBtnLoading(contactSubmitBtn, true, 'Sending…');
   try {
     const res = await fetch('/api/contact', {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body)
@@ -766,6 +806,8 @@ contactForm?.addEventListener('submit', async (e) => {
   } catch (err) {
     contactStatus.textContent = err.message;
     contactStatus.classList.add('error');
+  } finally {
+    setBtnLoading(contactSubmitBtn, false);
   }
 });
 
@@ -892,31 +934,54 @@ function renderShowcaseGrid() {
   }), showcaseFilter);
 
   showcaseGrid.innerHTML = '';
+  showcaseGrid.style.removeProperty('--marquee-duration');
+
   if (!filtered.length) {
     showcaseStatus.textContent = showcaseItems.length
       ? 'No profiles match that filter.'
       : (showcaseDone ? 'No showcased sites yet — donate to be featured!' : '');
-    updateShowcaseArrow();
     return;
   }
   showcaseStatus.textContent = '';
+
+  // The belt scrolls itself forever via a CSS animation that slides the
+  // track exactly -50% — so the content has to be duplicated back-to-back
+  // for the loop to be seamless. The second copy is decorative/hidden
+  // from assistive tech since it's a visual repeat of the first.
   filtered.forEach(item => showcaseGrid.appendChild(renderShowcaseItem(item)));
-  updateShowcaseArrow();
+  filtered.forEach(item => {
+    const dupe = renderShowcaseItem(item);
+    dupe.setAttribute('aria-hidden', 'true');
+    dupe.tabIndex = -1;
+    showcaseGrid.appendChild(dupe);
+  });
+
+  // Keep the drift speed consistent regardless of how many cards are in
+  // the loop — a fixed pixels-per-second rate rather than a fixed time,
+  // so a short list doesn't zoom by and a long one doesn't crawl.
+  requestAnimationFrame(() => {
+    const trackWidth = showcaseGrid.scrollWidth / 2;
+    const pxPerSecond = 55;
+    const duration = Math.max(trackWidth / pxPerSecond, 12);
+    showcaseGrid.style.setProperty('--marquee-duration', `${duration}s`);
+  });
 }
 
-async function loadShowcasePage() {
+async function loadAllShowcase() {
   if (showcaseLoading || showcaseDone) return;
   showcaseLoading = true;
   if (!showcaseItems.length) showcaseStatus.textContent = 'Loading…';
   try {
-    const url = new URL('/api/showcase', window.location.origin);
-    if (showcaseCursor) url.searchParams.set('cursor', showcaseCursor);
-    const res = await fetch(url);
-    const data = await res.json();
-    if (!data.ok) throw new Error();
-    showcaseItems = showcaseItems.concat(data.items);
-    showcaseCursor = data.cursor;
-    if (!showcaseCursor) showcaseDone = true;
+    while (!showcaseDone) {
+      const url = new URL('/api/showcase', window.location.origin);
+      if (showcaseCursor) url.searchParams.set('cursor', showcaseCursor);
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!data.ok) throw new Error();
+      showcaseItems = showcaseItems.concat(data.items);
+      showcaseCursor = data.cursor;
+      if (!showcaseCursor) showcaseDone = true;
+    }
     renderShowcaseGrid();
   } catch {
     showcaseStatus.textContent = 'Could not load the showcase right now.';
@@ -943,36 +1008,16 @@ showcaseSearch?.addEventListener('input', () => {
   renderShowcaseGrid();
 });
 
-// Load more as the visitor nears the bottom of the showcase's own
-// scroll container (not the page — this container scrolls internally
-// while the showcase slide is active).
-showcaseScroll?.addEventListener('scroll', () => {
-  updateShowcaseArrow();
-  if (showcaseLoading || showcaseDone) return;
-  const { scrollTop, scrollHeight, clientHeight } = showcaseScroll;
-  if (scrollHeight - (scrollTop + clientHeight) < 300) loadShowcasePage();
-});
-
-// Down arrow: nudges the showcase's own content down by one screenful.
-function updateShowcaseArrow() {
-  if (!showcaseScroll || !showcaseArrowDown) return;
-  const { scrollTop, scrollHeight, clientHeight } = showcaseScroll;
-  const hasMore = scrollHeight - (scrollTop + clientHeight) > 24;
-  showcaseArrowDown.classList.toggle('hidden', !hasMore);
-}
-
+// The belt has no "next slide" of its own anymore — it just drifts
+// forever — so the down-arrow's job is simply to skip straight past it
+// to the next real section (the footer/contact form).
 showcaseArrowDown?.addEventListener('click', () => {
-  showcaseScroll.scrollBy({ top: showcaseScroll.clientHeight * 0.85, behavior: 'smooth' });
+  document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
-
-if (showcaseGrid) new ResizeObserver(updateShowcaseArrow).observe(showcaseGrid);
 
 const showcaseObserver = new IntersectionObserver(entries => {
-  if (entries.some(e => e.isIntersecting)) {
-    loadShowcasePage();
-    updateShowcaseArrow();
-  }
+  if (entries.some(e => e.isIntersecting)) loadAllShowcase();
 }, { rootMargin: '300px' });
 
 showcaseObserver.observe(document.getElementById('showcase'));
-loadShowcasePage();
+loadAllShowcase();

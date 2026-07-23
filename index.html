@@ -73,7 +73,7 @@
         <svg id="tierPopupHeart" class="pixel-heart tier-popup-heart" viewBox="0 0 16 16" aria-hidden="true"><use href="#pixel-heart"/></svg>
         <h3 id="tierPopupTitle">Pulse</h3>
         <p class="tier-popup-copy" id="tierPopupCopy">Scan the QR code, send exactly this amount, then fill in the details below.</p>
-        <img src="payment-qr.png" alt="Donation QR code" class="tier-popup-qr" />
+        <img src="payment-qr-php.png" alt="Donation QR code" class="tier-popup-qr" />
       </div>
 
       <form id="tierPopupForm" class="claim-form tier-popup-form" novalidate>
@@ -111,7 +111,7 @@
   <div id="qrPopup" class="qr-popup hidden" role="dialog" aria-modal="true" aria-label="Payment QR code">
     <div class="qr-popup-card">
       <button type="button" class="tier-popup-close" id="qrPopupClose" aria-label="Close">✕</button>
-      <img src="payment-qr.png" alt="Donation QR code" class="qr-popup-img" />
+      <img src="payment-qr-php.png" alt="Donation QR code" class="qr-popup-img" id="qrPopupImg" data-qr-php="payment-qr-php.png" data-qr-usd="payment-qr-usd.png" />
       <p class="qr-popup-caption">Scan to pay.</p>
     </div>
   </div>
@@ -135,7 +135,9 @@
     </symbol>
   </svg>
 
-  <div id="pageDots" class="page-scroll-dots hidden" aria-label="Scroll position"></div>
+  <div id="pageDots" class="page-progress-bar hidden" aria-label="Scroll position">
+    <div class="page-progress-track" id="pageProgressTrack"></div>
+  </div>
 
   <main id="top">
 
@@ -342,12 +344,13 @@
         <input type="text" class="showcase-search" id="showcaseSearch" placeholder="Search subdomain…" />
       </div>
 
+      <p class="username-status" id="showcaseStatus"></p>
+
       <div class="showcase-scroll" id="showcaseScroll">
-        <div id="showcaseGrid" class="showcase-grid"></div>
-        <p class="username-status" id="showcaseStatus"></p>
+        <div id="showcaseGrid" class="showcase-track"></div>
       </div>
 
-      <button class="showcase-arrow-down hidden" id="showcaseArrowDown" type="button" aria-label="Scroll for more">
+      <button class="showcase-arrow-down" id="showcaseArrowDown" type="button" aria-label="Skip to contact">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M5 13l7 7 7-7"/></svg>
       </button>
     </section>

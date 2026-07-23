@@ -8,10 +8,10 @@
 .showcase-hero {
   text-align: center;
   max-width: 640px;
-  margin: 0 auto 2.5rem;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
   align-items: center;
 }
 
@@ -46,7 +46,7 @@
   gap: 0.6rem;
   align-items: center;
   justify-content: center;
-  margin-bottom: 2rem;
+  margin: 0.75rem 0 1rem;
 }
 
 .chip {
@@ -134,11 +134,32 @@
   padding: 3rem 1rem;
 }
 
-/* ── Grid ────────────────────────────────────────────────── */
-.showcase-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 2.25rem;
+/* ── Horizontal, infinitely-scrolling belt of cards ─────────
+   The track is rendered twice back-to-back by home.js (so the
+   loop has no visible seam) and drifts left forever via a CSS
+   animation. Hovering — or reduced-motion — pauses/disables it so
+   people can actually read a card or use assistive tech. ───────── */
+.showcase-track {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 1.75rem;
+  width: max-content;
+  animation: showcase-marquee var(--marquee-duration, 45s) linear infinite;
+}
+
+.showcase-scroll:hover .showcase-track,
+.showcase-scroll:focus-within .showcase-track {
+  animation-play-state: paused;
+}
+
+@keyframes showcase-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .showcase-track { animation: none; }
 }
 
 .showcase-card {
@@ -153,6 +174,8 @@
   box-shadow: var(--shadow);
   padding: 1.5rem;
   position: relative;
+  flex: 0 0 clamp(230px, 26vw, 280px);
+  width: clamp(230px, 26vw, 280px);
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 
@@ -180,6 +203,15 @@
 
 .showcase-card.is-starred:hover {
   box-shadow: 14px 14px 0 0 var(--donor-heart-color, var(--color-primary));
+}
+
+.showcase-card.has-donor-tag .showcase-avatar {
+  border-color: var(--donor-heart-color, var(--color-border));
+  color: var(--donor-heart-color, var(--color-primary));
+}
+
+.showcase-card.has-donor-tag .showcase-card-cta {
+  color: var(--donor-heart-color, var(--color-primary));
 }
 
 /* Top pill — only shown for Soul-tier ("real") donors. Plain text tag
