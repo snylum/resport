@@ -147,7 +147,7 @@
      every card — a column holding a long subdomain gets wider, a
      column of short ones stays compact. */
   grid-auto-columns: max-content;
-  gap: 1rem;
+  gap: 1.75rem;
   width: max-content;
 }
 
@@ -168,7 +168,7 @@
      unusually long link/description doesn't blow the belt out. */
   width: max-content;
   min-width: clamp(190px, 19vw, 225px);
-  max-width: 300px;
+  max-width: 330px;
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 

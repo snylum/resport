@@ -870,14 +870,22 @@ function renderShowcaseItem(item) {
   card.dataset.username = item.username;
   if (meta) card.style.setProperty('--donor-heart-color', meta.color);
 
-  // Size the card to its own handle (the actual link text, e.g.
-  // "canva-free.proves.work") so it never has to wrap mid-word — longer
-  // subdomains get a longer card, short ones stay compact. This is a
-  // deliberately simple monospace-char estimate (the handle uses
-  // --font-mono) rather than a full text measurement, clamped by the
-  // CSS min/max-width on .showcase-card as a safety net either way.
+  // Size the card to fit its own content instead of a flat width for
+  // every card: longer subdomains get a wider card so the handle never
+  // has to wrap mid-word, and longer captions get extra width too — a
+  // card sized purely off the handle can end up just barely too narrow
+  // for its description, wrapping it down to a lone orphan word on the
+  // second line. Splitting the description's estimated width evenly
+  // across its two visible lines (it's clamped to 2 lines via CSS)
+  // keeps that split roughly balanced instead. Both are deliberately
+  // simple char-count estimates (handle uses the monospace font, the
+  // description uses the sans-serif one) rather than full text
+  // measurement, with the CSS min/max-width on .showcase-card as a
+  // safety net either way.
   const handle = `${item.username}.proves.work`;
-  const estimatedWidth = Math.round(handle.length * 7.4) + 44; // char width + card padding
+  const handleWidth = Math.round(handle.length * 7.4) + 44;
+  const descWidth = Math.round((description.length / 2) * 6.3) + 44;
+  const estimatedWidth = Math.max(handleWidth, descWidth);
   card.style.width = `${estimatedWidth}px`;
 
   card.innerHTML = `
