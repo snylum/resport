@@ -700,37 +700,6 @@ function pathForSlide(id) { return SLIDE_PATHS[id] || '/'; }
   });
 })();
 
-/* ── Dot nav: one dot per slide, hollow scrollbar replacement ────── */
-(function initPageDots() {
-  const slides = Array.from(document.querySelectorAll('main .section, .site-footer'));
-  const dotsWrap = document.getElementById('pageDots');
-  const track = document.getElementById('pageProgressTrack') || dotsWrap;
-  if (!slides.length || !dotsWrap || !track) return;
-
-  dotsWrap.classList.remove('hidden');
-  track.innerHTML = '';
-
-  slides.forEach((slide, i) => {
-    const dot = document.createElement('button');
-    dot.type = 'button';
-    dot.className = 'page-dot';
-    dot.setAttribute('aria-label', `Go to section ${i + 1} of ${slides.length}`);
-    dot.addEventListener('click', () => slide.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-    track.appendChild(dot);
-  });
-
-  const dots = Array.from(track.querySelectorAll('.page-dot'));
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (!entry.isIntersecting) return;
-      const idx = slides.indexOf(entry.target);
-      if (idx === -1) return;
-      dots.forEach((d, di) => d.classList.toggle('active', di === idx));
-    });
-  }, { threshold: 0.55 });
-  slides.forEach(s => observer.observe(s));
-})();
-
 /* ── Clean-path URL sync: keep the address bar matching whichever slide
    is actually in view (replaceState — no history spam, no reload), and
    land on the right slide if the page was loaded at a clean path or an
@@ -821,7 +790,6 @@ const showcaseGrid = document.getElementById('showcaseGrid');
 const showcaseScroll = document.getElementById('showcaseScroll');
 const showcaseStatus = document.getElementById('showcaseStatus');
 const showcaseSearch = document.getElementById('showcaseSearch');
-const showcaseArrowDown = document.getElementById('showcaseArrowDown');
 const showcaseHeartOrderBtn = document.getElementById('showcaseHeartOrderBtn');
 let showcaseCursor = null;
 let showcaseLoading = false;
@@ -934,8 +902,6 @@ function renderShowcaseGrid() {
   }), showcaseFilter);
 
   showcaseGrid.innerHTML = '';
-  showcaseGrid.style.removeProperty('--marquee-duration');
-
   if (!filtered.length) {
     showcaseStatus.textContent = showcaseItems.length
       ? 'No profiles match that filter.'
@@ -943,28 +909,7 @@ function renderShowcaseGrid() {
     return;
   }
   showcaseStatus.textContent = '';
-
-  // The belt scrolls itself forever via a CSS animation that slides the
-  // track exactly -50% — so the content has to be duplicated back-to-back
-  // for the loop to be seamless. The second copy is decorative/hidden
-  // from assistive tech since it's a visual repeat of the first.
   filtered.forEach(item => showcaseGrid.appendChild(renderShowcaseItem(item)));
-  filtered.forEach(item => {
-    const dupe = renderShowcaseItem(item);
-    dupe.setAttribute('aria-hidden', 'true');
-    dupe.tabIndex = -1;
-    showcaseGrid.appendChild(dupe);
-  });
-
-  // Keep the drift speed consistent regardless of how many cards are in
-  // the loop — a fixed pixels-per-second rate rather than a fixed time,
-  // so a short list doesn't zoom by and a long one doesn't crawl.
-  requestAnimationFrame(() => {
-    const trackWidth = showcaseGrid.scrollWidth / 2;
-    const pxPerSecond = 55;
-    const duration = Math.max(trackWidth / pxPerSecond, 12);
-    showcaseGrid.style.setProperty('--marquee-duration', `${duration}s`);
-  });
 }
 
 async function loadAllShowcase() {
@@ -1008,12 +953,44 @@ showcaseSearch?.addEventListener('input', () => {
   renderShowcaseGrid();
 });
 
-// The belt has no "next slide" of its own anymore — it just drifts
-// forever — so the down-arrow's job is simply to skip straight past it
-// to the next real section (the footer/contact form).
-showcaseArrowDown?.addEventListener('click', () => {
-  document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-});
+// Pan the belt horizontally on wheel/trackpad scroll while hovering it —
+// vertical wheel motion (deltaY) drives horizontal movement, which feels
+// natural since the belt itself never scrolls vertically. Only takes
+// over when there's actually horizontal room to move, so page scrolling
+// still works normally once the belt is fully panned.
+showcaseScroll?.addEventListener('wheel', (e) => {
+  const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+  const { scrollLeft, scrollWidth, clientWidth } = showcaseScroll;
+  const atStart = scrollLeft <= 0 && delta < 0;
+  const atEnd = scrollLeft + clientWidth >= scrollWidth - 1 && delta > 0;
+  if (atStart || atEnd) return; // let the page scroll take over at the ends
+  e.preventDefault();
+  showcaseScroll.scrollLeft += delta;
+}, { passive: false });
+
+// Click-and-drag panning for mouse users (in addition to wheel/touch).
+(function initShowcaseDrag() {
+  if (!showcaseScroll) return;
+  let isDown = false;
+  let startX = 0;
+  let startScroll = 0;
+
+  showcaseScroll.addEventListener('mousedown', (e) => {
+    isDown = true;
+    showcaseScroll.classList.add('is-grabbing');
+    startX = e.pageX;
+    startScroll = showcaseScroll.scrollLeft;
+  });
+  window.addEventListener('mouseup', () => {
+    isDown = false;
+    showcaseScroll.classList.remove('is-grabbing');
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!isDown) return;
+    e.preventDefault();
+    showcaseScroll.scrollLeft = startScroll - (e.pageX - startX);
+  });
+})();
 
 const showcaseObserver = new IntersectionObserver(entries => {
   if (entries.some(e => e.isIntersecting)) loadAllShowcase();

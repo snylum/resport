@@ -20,53 +20,6 @@ html {
 html::-webkit-scrollbar { display: none; } /* Chrome/Safari */
 body { min-height: 100%; }
 
-/* ── Fixed slide-position indicator: a single horizontal pink bar,
-   centered under the viewport, made of one segment per section. The
-   active segment glows solid pink; the rest sit dim. Replaces the old
-   right-edge dot column. ─────────────────────────────────────────── */
-.page-progress-bar {
-  position: fixed;
-  left: 50%;
-  bottom: clamp(.9rem, 3vh, 1.6rem);
-  transform: translateX(-50%);
-  z-index: 60;
-}
-.page-progress-bar.hidden { display: none; }
-
-.page-progress-track {
-  display: flex;
-  align-items: center;
-  gap: .4rem;
-  padding: .35rem;
-  border-radius: 999px;
-  background: rgba(10, 6, 18, 0.55);
-  backdrop-filter: blur(6px);
-  border: 1.5px solid var(--color-border);
-}
-
-.page-dot {
-  width: 1.6rem;
-  height: 5px;
-  padding: 0;
-  border: none;
-  border-radius: 999px;
-  background: var(--color-surface-alt);
-  cursor: pointer;
-  transition: background .2s ease, box-shadow .2s ease, width .2s ease;
-  flex-shrink: 0;
-}
-.page-dot:hover { background: var(--color-text-muted); }
-.page-dot.active {
-  width: 2.4rem;
-  background: var(--color-primary);
-  box-shadow: 0 0 10px 1px rgba(255,46,159,0.7);
-}
-
-@media (max-width: 640px) {
-  .page-dot { width: 1.1rem; height: 4px; }
-  .page-dot.active { width: 1.8rem; }
-}
-
 main { display: block; }
 
 .section {
@@ -522,18 +475,24 @@ main { display: block; }
 .showcase-scroll { flex: 1 1 auto; min-height: 0; }
 #showcaseStatus { flex: 0 0 auto; text-align: center; }
 
-/* ── Showcase: an infinitely-drifting horizontal belt of cards.
-   No internal scrollbar to manage — the track animates itself
-   (see showcase.css) — this wrapper just clips it and fades the
-   left/right edges so cards don't feel like they're cut off mid-air. */
+/* ── Showcase: a two-row belt of cards you pan by hovering and using
+   the scroll wheel/trackpad (see home.js), or by dragging on touch.
+   Native horizontal scrolling, just with the scrollbar hidden and the
+   edges faded so it doesn't look clipped. ─────────────────────────── */
 .showcase-scroll {
   display: flex;
   align-items: center;
-  overflow: hidden;
-  padding: 1.25rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  padding: .75rem 0;
+  cursor: grab;
   -webkit-mask-image: linear-gradient(to right, transparent 0, #000 4%, #000 96%, transparent 100%);
   mask-image: linear-gradient(to right, transparent 0, #000 4%, #000 96%, transparent 100%);
 }
+.showcase-scroll::-webkit-scrollbar { display: none; }
+.showcase-scroll.is-grabbing { cursor: grabbing; }
 
 .showcase-card-tag {
   display: inline-block;
@@ -543,32 +502,6 @@ main { display: block; }
   letter-spacing: .03em;
   text-transform: uppercase;
   color: var(--color-primary);
-}
-
-.showcase-arrow-down {
-  position: absolute;
-  left: 50%;
-  bottom: clamp(.75rem, 2.5vh, 1.5rem);
-  transform: translateX(-50%);
-  width: 2.4rem;
-  height: 2.4rem;
-  border-radius: 50%;
-  border: 2px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: var(--shadow);
-  animation: showcase-bounce 1.6s ease-in-out infinite;
-  z-index: 5;
-}
-.showcase-arrow-down:hover { background: var(--color-surface-alt); }
-
-@keyframes showcase-bounce {
-  0%, 100% { transform: translateX(-50%) translateY(0); }
-  50% { transform: translateX(-50%) translateY(6px); }
 }
 
 /* ── Contact (now lives in the footer, see .footer-contact) ─────── */
