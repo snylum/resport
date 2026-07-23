@@ -165,7 +165,36 @@ Want it featured in the public showcase? Donations get you a spot (and a colored
   } catch { /* best-effort — approval already succeeded, don't fail the request */ }
 }
 
-// ── Donation tiers ──────────────────────────────────────────────────
+// Fires a "your claim was rejected" email. Same best-effort-only rule as
+// sendLiveEmail — a failed send here must never block whatever admin
+// action triggered it.
+async function sendRejectionEmail(env, record) {
+  if (!env.RESEND_API_KEY || !record || !record.email) return;
+  const username = record.username;
+  const reason = (record.rejectionReason || '').trim();
+  const subject = `${username}.${APP_HOST} — claim update`;
+  const text = `Hey — your claim for ${username}.${APP_HOST} wasn't accepted${reason ? `:
+
+${reason}` : '.'}
+
+You're welcome to fix the issue and submit a new claim any time at https://${APP_HOST}
+
+— SNYLUM`;
+  try {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'Authorization': `Bearer ${env.RESEND_API_KEY}` },
+      body: JSON.stringify({
+        from: `${APP_HOST} <noreply@${APP_HOST}>`,
+        to: [record.email],
+        subject,
+        text
+      })
+    });
+  } catch { /* best-effort — don't fail the request that triggered this */ }
+}
+
+
 const TIERS = {
   normal:  { label: 'Pulse',  php: 50,   usd: 1 },
   gold:    { label: 'Beat',   php: 250,  usd: 10 },
@@ -255,11 +284,28 @@ async function proxyRedirectTarget(redirectUrl, pathAndQuery) {
   });
 }
 
+// ── Redirect mode: send the browser straight to the target instead of
+// proxying it. Used for targets that can't be proxied (login-gated pages,
+// heavy same-origin JS, Facebook profiles/groups, etc).
+function redirectToTarget(redirectUrl, pathAndQuery) {
+  let targetOrigin;
+  try {
+    targetOrigin = new URL(redirectUrl).origin;
+  } catch {
+    return new Response('This address is not configured correctly.', {
+      status: 502, headers: { 'content-type': 'text/plain;charset=UTF-8' }
+    });
+  }
+  const dest = (!pathAndQuery || pathAndQuery === '/') ? redirectUrl : targetOrigin + pathAndQuery;
+  return Response.redirect(dest, 302);
+}
+
 async function serveSite(username, env, pathAndQuery) {
   username = username.toLowerCase();
   const record = await env.SITES.get(`site:${username}`, 'json');
   if (!record) return new Response(notFoundPage(username), { status: 404, headers: { 'content-type': 'text/html;charset=UTF-8' } });
   if (record.status !== 'live') return new Response(pendingPage(username), { status: 200, headers: { 'content-type': 'text/html;charset=UTF-8' } });
+  if (record.linkMode === 'redirect') return redirectToTarget(record.target, pathAndQuery);
   return proxyRedirectTarget(record.target, pathAndQuery);
 }
 
@@ -297,6 +343,13 @@ async function handleApi(request, env, url) {
 
     const username = String(body.username || '').toLowerCase().trim();
     const mode = body.mode === 'coder' ? 'coder' : 'nocode';
+    // How the subdomain actually serves visitors: 'proxy' fetches the
+    // target and serves it back so the address bar stays on proves.work
+    // (the original/default behavior); 'redirect' just sends the browser
+    // straight to the target URL instead. Some targets (Facebook profiles/
+    // groups, anything requiring a login session or heavy same-origin JS)
+    // can't be proxied at all, so claimants can opt into a plain redirect.
+    const linkMode = body.linkMode === 'redirect' ? 'redirect' : 'proxy';
 
     if (!USERNAME_RE.test(username)) return json({ ok: false, error: 'Username must be 3–30 lowercase letters, numbers, or hyphens.' }, 400);
     if (RESERVED.has(username)) return json({ ok: false, error: 'That name is reserved.' }, 400);
@@ -316,7 +369,7 @@ async function handleApi(request, env, url) {
       let normalizedTarget;
       try { normalizedTarget = new URL(target).href; } catch { return json({ ok: false, error: 'Deployed site URL is not valid.' }, 400); }
       record = {
-        username, mode: 'coder', target: normalizedTarget,
+        username, mode: 'coder', target: normalizedTarget, linkMode,
         repo: check.htmlUrl, repoName: check.fullName,
         email,
         status: 'pending', showcase: false, createdAt: new Date().toISOString()
@@ -329,7 +382,7 @@ async function handleApi(request, env, url) {
       try { normalizedTarget = new URL(target).href; } catch { return json({ ok: false, error: 'That URL is not valid.' }, 400); }
       if (!GMAIL_RE.test(email)) return json({ ok: false, error: 'Only properly named @gmail.com addresses are accepted.' }, 400);
       record = {
-        username, mode: 'nocode', target: normalizedTarget,
+        username, mode: 'nocode', target: normalizedTarget, linkMode,
         email,
         status: 'pending', showcase: false, createdAt: new Date().toISOString()
       };
@@ -519,8 +572,54 @@ async function handleApi(request, env, url) {
     if (body.sample !== undefined) {
       existing.sample = !!body.sample;
     }
+    // Where the subdomain actually points, and how it's served — an admin
+    // can correct a broken/changed link, or switch a claim between proxy
+    // (keeps proves.work in the address bar) and redirect (sends visitors
+    // straight to the target, for targets that can't be proxied at all —
+    // Facebook profiles/groups, login-gated pages, etc).
+    if (body.target !== undefined) {
+      const target = String(body.target || '').trim();
+      if (!target) return json({ ok: false, error: 'Target URL is required.' }, 400);
+      let normalizedTarget;
+      try { normalizedTarget = new URL(target).href; } catch { return json({ ok: false, error: 'That target URL is not valid.' }, 400); }
+      existing.target = normalizedTarget;
+    }
+    if (body.linkMode !== undefined) {
+      existing.linkMode = body.linkMode === 'redirect' ? 'redirect' : 'proxy';
+    }
+    // Changing the email a subdomain is associated with also moves its
+    // active-claim slot over, so the old email's cap frees up and the new
+    // email's cap correctly accounts for it.
+    if (body.email !== undefined) {
+      const newEmail = String(body.email || '').trim();
+      if (newEmail && !EMAIL_RE.test(newEmail)) return json({ ok: false, error: 'That email is not valid.' }, 400);
+      if (newEmail !== existing.email) {
+        if (existing.email) await releaseEmailSlot(env, existing.email, username);
+        existing.email = newEmail;
+        if (newEmail) await addEmailSlot(env, newEmail, username, Infinity);
+      }
+    }
     await env.SITES.put(`site:${username}`, JSON.stringify(existing));
     return json({ ok: true, site: existing });
+  }
+
+  // Manually (re)send the "claim approved / now live" or "claim rejected"
+  // email to a claimant — useful when the automatic send failed, was
+  // skipped (RESEND_API_KEY added after the fact), or a claimant just
+  // says they never got it.
+  if (url.pathname === '/api/admin/sites/resend-email' && request.method === 'POST') {
+    const body = await request.json().catch(() => ({}));
+    const adminEmail = await verifyAdminCredential(body.googleCredential);
+    if (!adminEmail) return json({ ok: false, error: 'Admin sign-in required.' }, 403);
+    const username = String(body.username || '').toLowerCase().trim();
+    const type = body.type === 'rejected' ? 'rejected' : 'live';
+    const existing = await env.SITES.get(`site:${username}`, 'json');
+    if (!existing) return json({ ok: false, error: 'Not found.' }, 404);
+    if (!existing.email) return json({ ok: false, error: 'This claim has no email on file.' }, 400);
+    if (!env.RESEND_API_KEY) return json({ ok: false, error: 'Email sending isn\'t configured (RESEND_API_KEY not set).' }, 400);
+    if (type === 'rejected') await sendRejectionEmail(env, existing);
+    else await sendLiveEmail(env, existing);
+    return json({ ok: true });
   }
 
   // Rename a claimed subdomain's username (admin-only — never exposed to

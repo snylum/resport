@@ -178,7 +178,7 @@ claimForm.addEventListener('submit', async (e) => {
   claimStatus.className = 'username-status';
 
   const username = document.getElementById('claimUsername').value.trim().toLowerCase();
-  const body = { mode: claimMode, username };
+  const body = { mode: claimMode, username, linkMode: document.getElementById('claimLinkMode').value };
 
   if (claimMode === 'coder') {
     body.repo = document.getElementById('claimRepo').value.trim();

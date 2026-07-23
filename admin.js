@@ -556,12 +556,29 @@ function viewSite(username) { window.open(`https://${username}.${PUBLISH_APEX}`,
 function editSiteModal(site) {
   openModal(`
     <h3 class="modal-title">Edit @${esc(site.username)}</h3>
-    <p class="modal-sub">Username is admin-only — claimants/donors never see or set this field. Description is shown on their public showcase card, replacing the old auto-generated tier blurb.</p>
+    <p class="modal-sub">Username, target link, link mode, and email are admin-only — claimants/donors never see or set these directly. Description is shown on their public showcase card.</p>
     <div class="admin-form-grid">
       <label class="admin-form-field">
         <span>Username</span>
         <input type="text" id="editSiteUsername" value="${esc(site.username)}" maxlength="30" />
         <span class="field-hint">Renames ${esc(site.username)}.proves.work — donations and the active-claim slot move with it.</span>
+      </label>
+      <label class="admin-form-field">
+        <span>Email</span>
+        <input type="email" id="editSiteEmail" value="${esc(site.email ?? '')}" />
+        <span class="field-hint">Moves the active-claim slot to the new email.</span>
+      </label>
+      <label class="admin-form-field admin-form-field-wide">
+        <span>Target URL</span>
+        <input type="url" id="editSiteTarget" value="${esc(site.target ?? '')}" />
+      </label>
+      <label class="admin-form-field">
+        <span>Link mode</span>
+        <select id="editSiteLinkMode">
+          <option value="proxy" ${site.linkMode !== 'redirect' ? 'selected' : ''}>Proxy — proves.work stays in the address bar</option>
+          <option value="redirect" ${site.linkMode === 'redirect' ? 'selected' : ''}>Redirect — sends visitors straight to the target</option>
+        </select>
+        <span class="field-hint">Switch to redirect for links that can't be proxied (Facebook profiles/groups, login-gated pages, etc).</span>
       </label>
       <label class="admin-form-field-wide" style="display:flex;align-items:center;gap:0.5rem;">
         <input type="checkbox" id="editSiteSample" ${site.sample ? 'checked' : ''} style="width:auto;" />
@@ -572,14 +589,35 @@ function editSiteModal(site) {
         <textarea id="editSiteDescription" rows="3" maxlength="280" placeholder="e.g. Frontend dev open to junior roles — full portfolio at the link.">${esc(site.description ?? '')}</textarea>
       </label>
     </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost btn-sm" id="cancelEditSiteBtn" type="button">Cancel</button>
-      <button class="btn btn-primary btn-sm" id="saveEditSiteBtn" type="button">Save changes</button>
+    <div class="modal-actions" style="justify-content:space-between;">
+      <div style="display:flex;gap:0.5rem;">
+        <button class="btn btn-ghost btn-sm" id="resendLiveEmailBtn" type="button">Resend acceptance email</button>
+        <button class="btn btn-ghost btn-sm" id="resendRejectEmailBtn" type="button">Resend rejection email</button>
+      </div>
+      <div style="display:flex;gap:0.5rem;">
+        <button class="btn btn-ghost btn-sm" id="cancelEditSiteBtn" type="button">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="saveEditSiteBtn" type="button">Save changes</button>
+      </div>
     </div>
   `, (root) => {
     root.querySelector('#cancelEditSiteBtn').addEventListener('click', closeModal);
+
+    root.querySelector('#resendLiveEmailBtn').addEventListener('click', async () => {
+      const data = await api('/api/admin/sites/resend-email', { username: site.username, type: 'live' });
+      if (!data.ok) { alertModal(data.error || 'Could not send that email.'); return; }
+      alertModal('Acceptance email sent.');
+    });
+    root.querySelector('#resendRejectEmailBtn').addEventListener('click', async () => {
+      const data = await api('/api/admin/sites/resend-email', { username: site.username, type: 'rejected' });
+      if (!data.ok) { alertModal(data.error || 'Could not send that email.'); return; }
+      alertModal('Rejection email sent.');
+    });
+
     root.querySelector('#saveEditSiteBtn').addEventListener('click', async () => {
       const newUsername = root.querySelector('#editSiteUsername').value.trim().toLowerCase();
+      const email = root.querySelector('#editSiteEmail').value.trim();
+      const target = root.querySelector('#editSiteTarget').value.trim();
+      const linkMode = root.querySelector('#editSiteLinkMode').value;
       const description = root.querySelector('#editSiteDescription').value;
       const sample = root.querySelector('#editSiteSample').checked;
 
@@ -588,7 +626,10 @@ function editSiteModal(site) {
         if (!renameData.ok) { alertModal(renameData.error || 'Could not rename that subdomain.'); return; }
       }
 
-      const data = await api('/api/admin/sites/edit', { username: newUsername || site.username, description, sample });
+      const data = await api('/api/admin/sites/edit', {
+        username: newUsername || site.username,
+        description, sample, target, linkMode, email
+      });
       if (!data.ok) { alertModal(data.error || 'Something went wrong.'); return; }
       closeModal();
       loadSites();
