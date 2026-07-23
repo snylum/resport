@@ -111,6 +111,7 @@ main { display: block; }
   opacity: 1;
   max-height: 200px;
   transform: translateY(0);
+  overflow: visible; /* let button hover glow/shadow show once revealed */
 }
 .button-group { display: flex; gap: .75rem; flex-wrap: wrap; justify-content: center; }
 
