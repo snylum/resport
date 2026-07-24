@@ -46,26 +46,6 @@ main { display: block; }
   z-index: 1;
 }
 
-/* Safety net for mobile / larger text settings: the clamp()-based
-   scaling above assumes a slide's content always fits the fixed
-   viewport height. When it doesn't — a small phone in landscape, a
-   larger system font size, longer validation messages — clipping
-   content with overflow:hidden would make it inaccessible rather than
-   just less pretty. Below the width where these layouts are already
-   single-column, let a slide grow to fit its content and scroll
-   internally instead of silently cutting it off. */
-@media (max-width: 640px), (max-height: 480px) {
-  .section {
-    height: auto;
-    min-height: calc(100dvh - 56px);
-    min-height: calc(100vh - 56px);
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding-right: clamp(1rem, 4vw, 2.5rem);
-    -webkit-overflow-scrolling: touch;
-  }
-}
-
 .site-footer {
   scroll-margin-top: 56px;
   text-align: left;
@@ -108,14 +88,6 @@ main { display: block; }
   line-height: 1.1;
   margin: 0;
   white-space: nowrap;
-  max-width: 100%;
-}
-
-/* On the narrowest phones, even the min comfortable size can be wider
-   than the screen for longer names in the ticker — scale down with
-   viewport width instead of forcing horizontal scroll. */
-@media (max-width: 420px) {
-  .dynamic-subdomain { font-size: clamp(1.4rem, 8.2vw, 4.4rem); }
 }
 .dynamic-subdomain em { font-style: normal; }
 .tld-accent { color: var(--color-primary); }
@@ -439,22 +411,11 @@ main { display: block; }
 
 @media (max-width: 640px) {
   .heart-tip { display: none; }
-  /* Visual glyph stays compact, but the tappable hit area is padded
-     out (via padding, not width/height) so it stays closer to the
-     44px touch-target guideline without changing row density. */
-  .heart-link { width: 28px; height: 28px; padding: 6px; background-clip: content-box; }
+  .heart-link { width: 28px; height: 28px; }
   .heart-link .pixel-heart { width: 1.1rem; height: 1.1rem; }
-  .nav-hearts { gap: .05rem; }
-  .nav-brand-heart { width: 32px; height: 32px; }
+  .nav-hearts { gap: .15rem; }
+  .nav-brand-heart { width: 28px; height: 28px; }
   .nav-brand-heart .pixel-heart { width: 1.15rem; height: 1.15rem; }
-}
-
-@media (max-width: 380px) {
-  /* Keep the icon (with its alt text) but drop the wordmark so the
-     nav never has to wrap or scroll horizontally on the smallest
-     phones — the heart-donation row takes priority for space. */
-  .nav-logo-text { display: none; }
-  .nav-logo { gap: 0; }
 }
 
 /* ── Tier popup ───────────────────────────────────────────── */
@@ -528,15 +489,6 @@ main { display: block; }
   cursor: pointer;
   font-size: 1rem;
   line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-@media (max-width: 640px) {
-  /* Grow the tap target without shifting layout, so close buttons on
-     phones meet the ~44px touch-target guideline. */
-  .tier-popup-close { width: 44px; height: 44px; top: .35rem; right: .35rem; }
 }
 .tier-popup-close:hover { color: var(--color-text); }
 
@@ -595,7 +547,6 @@ main { display: block; }
      a card that's fully in view. */
 }
 .showcase-scroll::-webkit-scrollbar { display: none; }
-.showcase-scroll:focus-visible { outline: 2.5px solid var(--color-primary); outline-offset: -2px; }
 .showcase-scroll.fade-left {
   -webkit-mask-image: linear-gradient(to right, transparent 0, #000 28px);
   mask-image: linear-gradient(to right, transparent 0, #000 28px);
