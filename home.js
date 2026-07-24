@@ -185,7 +185,20 @@ const GMAIL_RE = /^[a-z0-9](?:\.?[a-z0-9]){5,29}@gmail\.com$/i;
 let claimTurnstileToken = '';
 window.onClaimTurnstileVerified = (token) => { claimTurnstileToken = token; };
 window.onClaimTurnstileExpired = () => { claimTurnstileToken = ''; };
-window.onClaimTurnstileError = () => { claimTurnstileToken = ''; };
+
+// If the widget fails to load/render (e.g. a corrupted cached asset,
+// flaky network), auto-reset it once instead of leaving the user stuck
+// on a dead checkbox with no clear next step. Only auto-retry once per
+// page load to avoid a silent infinite retry loop if it's a persistent
+// problem (e.g. real network outage).
+let turnstileAutoRetried = false;
+window.onClaimTurnstileError = () => {
+  claimTurnstileToken = '';
+  if (!turnstileAutoRetried) {
+    turnstileAutoRetried = true;
+    try { window.turnstile?.reset('claimTurnstile'); } catch { /* widget never mounted */ }
+  }
+};
 
 const claimSubmitBtn = claimForm.querySelector('button[type="submit"]');
 
@@ -466,79 +479,41 @@ donateForm.addEventListener('submit', async (e) => {
   const usernameInput = document.getElementById('tierPopupUsername');
   const emailInput = document.getElementById('tierPopupEmail');
   const heartButtons = document.querySelectorAll('.heart-link[data-tier]');
-  const currencyTabs = document.querySelectorAll('#tierPopupCurrencyTabs .claim-tab');
-  const qrImg = document.getElementById('tierPopupQrImg');
   if (!popup || !form) return;
 
-  // Same per-tier rules as the donate form — PHP and USD versions of each
-  // tag's amount, so the header hearts and the donate section always agree
-  // on what a given tier actually costs.
+  // Exactly what each heart tag offers — enforced against whatever the
+  // person actually types into the amount field before it's submitted.
   const TIER_RULES = {
-    normal:  { label: 'Pulse',
-      php: { fixed: 50,   symbol: '₱' }, usd: { fixed: 1,   symbol: '$' } },
-    gold:    { label: 'Beat',
-      php: { fixed: 250,  symbol: '₱' }, usd: { fixed: 10,  symbol: '$' } },
-    diamond: { label: 'Blood',
-      php: { fixed: 1000, symbol: '₱' }, usd: { fixed: 50,  symbol: '$' } },
-    real:    { label: 'Soul', customTag: true,
-      php: { min: 1000, symbol: '₱' }, usd: { min: 50, symbol: '$' } },
-    ghost:   { label: 'Breath',
-      php: { max: 1000, symbol: '₱' }, usd: { max: 50, symbol: '$' } }
+    normal:  { label: 'Pulse',  fixed: 50,   copy: 'Scan the QR code, send exactly ₱50 / $1, then fill in the details below.' },
+    gold:    { label: 'Beat',   fixed: 250,  copy: 'Scan the QR code, send exactly ₱250 / $10, then fill in the details below.' },
+    diamond: { label: 'Blood',  fixed: 1000, copy: 'Scan the QR code, send exactly ₱1,000 / $50, then fill in the details below.' },
+    real:    { label: 'Soul',   min: 1000,   customTag: true, copy: 'Scan the QR code, send any amount above ₱1,000 / $50, then name your own tag below.' },
+    ghost:   { label: 'Breath', max: 1000, odd: true, copy: 'Scan the QR code, send an odd amount below ₱1,000 / $50 (e.g. ₱37), then fill in the details below.' }
   };
 
   let activeTier = null;
-  let activeCurrency = 'php';
-
-  function currentRule() {
-    const tierRule = TIER_RULES[activeTier];
-    if (!tierRule) return null;
-    return { label: tierRule.label, customTag: tierRule.customTag, ...tierRule[activeCurrency] };
-  }
-
-  function updateQrImage() {
-    if (!qrImg) return;
-    const src = activeCurrency === 'usd' ? qrImg.dataset.qrUsd : qrImg.dataset.qrPhp;
-    if (src) qrImg.src = src;
-  }
-
-  function refreshAmountUI() {
-    const rule = currentRule();
-    if (!rule) return;
-    const { symbol } = rule;
-
-    if (rule.fixed != null) {
-      amountEl.value = rule.fixed;
-      amountEl.readOnly = true;
-      amountLabelEl.textContent = `Amount (fixed at ${symbol}${rule.fixed})`;
-      copyEl.textContent = `Scan the QR code, send exactly ${symbol}${rule.fixed}, then fill in the details below.`;
-    } else if (rule.min != null) {
-      amountEl.value = '';
-      amountEl.readOnly = false;
-      amountLabelEl.textContent = `Amount you sent (above ${symbol}${rule.min})`;
-      copyEl.textContent = `Scan the QR code, send any amount above ${symbol}${rule.min}, then name your own tag below.`;
-    } else if (rule.max != null) {
-      amountEl.value = '';
-      amountEl.readOnly = false;
-      amountLabelEl.textContent = `Amount you sent (odd, below ${symbol}${rule.max})`;
-      copyEl.textContent = `Scan the QR code, send an odd amount below ${symbol}${rule.max}, then fill in the details below.`;
-    }
-  }
 
   function openPopup(tier) {
-    const tierRule = TIER_RULES[tier];
-    if (!tierRule) return;
+    const rule = TIER_RULES[tier];
+    if (!rule) return;
     activeTier = tier;
-    activeCurrency = 'php';
-    currencyTabs.forEach(t => t.classList.toggle('active', t.dataset.currency === 'php'));
-    updateQrImage();
 
-    titleEl.textContent = tierRule.label;
+    titleEl.textContent = rule.label;
+    copyEl.textContent = rule.copy;
     heartEl.setAttribute('class', `pixel-heart tier-popup-heart pixel-heart--${tier}`);
 
-    refreshAmountUI();
+    if (rule.fixed) {
+      amountEl.value = rule.fixed;
+      amountEl.readOnly = true;
+      amountLabelEl.textContent = `Amount (fixed at ₱${rule.fixed})`;
+    } else {
+      amountEl.value = '';
+      amountEl.readOnly = false;
+      amountLabelEl.textContent = rule.customTag ? 'Amount you sent (above ₱1,000)' : 'Amount you sent (odd, below ₱1,000)';
+    }
 
-    customTagField.classList.toggle('hidden', !tierRule.customTag);
-    customTagInput.required = !!tierRule.customTag;
+    customTagField.classList.toggle('hidden', !rule.customTag);
+    customTagInput.required = !!rule.customTag;
 
     statusEl.textContent = '';
     statusEl.className = 'username-status';
@@ -550,16 +525,6 @@ donateForm.addEventListener('submit', async (e) => {
 
   function closePopup() { popup.classList.add('hidden'); }
 
-  currencyTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      currencyTabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      activeCurrency = tab.dataset.currency;
-      updateQrImage();
-      if (activeTier) refreshAmountUI();
-    });
-  });
-
   heartButtons.forEach(btn => {
     btn.addEventListener('click', () => openPopup(btn.dataset.tier));
   });
@@ -569,24 +534,23 @@ donateForm.addEventListener('submit', async (e) => {
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !popup.classList.contains('hidden')) closePopup(); });
 
   function validateAmount(rule, amount) {
-    const symbol = rule.symbol;
     if (!Number.isFinite(amount) || amount <= 0) return 'Enter a valid amount.';
-    if (rule.fixed != null) {
+    if (rule.fixed) {
       if (Math.round(amount * 100) !== Math.round(rule.fixed * 100)) {
-        return `${rule.label} is exactly ${symbol}${rule.fixed} — adjust the amount to match what you sent.`;
+        return `${rule.label} is exactly ₱${rule.fixed} / $${rule.fixed === 50 ? 1 : rule.fixed === 250 ? 10 : 50} — adjust the amount to match what you sent.`;
       }
-    } else if (rule.min != null) {
-      if (amount <= rule.min) return `${rule.label} needs any amount above ${symbol}${rule.min}.`;
-    } else if (rule.max != null) {
-      if (amount >= rule.max) return `${rule.label} needs an amount below ${symbol}${rule.max}.`;
-      if (!Number.isInteger(amount) || amount % 2 === 0) return `${rule.label} needs an odd whole-number amount (e.g. ${symbol}37).`;
+    } else if (rule.min) {
+      if (amount <= rule.min) return `Soul needs any amount above ₱${rule.min} / $50.`;
+    } else if (rule.max) {
+      if (amount >= rule.max) return `Breath needs an amount below ₱${rule.max} / $50.`;
+      if (!Number.isInteger(amount) || amount % 2 === 0) return 'Breath needs an odd whole-number amount (e.g. ₱37).';
     }
     return null;
   }
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const rule = currentRule();
+    const rule = TIER_RULES[activeTier];
     if (!rule) return;
 
     const amount = parseFloat(amountEl.value);
@@ -604,7 +568,6 @@ donateForm.addEventListener('submit', async (e) => {
     const body = {
       type: 'donation',
       tier: activeTier,
-      currency: activeCurrency,
       amount,
       referenceNumber: refInput.value.trim(),
       username: usernameInput.value.trim().toLowerCase(),
