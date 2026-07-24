@@ -23,7 +23,9 @@
 </head>
 <body class="is-loading">
 
-  <nav class="site-nav">
+  <a class="sr-only-focusable" href="#top">Skip to main content</a>
+
+  <nav class="site-nav" aria-label="Primary">
     <a class="nav-logo" href="#top"><img class="logo-dot" src="favicon.png" alt="" /> <span class="nav-logo-text">proves.work</span></a>
     <ul class="nav-links nav-hearts" id="navHearts">
       <li>
@@ -331,7 +333,7 @@
 
       <p class="username-status" id="showcaseStatus"></p>
 
-      <div class="showcase-scroll" id="showcaseScroll">
+      <div class="showcase-scroll" id="showcaseScroll" tabindex="0" role="region" aria-label="Showcase profiles, scrollable horizontally">
         <div id="showcaseGrid" class="showcase-track"></div>
       </div>
     </section>

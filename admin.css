@@ -585,6 +585,8 @@
   .admin-card,
   .admin-site-row { padding: 0.9rem 0.85rem; }
 
+  .admin-toolbar input[type="search"] { min-width: 0; width: 100%; }
+
   .admin-card-actions,
   .admin-site-actions { gap: 0.35rem; }
 
@@ -644,6 +646,12 @@
   border-radius: 50%;
 }
 .modal-close:hover { background: var(--color-surface-alt); color: var(--color-text); }
+
+@media (max-width: 640px) {
+  /* Larger tap target on touch screens without changing icon size or
+     shifting the visible layout. */
+  .modal-close { width: 44px; height: 44px; top: .5rem; right: .5rem; }
+}
 
 .modal-title {
   font-family: var(--font-display);

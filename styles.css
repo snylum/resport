@@ -15,6 +15,9 @@ body {
   color: var(--color-text);
   line-height: 1.6;
   min-height: 100vh;
+  /* Safety net: nothing should be able to force a horizontal
+     scrollbar on the page itself at any viewport width. */
+  overflow-x: hidden;
 }
 
 /* ── Typography ──────────────────────────────────────────── */
@@ -34,6 +37,10 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
   justify-content: space-between;
   padding: 0 2rem;
   height: 56px;
+  /* Safety net: if content ever can't fit at very narrow widths, wrap
+     instead of forcing a horizontal scrollbar on the whole page. */
+  flex-wrap: wrap;
+  row-gap: 0;
 }
 
 .nav-logo {
@@ -252,8 +259,60 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
   clip: rect(0,0,0,0); white-space: nowrap; border: 0;
 }
 
+.sr-only-focusable:focus,
+.sr-only-focusable:focus-visible {
+  position: fixed;
+  top: .5rem;
+  left: .5rem;
+  width: auto;
+  height: auto;
+  padding: .6rem 1rem;
+  margin: 0;
+  clip: auto;
+  overflow: visible;
+  white-space: normal;
+  z-index: 1000;
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  border-radius: var(--radius);
+  font-weight: 700;
+  font-size: .85rem;
+  text-decoration: none;
+  box-shadow: var(--shadow-lg);
+}
+
+/* ── Accessible focus states ─────────────────────────────────
+   Keyboard-only outline (never shown on mouse/touch click) applied
+   broadly so every interactive element gets a visible, consistent
+   focus ring regardless of whether the component styled its own. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2.5px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm, 4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
+/* Prevent iOS Safari from auto-zooming the page when a form field is
+   focused — it does this for any input with a computed font-size under
+   16px, which every form field on this site has at narrow widths. */
+@media (max-width: 640px) {
+  input, select, textarea { font-size: 16px !important; }
+}
+
 @media (max-width: 640px) {
   .section { padding: 3rem 1rem; }
-  .site-nav { padding: 0 1rem; }
+  .site-nav { padding: 0 .75rem; }
   .nav-links { gap: 1rem; }
+}
+
+@media (max-width: 400px) {
+  .site-nav { padding: 0 .5rem; }
 }
